@@ -22,8 +22,8 @@ import (
 
 type server struct {
 	pb.UnimplementedBeemonServiceServer
-	objs   *BeemonObjects
-	mu     sync.Mutex
+	objs    *BeemonObjects
+	mu      sync.Mutex
 	streams map[uint32]chan *pb.Event
 }
 
@@ -71,6 +71,17 @@ func (s *server) StreamEvents(req *pb.StreamEventsRequest, stream pb.BeemonServi
 	}
 }
 
+func int8ToStr(arr []int8) string {
+	var b []byte
+	for _, v := range arr {
+		if v == 0 {
+			break
+		}
+		b = append(b, byte(v))
+	}
+	return string(b)
+}
+
 func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -79,18 +90,65 @@ func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 		return // no one listening
 	}
 	
-	// Convert to pb.Event (simplified conversion for plan)
 	event := &pb.Event{
 		TimestampNs: bpfEvent.Ts,
 		Pid:         bpfEvent.Pid,
 	}
 
-	// Just a basic mapping
 	switch bpfEvent.Type {
 	case 1: // EVENT_TYPE_SYSCALL
-		event.EventData = &pb.Event_Syscall{
+		event.Event = &pb.Event_Syscall{
 			Syscall: &pb.SyscallEvent{
-				SyscallId: 0, // Need to parse union bytes
+				SyscallId: bpfEvent.Syscall.SyscallId,
+			},
+		}
+	case 2: // EVENT_TYPE_FILE_OPEN
+		event.Event = &pb.Event_FileOpen{
+			FileOpen: &pb.FileOpenEvent{
+				Filename: int8ToStr(bpfEvent.File.Filename[:]),
+				Flags:    bpfEvent.File.Flags,
+			},
+		}
+	case 3: // EVENT_TYPE_NET_CONN
+		event.Event = &pb.Event_NetworkConnect{
+			NetworkConnect: &pb.NetworkConnectEvent{
+				Saddr:  bpfEvent.Net.Saddr,
+				Daddr:  bpfEvent.Net.Daddr,
+				Sport:  uint32(bpfEvent.Net.Sport),
+				Dport:  uint32(bpfEvent.Net.Dport),
+				Family: uint32(bpfEvent.Net.Family),
+			},
+		}
+	case 4: // EVENT_TYPE_PROCESS
+		event.Event = &pb.Event_Process{
+			Process: &pb.ProcessEvent{
+				IsExec:   bpfEvent.Process.IsExec > 0,
+				IsFork:   bpfEvent.Process.IsFork > 0,
+				IsExit:   bpfEvent.Process.IsExit > 0,
+				Comm:     int8ToStr(bpfEvent.Process.Comm[:]),
+				ChildPid: bpfEvent.Process.ChildPid,
+				ExitCode: bpfEvent.Process.ExitCode,
+				Filename: int8ToStr(bpfEvent.Process.Filename[:]),
+			},
+		}
+	case 5: // EVENT_TYPE_FILE_READ
+		event.Event = &pb.Event_FileRead{
+			FileRead: &pb.FileReadEvent{
+				Fd:    bpfEvent.Rw.Fd,
+				Count: bpfEvent.Rw.Count,
+			},
+		}
+	case 6: // EVENT_TYPE_FILE_WRITE
+		event.Event = &pb.Event_FileWrite{
+			FileWrite: &pb.FileWriteEvent{
+				Fd:    bpfEvent.Rw.Fd,
+				Count: bpfEvent.Rw.Count,
+			},
+		}
+	case 7: // EVENT_TYPE_FILE_CLOSE
+		event.Event = &pb.Event_FileClose{
+			FileClose: &pb.FileCloseEvent{
+				Fd: bpfEvent.Close.Fd,
 			},
 		}
 	}
@@ -109,13 +167,29 @@ func main() {
 	defer objs.Close()
 
 	// Link hooks
-	tpEnter, err := link.Tracepoint("raw_syscalls", "sys_enter", objs.TraceSysEnter, nil)
-	if err == nil { defer tpEnter.Close() }
-	tpExec, err := link.Tracepoint("sched", "sched_process_exec", objs.TraceSchedProcessExec, nil)
+	tpExec, err := link.Tracepoint("syscalls", "sys_enter_execve", objs.TraceSysEnterExecve, nil)
 	if err == nil { defer tpExec.Close() }
 
-	kpOpen, err := link.Kprobe("do_sys_openat2", objs.DoSysOpenat2, nil)
-	if err == nil { defer kpOpen.Close() }
+	tpFork, err := link.Tracepoint("sched", "sched_process_fork", objs.TraceSchedProcessFork, nil)
+	if err == nil { defer tpFork.Close() }
+
+	tpExit, err := link.Tracepoint("sched", "sched_process_exit", objs.TraceSchedProcessExit, nil)
+	if err == nil { defer tpExit.Close() }
+
+	tpRead, err := link.Tracepoint("syscalls", "sys_enter_read", objs.TraceSysEnterRead, nil)
+	if err == nil { defer tpRead.Close() }
+
+	tpWrite, err := link.Tracepoint("syscalls", "sys_enter_write", objs.TraceSysEnterWrite, nil)
+	if err == nil { defer tpWrite.Close() }
+
+	tpClose, err := link.Tracepoint("syscalls", "sys_enter_close", objs.TraceSysEnterClose, nil)
+	if err == nil { defer tpClose.Close() }
+
+	tpOpenat, err := link.Tracepoint("syscalls", "sys_enter_openat", objs.TraceSysEnterOpenat, nil)
+	if err == nil { defer tpOpenat.Close() }
+
+	kpConnect, err := link.Kprobe("tcp_v4_connect", objs.TcpV4Connect, nil)
+	if err == nil { defer kpConnect.Close() }
 
 	srv := &server{objs: &objs}
 

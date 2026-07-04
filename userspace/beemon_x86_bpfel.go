@@ -24,7 +24,42 @@ type BeemonEventT struct {
 		_         structs.HostLayout
 		SyscallId uint32
 	}
-	_ [256]byte
+	File struct {
+		_        structs.HostLayout
+		Filename [256]int8
+		Flags    int32
+	}
+	Net struct {
+		_      structs.HostLayout
+		Saddr  uint32
+		Daddr  uint32
+		Sport  uint16
+		Dport  uint16
+		Family uint16
+		_      [2]byte
+	}
+	Process struct {
+		_        structs.HostLayout
+		ChildPid uint32
+		ExitCode int32
+		Comm     [16]int8
+		IsExit   uint8
+		IsExec   uint8
+		IsFork   uint8
+		Filename [256]int8
+		_        [1]byte
+	}
+	_  [4]byte
+	Rw struct {
+		_     structs.HostLayout
+		Fd    uint32
+		_     [4]byte
+		Count uint64
+	}
+	Close struct {
+		_  structs.HostLayout
+		Fd uint32
+	}
 	_ [4]byte
 }
 
@@ -34,12 +69,14 @@ type BeemonEventT struct {
 const (
 	BeemonMapEvents                 = "events"
 	BeemonMapTargetPids             = "target_pids"
-	BeemonProgDoSysOpenat2          = "do_sys_openat2"
 	BeemonProgTcpV4Connect          = "tcp_v4_connect"
-	BeemonProgTraceSchedProcessExec = "trace_sched_process_exec"
 	BeemonProgTraceSchedProcessExit = "trace_sched_process_exit"
 	BeemonProgTraceSchedProcessFork = "trace_sched_process_fork"
-	BeemonProgTraceSysEnter         = "trace_sys_enter"
+	BeemonProgTraceSysEnterClose    = "trace_sys_enter_close"
+	BeemonProgTraceSysEnterExecve   = "trace_sys_enter_execve"
+	BeemonProgTraceSysEnterOpenat   = "trace_sys_enter_openat"
+	BeemonProgTraceSysEnterRead     = "trace_sys_enter_read"
+	BeemonProgTraceSysEnterWrite    = "trace_sys_enter_write"
 	BeemonVarEventT_forceBtf        = "_event_t_force_btf"
 )
 
@@ -85,12 +122,14 @@ type BeemonSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type BeemonProgramSpecs struct {
-	DoSysOpenat2          *ebpf.ProgramSpec `ebpf:"do_sys_openat2"`
 	TcpV4Connect          *ebpf.ProgramSpec `ebpf:"tcp_v4_connect"`
-	TraceSchedProcessExec *ebpf.ProgramSpec `ebpf:"trace_sched_process_exec"`
 	TraceSchedProcessExit *ebpf.ProgramSpec `ebpf:"trace_sched_process_exit"`
 	TraceSchedProcessFork *ebpf.ProgramSpec `ebpf:"trace_sched_process_fork"`
-	TraceSysEnter         *ebpf.ProgramSpec `ebpf:"trace_sys_enter"`
+	TraceSysEnterClose    *ebpf.ProgramSpec `ebpf:"trace_sys_enter_close"`
+	TraceSysEnterExecve   *ebpf.ProgramSpec `ebpf:"trace_sys_enter_execve"`
+	TraceSysEnterOpenat   *ebpf.ProgramSpec `ebpf:"trace_sys_enter_openat"`
+	TraceSysEnterRead     *ebpf.ProgramSpec `ebpf:"trace_sys_enter_read"`
+	TraceSysEnterWrite    *ebpf.ProgramSpec `ebpf:"trace_sys_enter_write"`
 }
 
 // BeemonMapSpecs contains maps before they are loaded into the kernel.
@@ -150,22 +189,26 @@ type BeemonVariables struct {
 //
 // It can be passed to LoadBeemonObjects or ebpf.CollectionSpec.LoadAndAssign.
 type BeemonPrograms struct {
-	DoSysOpenat2          *ebpf.Program `ebpf:"do_sys_openat2"`
 	TcpV4Connect          *ebpf.Program `ebpf:"tcp_v4_connect"`
-	TraceSchedProcessExec *ebpf.Program `ebpf:"trace_sched_process_exec"`
 	TraceSchedProcessExit *ebpf.Program `ebpf:"trace_sched_process_exit"`
 	TraceSchedProcessFork *ebpf.Program `ebpf:"trace_sched_process_fork"`
-	TraceSysEnter         *ebpf.Program `ebpf:"trace_sys_enter"`
+	TraceSysEnterClose    *ebpf.Program `ebpf:"trace_sys_enter_close"`
+	TraceSysEnterExecve   *ebpf.Program `ebpf:"trace_sys_enter_execve"`
+	TraceSysEnterOpenat   *ebpf.Program `ebpf:"trace_sys_enter_openat"`
+	TraceSysEnterRead     *ebpf.Program `ebpf:"trace_sys_enter_read"`
+	TraceSysEnterWrite    *ebpf.Program `ebpf:"trace_sys_enter_write"`
 }
 
 func (p *BeemonPrograms) Close() error {
 	return _BeemonClose(
-		p.DoSysOpenat2,
 		p.TcpV4Connect,
-		p.TraceSchedProcessExec,
 		p.TraceSchedProcessExit,
 		p.TraceSchedProcessFork,
-		p.TraceSysEnter,
+		p.TraceSysEnterClose,
+		p.TraceSysEnterExecve,
+		p.TraceSysEnterOpenat,
+		p.TraceSysEnterRead,
+		p.TraceSysEnterWrite,
 	)
 }
 

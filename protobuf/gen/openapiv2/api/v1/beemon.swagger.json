@@ -130,18 +130,36 @@
         "syscall": {
           "$ref": "#/definitions/v1SyscallEvent"
         },
-        "file": {
-          "$ref": "#/definitions/v1FileEvent"
+        "fileOpen": {
+          "$ref": "#/definitions/v1FileOpenEvent"
         },
-        "network": {
-          "$ref": "#/definitions/v1NetworkEvent"
+        "networkConnect": {
+          "$ref": "#/definitions/v1NetworkConnectEvent"
         },
         "process": {
           "$ref": "#/definitions/v1ProcessEvent"
+        },
+        "fileRead": {
+          "$ref": "#/definitions/v1FileReadEvent"
+        },
+        "fileWrite": {
+          "$ref": "#/definitions/v1FileWriteEvent"
+        },
+        "fileClose": {
+          "$ref": "#/definitions/v1FileCloseEvent"
         }
       }
     },
-    "v1FileEvent": {
+    "v1FileCloseEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1FileOpenEvent": {
       "type": "object",
       "properties": {
         "filename": {
@@ -150,6 +168,32 @@
         "flags": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "v1FileReadEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "count": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1FileWriteEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "count": {
+          "type": "string",
+          "format": "uint64"
         }
       }
     },
@@ -165,14 +209,16 @@
         }
       }
     },
-    "v1NetworkEvent": {
+    "v1NetworkConnectEvent": {
       "type": "object",
       "properties": {
         "saddr": {
-          "type": "string"
+          "type": "integer",
+          "format": "int64"
         },
         "daddr": {
-          "type": "string"
+          "type": "integer",
+          "format": "int64"
         },
         "sport": {
           "type": "integer",
@@ -183,7 +229,8 @@
           "format": "int64"
         },
         "family": {
-          "type": "string"
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -203,19 +250,36 @@
         },
         "state": {
           "type": "string"
+        },
+        "memoryUsageBytes": {
+          "type": "string",
+          "format": "uint64",
+          "title": "Usage"
+        },
+        "cpuUsagePercent": {
+          "type": "number",
+          "format": "float"
+        },
+        "memoryLimitBytes": {
+          "type": "string",
+          "format": "uint64",
+          "description": "0 means no limit",
+          "title": "Limits"
+        },
+        "cpuQuotaUs": {
+          "type": "string",
+          "format": "uint64",
+          "title": "0 means no limit"
+        },
+        "cpuPeriodUs": {
+          "type": "string",
+          "format": "uint64"
         }
       }
     },
     "v1ProcessEvent": {
       "type": "object",
       "properties": {
-        "childPid": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "comm": {
-          "type": "string"
-        },
         "isExec": {
           "type": "boolean"
         },
@@ -224,6 +288,20 @@
         },
         "isExit": {
           "type": "boolean"
+        },
+        "comm": {
+          "type": "string"
+        },
+        "childPid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "exitCode": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "filename": {
+          "type": "string"
         }
       }
     },

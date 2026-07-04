@@ -1,15 +1,19 @@
-.PHONY: all generate generate-ebpf build build-ui clean run
+.PHONY: all generate-proto generate-ebpf build build-ebpf build-bff build-ui clean run
 
-all: generate generate-ebpf build build-ui
+all: generate-proto generate-ebpf build build-ui
 
-generate:
+generate-proto:
 	$(MAKE) -C protobuf generate
 
 generate-ebpf:
 	$(MAKE) -C userspace generate
 
-build:
+build: build-ebpf build-bff
+
+build-ebpf:
 	$(MAKE) -C userspace build
+
+build-bff:
 	$(MAKE) -C webui/bff build
 
 build-ui:
