@@ -125,6 +125,19 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			memLimit, cpuQuota, cpuPeriod, pidsLimit = ReadCgroupLimits(sysFsCgroup)
 		}
 
+		// Read namespaces
+		var namespaces []string
+		nsPath := filepath.Join(procDir, "ns")
+		nsEntries, err := os.ReadDir(nsPath)
+		if err == nil {
+			for _, e := range nsEntries {
+				target, err := os.Readlink(filepath.Join(nsPath, e.Name()))
+				if err == nil {
+					namespaces = append(namespaces, fmt.Sprintf("%s:%s", e.Name(), target))
+				}
+			}
+		}
+
 		processes = append(processes, &pb.Process{
 			Pid:              uint32(pid),
 			Ppid:             ppid,
@@ -136,6 +149,7 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			CpuQuotaUs:       cpuQuota,
 			CpuPeriodUs:      cpuPeriod,
 			PidsLimit:        pidsLimit,
+			Namespaces:       namespaces,
 		})
 	}
 

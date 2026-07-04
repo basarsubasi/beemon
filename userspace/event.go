@@ -151,6 +151,32 @@ func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 				Fd: bpfEvent.Close.Fd,
 			},
 		}
+	case 8: // EVENT_TYPE_CHROOT
+		event.Event = &pb.Event_Chroot{
+			Chroot: &pb.ChrootEvent{
+				Path: int8ToStr(bpfEvent.Isolate.Path1[:]),
+			},
+		}
+	case 9: // EVENT_TYPE_PIVOT_ROOT
+		event.Event = &pb.Event_PivotRoot{
+			PivotRoot: &pb.PivotRootEvent{
+				NewRoot: int8ToStr(bpfEvent.Isolate.Path1[:]),
+				PutOld:  int8ToStr(bpfEvent.Isolate.Path2[:]),
+			},
+		}
+	case 10: // EVENT_TYPE_SETNS
+		event.Event = &pb.Event_Setns{
+			Setns: &pb.SetnsEvent{
+				Fd:     bpfEvent.Isolate.Val1,
+				Nstype: bpfEvent.Isolate.Val2,
+			},
+		}
+	case 11: // EVENT_TYPE_UNSHARE
+		event.Event = &pb.Event_Unshare{
+			Unshare: &pb.UnshareEvent{
+				Flags: bpfEvent.Isolate.Val1,
+			},
+		}
 	}
 
 	select {

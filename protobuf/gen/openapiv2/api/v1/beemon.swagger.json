@@ -116,6 +116,14 @@
         }
       }
     },
+    "v1ChrootEvent": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      }
+    },
     "v1Event": {
       "type": "object",
       "properties": {
@@ -127,17 +135,17 @@
           "type": "integer",
           "format": "int64"
         },
+        "process": {
+          "$ref": "#/definitions/v1ProcessEvent"
+        },
+        "limitChanged": {
+          "$ref": "#/definitions/v1LimitChangedEvent"
+        },
         "syscall": {
           "$ref": "#/definitions/v1SyscallEvent"
         },
         "fileOpen": {
           "$ref": "#/definitions/v1FileOpenEvent"
-        },
-        "networkConnect": {
-          "$ref": "#/definitions/v1NetworkConnectEvent"
-        },
-        "process": {
-          "$ref": "#/definitions/v1ProcessEvent"
         },
         "fileRead": {
           "$ref": "#/definitions/v1FileReadEvent"
@@ -148,8 +156,20 @@
         "fileClose": {
           "$ref": "#/definitions/v1FileCloseEvent"
         },
-        "limitChanged": {
-          "$ref": "#/definitions/v1LimitChangedEvent"
+        "networkConnect": {
+          "$ref": "#/definitions/v1NetworkConnectEvent"
+        },
+        "chroot": {
+          "$ref": "#/definitions/v1ChrootEvent"
+        },
+        "pivotRoot": {
+          "$ref": "#/definitions/v1PivotRootEvent"
+        },
+        "setns": {
+          "$ref": "#/definitions/v1SetnsEvent"
+        },
+        "unshare": {
+          "$ref": "#/definitions/v1UnshareEvent"
         }
       }
     },
@@ -262,6 +282,17 @@
         }
       }
     },
+    "v1PivotRootEvent": {
+      "type": "object",
+      "properties": {
+        "newRoot": {
+          "type": "string"
+        },
+        "putOld": {
+          "type": "string"
+        }
+      }
+    },
     "v1Process": {
       "type": "object",
       "properties": {
@@ -307,6 +338,13 @@
           "type": "string",
           "format": "uint64",
           "title": "0 means no limit (or max)"
+        },
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Namespaces"
         }
       }
     },
@@ -344,10 +382,32 @@
         }
       }
     },
+    "v1SetnsEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "nstype": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "v1SyscallEvent": {
       "type": "object",
       "properties": {
         "syscallId": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1UnshareEvent": {
+      "type": "object",
+      "properties": {
+        "flags": {
           "type": "integer",
           "format": "int64"
         }

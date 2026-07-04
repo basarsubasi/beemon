@@ -4,6 +4,7 @@ import type { Process, ListProcessesResponse } from "../lib/types";
 import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
+import { Progress } from "./ui/progress";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit';
@@ -12,8 +13,8 @@ type SortDirection = 'asc' | 'desc';
 export function Dashboard() {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [filter, setFilter] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>('pid');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortKey, setSortKey] = useState<SortKey>('memory');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   const navigate = useNavigate();
 
@@ -159,8 +160,16 @@ export function Dashboard() {
                     {proc.state}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-300 py-4 px-6">
-                  {formatBytes(proc.memoryUsageBytes)}
+                <TableCell className="text-right font-mono text-zinc-300 py-4 px-6 w-[200px]">
+                  <div className="flex flex-col gap-1 items-end">
+                    <span>{formatBytes(proc.memoryUsageBytes)}</span>
+                    {proc.memoryLimitBytes !== "0" && (
+                      <Progress 
+                        value={(parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100} 
+                        className="h-1.5 w-24"
+                      />
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right font-mono text-zinc-500 py-4 px-6">
                   {proc.memoryLimitBytes !== "0" ? formatBytes(proc.memoryLimitBytes) : "Max"}
