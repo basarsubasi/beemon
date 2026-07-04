@@ -523,6 +523,7 @@ type FileWriteEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Fd            uint32                 `protobuf:"varint,1,opt,name=fd,proto3" json:"fd,omitempty"`
 	Count         uint64                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -569,6 +570,13 @@ func (x *FileWriteEvent) GetCount() uint64 {
 		return x.Count
 	}
 	return 0
+}
+
+func (x *FileWriteEvent) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
 }
 
 type FileCloseEvent struct {
@@ -796,6 +804,7 @@ type ProcessEvent struct {
 	ChildPid      uint32                 `protobuf:"varint,5,opt,name=child_pid,json=childPid,proto3" json:"child_pid,omitempty"`
 	ExitCode      int32                  `protobuf:"varint,6,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
 	Filename      string                 `protobuf:"bytes,7,opt,name=filename,proto3" json:"filename,omitempty"`
+	Args          []string               `protobuf:"bytes,8,rep,name=args,proto3" json:"args,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -877,6 +886,13 @@ func (x *ProcessEvent) GetFilename() string {
 		return x.Filename
 	}
 	return ""
+}
+
+func (x *ProcessEvent) GetArgs() []string {
+	if x != nil {
+		return x.Args
+	}
+	return nil
 }
 
 type LimitChangedEvent struct {
@@ -990,10 +1006,11 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x05event\"5\n" +
 	"\rFileReadEvent\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x04R\x05count\"6\n" +
+	"\x05count\x18\x02 \x01(\x04R\x05count\"J\n" +
 	"\x0eFileWriteEvent\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x04R\x05count\" \n" +
+	"\x05count\x18\x02 \x01(\x04R\x05count\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\" \n" +
 	"\x0eFileCloseEvent\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\rR\x02fd\"-\n" +
 	"\fSyscallEvent\x12\x1d\n" +
@@ -1007,7 +1024,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x05daddr\x18\x02 \x01(\rR\x05daddr\x12\x14\n" +
 	"\x05sport\x18\x03 \x01(\rR\x05sport\x12\x14\n" +
 	"\x05dport\x18\x04 \x01(\rR\x05dport\x12\x16\n" +
-	"\x06family\x18\x05 \x01(\rR\x06family\"\xc3\x01\n" +
+	"\x06family\x18\x05 \x01(\rR\x06family\"\xd7\x01\n" +
 	"\fProcessEvent\x12\x17\n" +
 	"\ais_exec\x18\x01 \x01(\bR\x06isExec\x12\x17\n" +
 	"\ais_fork\x18\x02 \x01(\bR\x06isFork\x12\x17\n" +
@@ -1015,7 +1032,8 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x04comm\x18\x04 \x01(\tR\x04comm\x12\x1b\n" +
 	"\tchild_pid\x18\x05 \x01(\rR\bchildPid\x12\x1b\n" +
 	"\texit_code\x18\x06 \x01(\x05R\bexitCode\x12\x1a\n" +
-	"\bfilename\x18\a \x01(\tR\bfilename\"\xa6\x01\n" +
+	"\bfilename\x18\a \x01(\tR\bfilename\x12\x12\n" +
+	"\x04args\x18\b \x03(\tR\x04args\"\xa6\x01\n" +
 	"\x11LimitChangedEvent\x12,\n" +
 	"\x12memory_limit_bytes\x18\x01 \x01(\x04R\x10memoryLimitBytes\x12 \n" +
 	"\fcpu_quota_us\x18\x02 \x01(\x04R\n" +

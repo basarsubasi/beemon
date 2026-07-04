@@ -46,8 +46,9 @@ type BeemonEventT struct {
 		IsExit   uint8
 		IsExec   uint8
 		IsFork   uint8
+		ArgCount uint8
 		Filename [256]int8
-		_        [1]byte
+		Args     [6][64]int8
 	}
 	_  [4]byte
 	Rw struct {
@@ -55,6 +56,7 @@ type BeemonEventT struct {
 		Fd    uint32
 		_     [4]byte
 		Count uint64
+		Data  [256]int8
 	}
 	Close struct {
 		_  structs.HostLayout

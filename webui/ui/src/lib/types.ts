@@ -21,7 +21,7 @@ export interface BeemonEvent {
   syscall?: { syscallId: number };
   fileOpen?: { filename: string; flags: number };
   fileRead?: { fd: number; count: string };
-  fileWrite?: { fd: number; count: string };
+  fileWrite?: { fd: number; count: string; data?: string };
   fileClose?: { fd: number };
   networkConnect?: {
     saddr: number;
@@ -38,6 +38,7 @@ export interface BeemonEvent {
     childPid: number;
     exitCode: number;
     filename: string;
+    args?: string[];
   };
   limitChanged?: {
     memoryLimitBytes: string;

@@ -106,6 +106,10 @@ func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 			},
 		}
 	case 4: // EVENT_TYPE_PROCESS
+		var args []string
+		for i := uint8(0); i < bpfEvent.Process.ArgCount && i < 6; i++ {
+			args = append(args, int8ToStr(bpfEvent.Process.Args[i][:]))
+		}
 		event.Event = &pb.Event_Process{
 			Process: &pb.ProcessEvent{
 				IsExec:   bpfEvent.Process.IsExec > 0,
@@ -115,6 +119,7 @@ func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 				ChildPid: bpfEvent.Process.ChildPid,
 				ExitCode: bpfEvent.Process.ExitCode,
 				Filename: int8ToStr(bpfEvent.Process.Filename[:]),
+				Args:     args,
 			},
 		}
 	case 5: // EVENT_TYPE_FILE_READ
@@ -125,10 +130,19 @@ func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 			},
 		}
 	case 6: // EVENT_TYPE_FILE_WRITE
+		dataLen := bpfEvent.Rw.Count
+		if dataLen > 256 {
+			dataLen = 256
+		}
+		var dataBytes []byte
+		for i := uint64(0); i < dataLen; i++ {
+			dataBytes = append(dataBytes, byte(bpfEvent.Rw.Data[i]))
+		}
 		event.Event = &pb.Event_FileWrite{
 			FileWrite: &pb.FileWriteEvent{
 				Fd:    bpfEvent.Rw.Fd,
 				Count: bpfEvent.Rw.Count,
+				Data:  dataBytes,
 			},
 		}
 	case 7: // EVENT_TYPE_FILE_CLOSE

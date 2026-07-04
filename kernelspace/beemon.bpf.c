@@ -46,11 +46,14 @@ struct event_t {
         u8 is_exit;
         u8 is_exec;
         u8 is_fork;
+        u8 arg_count;
         char filename[256];
+        char args[6][64];
     } process;
     struct {
         u32 fd;
         u64 count;
+        char data[256];
     } rw;
     struct {
         u32 fd;
@@ -105,6 +108,20 @@ int trace_sys_enter_execve(struct trace_event_raw_sys_enter *ctx) {
     // args[0] is const char *filename
     const char *filename = (const char *)ctx->args[0];
     bpf_probe_read_user_str(&e->process.filename, sizeof(e->process.filename), filename);
+
+    // args[1] is const char *const *argv
+    const char **argv = (const char **)ctx->args[1];
+    e->process.arg_count = 0;
+    if (argv) {
+        #pragma unroll
+        for (int i = 0; i < 6; i++) {
+            const char *argp = NULL;
+            bpf_probe_read_user(&argp, sizeof(argp), &argv[i]);
+            if (!argp) break;
+            bpf_probe_read_user_str(&e->process.args[i], sizeof(e->process.args[i]), argp);
+            e->process.arg_count++;
+        }
+    }
 
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -205,6 +222,14 @@ int trace_sys_enter_write(struct trace_event_raw_sys_enter *ctx) {
     e->ts = bpf_ktime_get_ns();
     e->rw.fd = (u32)ctx->args[0];
     e->rw.count = (u64)ctx->args[2];
+    
+    // Read up to 256 bytes of data
+    const char *buf = (const char *)ctx->args[1];
+    u64 bytes_to_read = e->rw.count;
+    if (bytes_to_read > sizeof(e->rw.data)) {
+        bytes_to_read = sizeof(e->rw.data);
+    }
+    bpf_probe_read_user(&e->rw.data, bytes_to_read, buf);
 
     bpf_ringbuf_submit(e, 0);
     return 0;
