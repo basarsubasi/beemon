@@ -1,0 +1,14 @@
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+
+WORKDIR /app
+COPY protobuf/ ./protobuf/
+COPY userspace/ ./userspace/
+
+WORKDIR /app/userspace
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /app/beemon-daemon .
+
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/beemon-daemon .
+CMD ["./beemon-daemon"]
