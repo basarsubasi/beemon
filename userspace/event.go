@@ -71,14 +71,16 @@ func (s *server) StreamEvents(req *pb.StreamEventsRequest, stream pb.BeemonServi
 func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	ch, ok := s.streams[bpfEvent.Pid]
+	// bpfEvent.Tgid is the Process ID (PID in userspace), bpfEvent.Pid is the Thread ID (TID)
+	// The UI requests the stream using the Process ID.
+	ch, ok := s.streams[bpfEvent.Tgid]
 	if !ok {
 		return // no one listening
 	}
 
 	event := &pb.Event{
 		TimestampNs: bpfEvent.Ts,
-		Pid:         bpfEvent.Pid,
+		Pid:         bpfEvent.Tgid, // Send the Process ID to the UI so it matches
 	}
 
 	switch bpfEvent.Type {
