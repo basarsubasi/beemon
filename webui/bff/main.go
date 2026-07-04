@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -37,22 +38,20 @@ func run() error {
 	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(swaggerAssets)))
 	
 	httpMux := http.NewServeMux()
+	
+	// Register Custom SSE Endpoint
+	httpMux.Handle("/api/v1/processes/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/events/sse") {
+			handleSSE(cfg)(w, r)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	}))
+
 	httpMux.Handle("/", mux)
 	httpMux.Handle("/swagger/", swaggerHandler)
 
-	// Add CORS for UI development
-	corsHandler := func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "*")
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			h.ServeHTTP(w, r)
-		})
-	}
+
 
 	log.Printf("BFF Server listening on :%d\n", cfg.HTTPPort)
 	return http.ListenAndServe(fmt.Sprintf(":%d", cfg.HTTPPort), corsHandler(httpMux))
