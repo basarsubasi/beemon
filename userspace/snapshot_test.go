@@ -53,6 +53,9 @@ func TestListProcesses(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cgroupTargetDir, "cpu.max"), []byte("50000 100000\n"), 0644); err != nil {
 		t.Fatalf("failed to write cpu.max: %v", err)
 	}
+	if err := os.WriteFile(filepath.Join(cgroupTargetDir, "pids.max"), []byte("250\n"), 0644); err != nil {
+		t.Fatalf("failed to write pids.max: %v", err)
+	}
 
 	// Run the test
 	procs, err := ListProcesses("")
@@ -82,5 +85,8 @@ func TestListProcesses(t *testing.T) {
 	}
 	if p.CpuPeriodUs != 100000 {
 		t.Errorf("Expected CpuPeriodUs 100000, got %d", p.CpuPeriodUs)
+	}
+	if p.PidsLimit != 250 {
+		t.Errorf("Expected PidsLimit 250, got %d", p.PidsLimit)
 	}
 }

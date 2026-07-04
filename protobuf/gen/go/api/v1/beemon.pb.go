@@ -124,6 +124,7 @@ type Process struct {
 	MemoryLimitBytes uint64 `protobuf:"varint,7,opt,name=memory_limit_bytes,json=memoryLimitBytes,proto3" json:"memory_limit_bytes,omitempty"` // 0 means no limit
 	CpuQuotaUs       uint64 `protobuf:"varint,8,opt,name=cpu_quota_us,json=cpuQuotaUs,proto3" json:"cpu_quota_us,omitempty"`                   // 0 means no limit
 	CpuPeriodUs      uint64 `protobuf:"varint,9,opt,name=cpu_period_us,json=cpuPeriodUs,proto3" json:"cpu_period_us,omitempty"`
+	PidsLimit        uint64 `protobuf:"varint,10,opt,name=pids_limit,json=pidsLimit,proto3" json:"pids_limit,omitempty"` // 0 means no limit (or max)
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -221,6 +222,13 @@ func (x *Process) GetCpuPeriodUs() uint64 {
 	return 0
 }
 
+func (x *Process) GetPidsLimit() uint64 {
+	if x != nil {
+		return x.PidsLimit
+	}
+	return 0
+}
+
 type StreamEventsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Pid           uint32                 `protobuf:"varint,1,opt,name=pid,proto3" json:"pid,omitempty"`
@@ -278,6 +286,7 @@ type Event struct {
 	//	*Event_FileRead
 	//	*Event_FileWrite
 	//	*Event_FileClose
+	//	*Event_LimitChanged
 	Event         isEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -397,6 +406,15 @@ func (x *Event) GetFileClose() *FileCloseEvent {
 	return nil
 }
 
+func (x *Event) GetLimitChanged() *LimitChangedEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_LimitChanged); ok {
+			return x.LimitChanged
+		}
+	}
+	return nil
+}
+
 type isEvent_Event interface {
 	isEvent_Event()
 }
@@ -429,6 +447,10 @@ type Event_FileClose struct {
 	FileClose *FileCloseEvent `protobuf:"bytes,10,opt,name=file_close,json=fileClose,proto3,oneof"`
 }
 
+type Event_LimitChanged struct {
+	LimitChanged *LimitChangedEvent `protobuf:"bytes,11,opt,name=limit_changed,json=limitChanged,proto3,oneof"`
+}
+
 func (*Event_Syscall) isEvent_Event() {}
 
 func (*Event_FileOpen) isEvent_Event() {}
@@ -442,6 +464,8 @@ func (*Event_FileRead) isEvent_Event() {}
 func (*Event_FileWrite) isEvent_Event() {}
 
 func (*Event_FileClose) isEvent_Event() {}
+
+func (*Event_LimitChanged) isEvent_Event() {}
 
 type FileReadEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -855,6 +879,74 @@ func (x *ProcessEvent) GetFilename() string {
 	return ""
 }
 
+type LimitChangedEvent struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	MemoryLimitBytes uint64                 `protobuf:"varint,1,opt,name=memory_limit_bytes,json=memoryLimitBytes,proto3" json:"memory_limit_bytes,omitempty"`
+	CpuQuotaUs       uint64                 `protobuf:"varint,2,opt,name=cpu_quota_us,json=cpuQuotaUs,proto3" json:"cpu_quota_us,omitempty"`
+	CpuPeriodUs      uint64                 `protobuf:"varint,3,opt,name=cpu_period_us,json=cpuPeriodUs,proto3" json:"cpu_period_us,omitempty"`
+	PidsLimit        uint64                 `protobuf:"varint,4,opt,name=pids_limit,json=pidsLimit,proto3" json:"pids_limit,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *LimitChangedEvent) Reset() {
+	*x = LimitChangedEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LimitChangedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LimitChangedEvent) ProtoMessage() {}
+
+func (x *LimitChangedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LimitChangedEvent.ProtoReflect.Descriptor instead.
+func (*LimitChangedEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *LimitChangedEvent) GetMemoryLimitBytes() uint64 {
+	if x != nil {
+		return x.MemoryLimitBytes
+	}
+	return 0
+}
+
+func (x *LimitChangedEvent) GetCpuQuotaUs() uint64 {
+	if x != nil {
+		return x.CpuQuotaUs
+	}
+	return 0
+}
+
+func (x *LimitChangedEvent) GetCpuPeriodUs() uint64 {
+	if x != nil {
+		return x.CpuPeriodUs
+	}
+	return 0
+}
+
+func (x *LimitChangedEvent) GetPidsLimit() uint64 {
+	if x != nil {
+		return x.PidsLimit
+	}
+	return 0
+}
+
 var File_api_v1_beemon_proto protoreflect.FileDescriptor
 
 const file_api_v1_beemon_proto_rawDesc = "" +
@@ -864,7 +956,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\vfilter_name\x18\x01 \x01(\tR\n" +
 	"filterName\"I\n" +
 	"\x15ListProcessesResponse\x120\n" +
-	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\"\xb0\x02\n" +
+	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\"\xcf\x02\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +
@@ -875,9 +967,12 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x12memory_limit_bytes\x18\a \x01(\x04R\x10memoryLimitBytes\x12 \n" +
 	"\fcpu_quota_us\x18\b \x01(\x04R\n" +
 	"cpuQuotaUs\x12\"\n" +
-	"\rcpu_period_us\x18\t \x01(\x04R\vcpuPeriodUs\"0\n" +
+	"\rcpu_period_us\x18\t \x01(\x04R\vcpuPeriodUs\x12\x1d\n" +
+	"\n" +
+	"pids_limit\x18\n" +
+	" \x01(\x04R\tpidsLimit\"0\n" +
 	"\x13StreamEventsRequest\x12\x19\n" +
-	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\"\xe4\x03\n" +
+	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\"\xa9\x04\n" +
 	"\x05Event\x12!\n" +
 	"\ftimestamp_ns\x18\x01 \x01(\x04R\vtimestampNs\x12\x10\n" +
 	"\x03pid\x18\x02 \x01(\rR\x03pid\x123\n" +
@@ -890,7 +985,8 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"file_write\x18\t \x01(\v2\x19.beemon.v1.FileWriteEventH\x00R\tfileWrite\x12:\n" +
 	"\n" +
 	"file_close\x18\n" +
-	" \x01(\v2\x19.beemon.v1.FileCloseEventH\x00R\tfileCloseB\a\n" +
+	" \x01(\v2\x19.beemon.v1.FileCloseEventH\x00R\tfileClose\x12C\n" +
+	"\rlimit_changed\x18\v \x01(\v2\x1c.beemon.v1.LimitChangedEventH\x00R\flimitChangedB\a\n" +
 	"\x05event\"5\n" +
 	"\rFileReadEvent\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x14\n" +
@@ -919,7 +1015,14 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x04comm\x18\x04 \x01(\tR\x04comm\x12\x1b\n" +
 	"\tchild_pid\x18\x05 \x01(\rR\bchildPid\x12\x1b\n" +
 	"\texit_code\x18\x06 \x01(\x05R\bexitCode\x12\x1a\n" +
-	"\bfilename\x18\a \x01(\tR\bfilename2\xea\x01\n" +
+	"\bfilename\x18\a \x01(\tR\bfilename\"\xa6\x01\n" +
+	"\x11LimitChangedEvent\x12,\n" +
+	"\x12memory_limit_bytes\x18\x01 \x01(\x04R\x10memoryLimitBytes\x12 \n" +
+	"\fcpu_quota_us\x18\x02 \x01(\x04R\n" +
+	"cpuQuotaUs\x12\"\n" +
+	"\rcpu_period_us\x18\x03 \x01(\x04R\vcpuPeriodUs\x12\x1d\n" +
+	"\n" +
+	"pids_limit\x18\x04 \x01(\x04R\tpidsLimit2\xea\x01\n" +
 	"\rBeemonService\x12m\n" +
 	"\rListProcesses\x12\x1f.beemon.v1.ListProcessesRequest\x1a .beemon.v1.ListProcessesResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/processes\x12j\n" +
 	"\fStreamEvents\x12\x1e.beemon.v1.StreamEventsRequest\x1a\x10.beemon.v1.Event\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/processes/{pid}/events0\x01B?Z=github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1b\x06proto3"
@@ -936,7 +1039,7 @@ func file_api_v1_beemon_proto_rawDescGZIP() []byte {
 	return file_api_v1_beemon_proto_rawDescData
 }
 
-var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_api_v1_beemon_proto_goTypes = []any{
 	(*ListProcessesRequest)(nil),  // 0: beemon.v1.ListProcessesRequest
 	(*ListProcessesResponse)(nil), // 1: beemon.v1.ListProcessesResponse
@@ -950,6 +1053,7 @@ var file_api_v1_beemon_proto_goTypes = []any{
 	(*FileOpenEvent)(nil),         // 9: beemon.v1.FileOpenEvent
 	(*NetworkConnectEvent)(nil),   // 10: beemon.v1.NetworkConnectEvent
 	(*ProcessEvent)(nil),          // 11: beemon.v1.ProcessEvent
+	(*LimitChangedEvent)(nil),     // 12: beemon.v1.LimitChangedEvent
 }
 var file_api_v1_beemon_proto_depIdxs = []int32{
 	2,  // 0: beemon.v1.ListProcessesResponse.processes:type_name -> beemon.v1.Process
@@ -960,15 +1064,16 @@ var file_api_v1_beemon_proto_depIdxs = []int32{
 	5,  // 5: beemon.v1.Event.file_read:type_name -> beemon.v1.FileReadEvent
 	6,  // 6: beemon.v1.Event.file_write:type_name -> beemon.v1.FileWriteEvent
 	7,  // 7: beemon.v1.Event.file_close:type_name -> beemon.v1.FileCloseEvent
-	0,  // 8: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
-	3,  // 9: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
-	1,  // 10: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
-	4,  // 11: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.Event
-	10, // [10:12] is the sub-list for method output_type
-	8,  // [8:10] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	12, // 8: beemon.v1.Event.limit_changed:type_name -> beemon.v1.LimitChangedEvent
+	0,  // 9: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
+	3,  // 10: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
+	1,  // 11: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
+	4,  // 12: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.Event
+	11, // [11:13] is the sub-list for method output_type
+	9,  // [9:11] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_beemon_proto_init() }
@@ -984,6 +1089,7 @@ func file_api_v1_beemon_proto_init() {
 		(*Event_FileRead)(nil),
 		(*Event_FileWrite)(nil),
 		(*Event_FileClose)(nil),
+		(*Event_LimitChanged)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -991,7 +1097,7 @@ func file_api_v1_beemon_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_beemon_proto_rawDesc), len(file_api_v1_beemon_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

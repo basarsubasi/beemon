@@ -52,7 +52,15 @@ func (s *server) StreamEvents(req *pb.StreamEventsRequest, stream pb.BeemonServi
 	s.streams[pid] = ch
 	s.mu.Unlock()
 
+	watcher, err := WatchCgroupLimits(pid, ch)
+	if err != nil {
+		log.Printf("failed to watch cgroup limits for pid %d: %v", pid, err)
+	}
+
 	defer func() {
+		if watcher != nil {
+			watcher.Close()
+		}
 		s.mu.Lock()
 		delete(s.streams, pid)
 		s.mu.Unlock()

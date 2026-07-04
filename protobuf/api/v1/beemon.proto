@@ -43,6 +43,7 @@ message Process {
   uint64 memory_limit_bytes = 7; // 0 means no limit
   uint64 cpu_quota_us = 8;       // 0 means no limit
   uint64 cpu_period_us = 9;
+  uint64 pids_limit = 10;        // 0 means no limit (or max)
 }
 
 message StreamEventsRequest {
@@ -61,6 +62,7 @@ message Event {
     FileReadEvent file_read = 8;
     FileWriteEvent file_write = 9;
     FileCloseEvent file_close = 10;
+    LimitChangedEvent limit_changed = 11;
   }
 }
 
@@ -103,4 +105,11 @@ message ProcessEvent {
   uint32 child_pid = 5;
   int32 exit_code = 6;
   string filename = 7;
+}
+
+message LimitChangedEvent {
+  uint64 memory_limit_bytes = 1;
+  uint64 cpu_quota_us = 2;
+  uint64 cpu_period_us = 3;
+  uint64 pids_limit = 4;
 }

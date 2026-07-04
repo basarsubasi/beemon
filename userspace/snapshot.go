@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +14,56 @@ var (
 	procRoot   = "/proc"
 	cgroupRoot = "/sys/fs/cgroup"
 )
+
+func GetCgroupPathForPid(pid uint32) string {
+	cgroupData, err := os.ReadFile(filepath.Join(procRoot, fmt.Sprintf("%d", pid), "cgroup"))
+	if err == nil {
+		cgroupPath := ""
+		for _, line := range strings.Split(string(cgroupData), "\n") {
+			if strings.HasPrefix(line, "0::") {
+				cgroupPath = strings.TrimPrefix(line, "0::")
+				break
+			}
+		}
+		if cgroupPath != "" {
+			return filepath.Join(cgroupRoot, cgroupPath)
+		}
+	}
+	return ""
+}
+
+func ReadCgroupLimits(sysFsCgroup string) (memLimit, cpuQuota, cpuPeriod, pidsLimit uint64) {
+	// Memory Limit
+	memMax, err := os.ReadFile(filepath.Join(sysFsCgroup, "memory.max"))
+	if err == nil {
+		memStr := strings.TrimSpace(string(memMax))
+		if memStr != "max" {
+			memLimit, _ = strconv.ParseUint(memStr, 10, 64)
+		}
+	}
+
+	// CPU Limit
+	cpuMax, err := os.ReadFile(filepath.Join(sysFsCgroup, "cpu.max"))
+	if err == nil {
+		cpuFields := strings.Fields(strings.TrimSpace(string(cpuMax)))
+		if len(cpuFields) == 2 {
+			if cpuFields[0] != "max" {
+				cpuQuota, _ = strconv.ParseUint(cpuFields[0], 10, 64)
+			}
+			cpuPeriod, _ = strconv.ParseUint(cpuFields[1], 10, 64)
+		}
+	}
+	
+	// PIDs Limit
+	pidsMax, err := os.ReadFile(filepath.Join(sysFsCgroup, "pids.max"))
+	if err == nil {
+		pidsStr := strings.TrimSpace(string(pidsMax))
+		if pidsStr != "max" {
+			pidsLimit, _ = strconv.ParseUint(pidsStr, 10, 64)
+		}
+	}
+	return
+}
 
 // ListProcesses reads /proc to get all running processes, their usage, and limits
 func ListProcesses(filter string) ([]*pb.Process, error) {
@@ -68,41 +119,10 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 		var cpuUsage float32 = 0.0
 
 		// Read cgroup v2 limits
-		var memLimit, cpuQuota, cpuPeriod uint64
-		cgroupData, err := os.ReadFile(filepath.Join(procDir, "cgroup"))
-		if err == nil {
-			cgroupPath := ""
-			for _, line := range strings.Split(string(cgroupData), "\n") {
-				if strings.HasPrefix(line, "0::") {
-					cgroupPath = strings.TrimPrefix(line, "0::")
-					break
-				}
-			}
-
-			if cgroupPath != "" {
-				sysFsCgroup := filepath.Join(cgroupRoot, cgroupPath)
-				
-				// Memory Limit
-				memMax, err := os.ReadFile(filepath.Join(sysFsCgroup, "memory.max"))
-				if err == nil {
-					memStr := strings.TrimSpace(string(memMax))
-					if memStr != "max" {
-						memLimit, _ = strconv.ParseUint(memStr, 10, 64)
-					}
-				}
-
-				// CPU Limit
-				cpuMax, err := os.ReadFile(filepath.Join(sysFsCgroup, "cpu.max"))
-				if err == nil {
-					cpuFields := strings.Fields(strings.TrimSpace(string(cpuMax)))
-					if len(cpuFields) == 2 {
-						if cpuFields[0] != "max" {
-							cpuQuota, _ = strconv.ParseUint(cpuFields[0], 10, 64)
-						}
-						cpuPeriod, _ = strconv.ParseUint(cpuFields[1], 10, 64)
-					}
-				}
-			}
+		var memLimit, cpuQuota, cpuPeriod, pidsLimit uint64
+		sysFsCgroup := GetCgroupPathForPid(uint32(pid))
+		if sysFsCgroup != "" {
+			memLimit, cpuQuota, cpuPeriod, pidsLimit = ReadCgroupLimits(sysFsCgroup)
 		}
 
 		processes = append(processes, &pb.Process{
@@ -115,6 +135,7 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			MemoryLimitBytes: memLimit,
 			CpuQuotaUs:       cpuQuota,
 			CpuPeriodUs:      cpuPeriod,
+			PidsLimit:        pidsLimit,
 		})
 	}
 

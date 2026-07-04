@@ -5,6 +5,7 @@ go 1.26.4
 require (
 	github.com/basarsubasi/beemon/protobuf v0.0.0-00010101000000-000000000000
 	github.com/cilium/ebpf v0.22.0
+	github.com/fsnotify/fsnotify v1.10.1
 	google.golang.org/grpc v1.82.0
 )
 
