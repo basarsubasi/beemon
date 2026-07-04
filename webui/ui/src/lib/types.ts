@@ -14,6 +14,7 @@ export interface Process {
 
 export interface ListProcessesResponse {
   processes: Process[];
+  hostMemoryTotalBytes: string;
 }
 
 export interface BeemonEvent {

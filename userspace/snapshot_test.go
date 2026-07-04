@@ -58,11 +58,13 @@ func TestListProcesses(t *testing.T) {
 	}
 
 	// Run the test
-	procs, err := ListProcesses("")
+	res, err := ListProcesses("")
 	if err != nil {
 		t.Fatalf("ListProcesses failed: %v", err)
 	}
-
+	
+	procs := res.Processes
+	
 	if len(procs) != 1 {
 		t.Fatalf("Expected 1 process, got %d", len(procs))
 	}

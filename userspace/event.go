@@ -17,11 +17,11 @@ type server struct {
 }
 
 func (s *server) ListProcesses(ctx context.Context, req *pb.ListProcessesRequest) (*pb.ListProcessesResponse, error) {
-	procs, err := ListProcesses(req.FilterName)
+	res, err := ListProcesses(req.FilterName)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.ListProcessesResponse{Processes: procs}, nil
+	return res, nil
 }
 
 func (s *server) StreamEvents(req *pb.StreamEventsRequest, stream pb.BeemonService_StreamEventsServer) error {

@@ -2,16 +2,16 @@ import { useEffect, useState, useRef } from "react";
 import type { BeemonEvent, WSMessage } from "../lib/types";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { ScrollArea } from "./ui/scroll-area";
 import { Activity } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 
-export function ProcessStream({ pid }: { pid: number }) {
+export function ProcessStream({ pid, process }: { pid: number, process?: import("../lib/types").Process }) {
   const [events, setEvents] = useState<BeemonEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [lastPing, setLastPing] = useState<number | null>(null);
-  const [limits, setLimits] = useState({ memory: "N/A", cpu: "N/A" });
+  const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
   const [syscallCounts, setSyscallCounts] = useState<Record<string, number>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     setEvents([]);
@@ -80,9 +80,8 @@ export function ProcessStream({ pid }: { pid: number }) {
 
   useEffect(() => {
     // Auto-scroll to bottom
-    const scrollContainer = document.querySelector('[data-slot="scroll-area-viewport"]');
-    if (scrollContainer) {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [events]);
 
@@ -179,6 +178,7 @@ export function ProcessStream({ pid }: { pid: number }) {
           <span className="text-sm text-zinc-500 ml-2">Monitoring PID {pid}</span>
         </div>
         <div className="flex gap-4 text-xs font-mono text-zinc-400">
+          <span>MEM USAGE: <span className="text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
           <span>MEM LIMIT: <span className="text-white">{limits.memory}</span></span>
           <span>CPU LIMIT: <span className="text-white">{limits.cpu}</span></span>
         </div>
@@ -186,7 +186,7 @@ export function ProcessStream({ pid }: { pid: number }) {
       
       <div className="flex gap-6 h-full">
         <Card className="flex-1 bg-black overflow-hidden border-zinc-800 shadow-xl flex flex-col h-[500px]">
-          <ScrollArea className="flex-1 w-full p-4 font-mono text-xs">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
             {events.map((ev, i) => (
               <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
                 <span className="text-zinc-500 mr-4">
@@ -202,7 +202,7 @@ export function ProcessStream({ pid }: { pid: number }) {
                 <span className="text-[10px] mt-2 opacity-50">Ping connectivity is active. Safe to idle.</span>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </Card>
 
         <Card className="w-[300px] bg-zinc-950 border-zinc-800 shadow-xl p-4 flex flex-col h-[500px]">

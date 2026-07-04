@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -66,10 +67,41 @@ func ReadCgroupLimits(sysFsCgroup string) (memLimit, cpuQuota, cpuPeriod, pidsLi
 }
 
 // ListProcesses reads /proc to get all running processes, their usage, and limits
-func ListProcesses(filter string) ([]*pb.Process, error) {
+func ListProcesses(filter string) (*pb.ListProcessesResponse, error) {
 	dirs, err := os.ReadDir(procRoot)
 	if err != nil {
 		return nil, err
+	}
+	
+	// Fetch CPU usages
+	cpuUsages := make(map[uint32]float32)
+	cmd := exec.Command("ps", "-eo", "pid,%cpu", "--no-headers")
+	out, err := cmd.Output()
+	if err == nil {
+		for _, line := range strings.Split(string(out), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				pid, _ := strconv.ParseUint(fields[0], 10, 32)
+				cpu, _ := strconv.ParseFloat(fields[1], 32)
+				cpuUsages[uint32(pid)] = float32(cpu)
+			}
+		}
+	}
+	
+	// Fetch total host memory
+	var hostMemTotalBytes uint64
+	meminfo, err := os.ReadFile("/proc/meminfo")
+	if err == nil {
+		for _, line := range strings.Split(string(meminfo), "\n") {
+			if strings.HasPrefix(line, "MemTotal:") {
+				fields := strings.Fields(line)
+				if len(fields) >= 2 {
+					kb, _ := strconv.ParseUint(fields[1], 10, 64)
+					hostMemTotalBytes = kb * 1024
+				}
+				break
+			}
+		}
 	}
 
 	var processes []*pb.Process
@@ -116,7 +148,7 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			continue
 		}
 
-		var cpuUsage float32 = 0.0
+		cpuUsage := cpuUsages[uint32(pid)]
 
 		// Read cgroup v2 limits
 		var memLimit, cpuQuota, cpuPeriod, pidsLimit uint64
@@ -153,5 +185,8 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 		})
 	}
 
-	return processes, nil
+	return &pb.ListProcessesResponse{
+		Processes: processes,
+		HostMemoryTotalBytes: hostMemTotalBytes,
+	}, nil
 }
