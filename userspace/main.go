@@ -216,7 +216,8 @@ func main() {
 		}
 	}()
 
-	lis, err := net.Listen("tcp", ":50051")
+	cfg := LoadConfig()
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

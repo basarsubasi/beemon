@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"embed"
-	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -17,11 +17,10 @@ import (
 //go:embed assets/swagger/*
 var swaggerAssets embed.FS
 
-var (
-	grpcServerEndpoint = flag.String("grpc-server-endpoint", "localhost:50051", "gRPC server endpoint")
-)
+
 
 func run() error {
+	cfg := LoadConfig()
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -29,7 +28,7 @@ func run() error {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	
-	err := pb.RegisterBeemonServiceHandlerFromEndpoint(ctx, mux, *grpcServerEndpoint, opts)
+	err := pb.RegisterBeemonServiceHandlerFromEndpoint(ctx, mux, cfg.GRPCEndpoint, opts)
 	if err != nil {
 		return err
 	}
@@ -55,12 +54,12 @@ func run() error {
 		})
 	}
 
-	log.Println("BFF Server listening on :8080")
-	return http.ListenAndServe(":8080", corsHandler(httpMux))
+	log.Printf("BFF Server listening on :%d\n", cfg.HTTPPort)
+	return http.ListenAndServe(fmt.Sprintf(":%d", cfg.HTTPPort), corsHandler(httpMux))
 }
 
 func main() {
-	flag.Parse()
+	// no flags to parse
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}

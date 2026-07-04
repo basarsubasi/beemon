@@ -9,9 +9,14 @@ import (
 	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
 )
 
+var (
+	procRoot   = "/proc"
+	cgroupRoot = "/sys/fs/cgroup"
+)
+
 // ListProcesses reads /proc to get all running processes, their usage, and limits
 func ListProcesses(filter string) ([]*pb.Process, error) {
-	dirs, err := os.ReadDir("/proc")
+	dirs, err := os.ReadDir(procRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +31,7 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			continue
 		}
 
-		procDir := filepath.Join("/proc", d.Name())
+		procDir := filepath.Join(procRoot, d.Name())
 		
 		// Parse status
 		statusData, err := os.ReadFile(filepath.Join(procDir, "status"))
@@ -75,7 +80,7 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			}
 
 			if cgroupPath != "" {
-				sysFsCgroup := filepath.Join("/sys/fs/cgroup", cgroupPath)
+				sysFsCgroup := filepath.Join(cgroupRoot, cgroupPath)
 				
 				// Memory Limit
 				memMax, err := os.ReadFile(filepath.Join(sysFsCgroup, "memory.max"))

@@ -85,15 +85,16 @@ static __always_inline bool should_trace(u32 pid) {
 SEC("tracepoint/syscalls/sys_enter_execve")
 int trace_sys_enter_execve(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
     
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_PROCESS;
     e->ts = bpf_ktime_get_ns();
     e->process.is_exec = 1;
@@ -140,15 +141,16 @@ int trace_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx) {
 SEC("tracepoint/sched/sched_process_exit")
 int trace_sched_process_exit(struct trace_event_raw_sched_process_template *ctx) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
 
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_PROCESS;
     e->ts = bpf_ktime_get_ns();
     e->process.is_exec = 0;
@@ -167,15 +169,16 @@ int trace_sched_process_exit(struct trace_event_raw_sched_process_template *ctx)
 SEC("tracepoint/syscalls/sys_enter_read")
 int trace_sys_enter_read(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
 
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_FILE_READ;
     e->ts = bpf_ktime_get_ns();
     e->rw.fd = (u32)ctx->args[0];
@@ -188,15 +191,16 @@ int trace_sys_enter_read(struct trace_event_raw_sys_enter *ctx) {
 SEC("tracepoint/syscalls/sys_enter_write")
 int trace_sys_enter_write(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
 
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_FILE_WRITE;
     e->ts = bpf_ktime_get_ns();
     e->rw.fd = (u32)ctx->args[0];
@@ -209,15 +213,16 @@ int trace_sys_enter_write(struct trace_event_raw_sys_enter *ctx) {
 SEC("tracepoint/syscalls/sys_enter_close")
 int trace_sys_enter_close(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
 
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_FILE_CLOSE;
     e->ts = bpf_ktime_get_ns();
     e->close.fd = (u32)ctx->args[0];
@@ -229,15 +234,16 @@ int trace_sys_enter_close(struct trace_event_raw_sys_enter *ctx) {
 SEC("tracepoint/syscalls/sys_enter_openat")
 int trace_sys_enter_openat(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
 
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_FILE_OPEN;
     e->ts = bpf_ktime_get_ns();
     e->file.flags = (int)ctx->args[2];
@@ -254,24 +260,31 @@ int trace_sys_enter_openat(struct trace_event_raw_sys_enter *ctx) {
 // -----------------------------------------------------------------------------
 
 SEC("kprobe/tcp_v4_connect")
-int BPF_KPROBE(tcp_v4_connect, struct sock *sk) {
+int BPF_KPROBE(tcp_v4_connect, struct sock *sk, struct sockaddr *uaddr) {
     u64 id = bpf_get_current_pid_tgid();
-    u32 tgid = id;
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
 
-    if (!should_trace(tgid)) return 0;
+    if (!should_trace(user_pid)) return 0;
 
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
     if (!e) return 0;
 
-    e->pid = id >> 32;
-    e->tgid = tgid;
+    e->pid = user_tid;
+    e->tgid = user_pid;
     e->type = EVENT_TYPE_NET_CONN;
     e->ts = bpf_ktime_get_ns();
     e->net.family = 2; // AF_INET
+    
+    // Read from uaddr since sk fields aren't populated at the start of tcp_v4_connect
+    struct sockaddr_in *usin = (struct sockaddr_in *)uaddr;
+    u16 dport = 0;
+    bpf_probe_read_kernel(&dport, sizeof(dport), &usin->sin_port);
+    
     e->net.saddr = BPF_CORE_READ(sk, __sk_common.skc_rcv_saddr);
-    e->net.daddr = BPF_CORE_READ(sk, __sk_common.skc_daddr);
+    bpf_probe_read_kernel(&e->net.daddr, sizeof(e->net.daddr), &usin->sin_addr.s_addr);
     e->net.sport = BPF_CORE_READ(sk, __sk_common.skc_num);
-    e->net.dport = bpf_ntohs(BPF_CORE_READ(sk, __sk_common.skc_dport));
+    e->net.dport = bpf_ntohs(dport);
 
     bpf_ringbuf_submit(e, 0);
     return 0;
