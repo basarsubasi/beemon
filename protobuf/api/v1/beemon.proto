@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package beemon.v1;
+
+option go_package = "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1";
+
+import "google/api/annotations.proto";
+import "buf/validate/validate.proto";
+
+service BeemonService {
+  rpc ListProcesses(ListProcessesRequest) returns (ListProcessesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/processes"
+    };
+  }
+
+  rpc StreamEvents(StreamEventsRequest) returns (stream Event) {
+    option (google.api.http) = {
+      get: "/api/v1/processes/{pid}/events"
+    };
+  }
+}
+
+message ListProcessesRequest {
+  string filter_name = 1;
+}
+
+message ListProcessesResponse {
+  repeated Process processes = 1;
+}
+
+message Process {
+  uint32 pid = 1;
+  uint32 ppid = 2;
+  string name = 3;
+  string state = 4;
+}
+
+message StreamEventsRequest {
+  uint32 pid = 1 [(buf.validate.field).uint32.gt = 0];
+}
+
+message Event {
+  uint64 timestamp_ns = 1;
+  uint32 pid = 2;
+  
+  oneof event_data {
+    SyscallEvent syscall = 3;
+    FileEvent file = 4;
+    NetworkEvent network = 5;
+    ProcessEvent process = 6;
+  }
+}
+
+message SyscallEvent {
+  uint32 syscall_id = 1;
+}
+
+message FileEvent {
+  string filename = 1;
+  int32 flags = 2;
+}
+
+message NetworkEvent {
+  string saddr = 1;
+  string daddr = 2;
+  uint32 sport = 3;
+  uint32 dport = 4;
+  string family = 5;
+}
+
+message ProcessEvent {
+  uint32 child_pid = 1;
+  string comm = 2;
+  bool is_exec = 3;
+  bool is_fork = 4;
+  bool is_exit = 5;
+}
