@@ -1,4 +1,4 @@
-// kernelspace/beemon.bpf.c
+// kernelspace/x86_64/beemon.bpf.c
 #define bpf_target_x86
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>

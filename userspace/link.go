@@ -7,15 +7,22 @@ import (
 	"io"
 	"log"
 
+	"github.com/basarsubasi/beemon/userspace/gen/x86_64"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
+	"github.com/cilium/ebpf/rlimit"
 )
 
 // StartEBPF loads the eBPF objects, attaches the tracepoints, and spawns the ringbuffer reader.
 // It returns a cleanup function that closes all resources.
 func StartEBPF(srv *server) (func(), error) {
-	var objs BeemonObjects
-	if err := LoadBeemonObjects(&objs, nil); err != nil {
+	// Allow the current process to lock memory for eBPF resources.
+	if err := rlimit.RemoveMemlock(); err != nil {
+		return nil, fmt.Errorf("failed to remove memlock: %v", err)
+	}
+
+	objs := x86_64.BeemonObjects{}
+	if err := x86_64.LoadBeemonObjects(&objs, nil); err != nil {
 		return nil, fmt.Errorf("loading objects: %v", err)
 	}
 
@@ -65,8 +72,9 @@ func StartEBPF(srv *server) (func(), error) {
 				continue
 			}
 
-			var bpfEvent BeemonEventT
-			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &bpfEvent); err != nil {
+			var bpfEvent x86_64.BeemonEventT
+			if err := binary.Read(bytes.NewReader(record.RawSample), binary.LittleEndian, &bpfEvent); err != nil {
+				log.Printf("parsing ringbuf event: %s", err)
 				continue
 			}
 			srv.dispatchEvent(bpfEvent)

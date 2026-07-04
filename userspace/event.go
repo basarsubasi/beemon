@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 	"sync"
-
 	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
+	"github.com/basarsubasi/beemon/userspace/gen/x86_64"
 )
 
 type server struct {
 	pb.UnimplementedBeemonServiceServer
-	objs    *BeemonObjects
+	objs    *x86_64.BeemonObjects
 	mu      sync.Mutex
 	streams map[uint32]chan *pb.Event
 }
@@ -68,7 +68,7 @@ func (s *server) StreamEvents(req *pb.StreamEventsRequest, stream pb.BeemonServi
 	}
 }
 
-func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
+func (s *server) dispatchEvent(bpfEvent x86_64.BeemonEventT) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// bpfEvent.Tgid is the Process ID (PID in userspace), bpfEvent.Pid is the Thread ID (TID)

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/basarsubasi/beemon/userspace/gen/x86_64"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 )
@@ -22,13 +23,11 @@ func requireRoot(t *testing.T) {
 	}
 }
 
-
-
 func TestEBPF_FileOperations(t *testing.T) {
 	requireRoot(t)
 
-	var objs BeemonObjects
-	if err := LoadBeemonObjects(&objs, nil); err != nil {
+	var objs x86_64.BeemonObjects
+	if err := x86_64.LoadBeemonObjects(&objs, nil); err != nil {
 		t.Fatalf("loading objects: %v", err)
 	}
 	defer objs.Close()
@@ -67,7 +66,7 @@ func TestEBPF_FileOperations(t *testing.T) {
 	defer objs.TargetPids.Delete(myPid)
 
 	// Channel to collect events
-	events := make(chan BeemonEventT, 10)
+	events := make(chan x86_64.BeemonEventT, 10)
 
 	go func() {
 		for {
@@ -79,11 +78,11 @@ func TestEBPF_FileOperations(t *testing.T) {
 				continue
 			}
 
-			var bpfEvent BeemonEventT
+			var bpfEvent x86_64.BeemonEventT
 			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &bpfEvent); err != nil {
 				continue
 			}
-			
+
 			// Only capture events for our PID to avoid flakes from other threads/processes
 			if bpfEvent.Tgid == myPid {
 				select {
@@ -98,7 +97,7 @@ func TestEBPF_FileOperations(t *testing.T) {
 	// Perform actions to trigger eBPF
 	// ---------------------------------------------------------
 	tmpFile := filepath.Join(t.TempDir(), "ebpf_test_file.txt")
-	
+
 	// 1. Open
 	f, err := os.Create(tmpFile)
 	if err != nil {
@@ -161,8 +160,8 @@ OuterLoop1:
 func TestEBPF_NetworkConnect(t *testing.T) {
 	requireRoot(t)
 
-	var objs BeemonObjects
-	if err := LoadBeemonObjects(&objs, nil); err != nil {
+	var objs x86_64.BeemonObjects
+	if err := x86_64.LoadBeemonObjects(&objs, nil); err != nil {
 		t.Fatalf("loading objects: %v", err)
 	}
 	defer objs.Close()
@@ -185,7 +184,7 @@ func TestEBPF_NetworkConnect(t *testing.T) {
 	}
 	defer objs.TargetPids.Delete(myPid)
 
-	events := make(chan BeemonEventT, 10)
+	events := make(chan x86_64.BeemonEventT, 10)
 
 	go func() {
 		for {
@@ -197,11 +196,11 @@ func TestEBPF_NetworkConnect(t *testing.T) {
 				continue
 			}
 
-			var bpfEvent BeemonEventT
+			var bpfEvent x86_64.BeemonEventT
 			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &bpfEvent); err != nil {
 				continue
 			}
-			
+
 			if bpfEvent.Tgid == myPid && bpfEvent.Type == 3 { // EVENT_TYPE_NET_CONN
 				select {
 				case events <- bpfEvent:
