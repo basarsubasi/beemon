@@ -1,0 +1,240 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "api/v1/beemon.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "BeemonService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/processes": {
+      "get": {
+        "operationId": "BeemonService_ListProcesses",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProcessesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "filterName",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BeemonService"
+        ]
+      }
+    },
+    "/api/v1/processes/{pid}/events": {
+      "get": {
+        "operationId": "BeemonService_StreamEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1Event"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of v1Event"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pid",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "BeemonService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1Event": {
+      "type": "object",
+      "properties": {
+        "timestampNs": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "pid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "syscall": {
+          "$ref": "#/definitions/v1SyscallEvent"
+        },
+        "file": {
+          "$ref": "#/definitions/v1FileEvent"
+        },
+        "network": {
+          "$ref": "#/definitions/v1NetworkEvent"
+        },
+        "process": {
+          "$ref": "#/definitions/v1ProcessEvent"
+        }
+      }
+    },
+    "v1FileEvent": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "flags": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListProcessesResponse": {
+      "type": "object",
+      "properties": {
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Process"
+          }
+        }
+      }
+    },
+    "v1NetworkEvent": {
+      "type": "object",
+      "properties": {
+        "saddr": {
+          "type": "string"
+        },
+        "daddr": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "dport": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "family": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Process": {
+      "type": "object",
+      "properties": {
+        "pid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "ppid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ProcessEvent": {
+      "type": "object",
+      "properties": {
+        "childPid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "comm": {
+          "type": "string"
+        },
+        "isExec": {
+          "type": "boolean"
+        },
+        "isFork": {
+          "type": "boolean"
+        },
+        "isExit": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SyscallEvent": {
+      "type": "object",
+      "properties": {
+        "syscallId": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    }
+  }
+}
