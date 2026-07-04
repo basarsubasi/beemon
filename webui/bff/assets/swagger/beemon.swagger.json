@@ -147,6 +147,9 @@
         },
         "fileClose": {
           "$ref": "#/definitions/v1FileCloseEvent"
+        },
+        "limitChanged": {
+          "$ref": "#/definitions/v1LimitChangedEvent"
         }
       }
     },
@@ -192,6 +195,27 @@
           "format": "int64"
         },
         "count": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1LimitChangedEvent": {
+      "type": "object",
+      "properties": {
+        "memoryLimitBytes": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "cpuQuotaUs": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "cpuPeriodUs": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "pidsLimit": {
           "type": "string",
           "format": "uint64"
         }
@@ -274,6 +298,11 @@
         "cpuPeriodUs": {
           "type": "string",
           "format": "uint64"
+        },
+        "pidsLimit": {
+          "type": "string",
+          "format": "uint64",
+          "title": "0 means no limit (or max)"
         }
       }
     },
