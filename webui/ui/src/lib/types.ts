@@ -9,6 +9,7 @@ export interface Process {
   cpuQuotaUs: string;
   cpuPeriodUs: string;
   pidsLimit: string;
+  namespaces?: string[];
 }
 
 export interface ListProcessesResponse {
@@ -19,10 +20,22 @@ export interface BeemonEvent {
   timestampNs: string;
   pid: number;
   syscall?: { syscallId: number };
-  fileOpen?: { filename: string; flags: number };
-  fileRead?: { fd: number; count: string };
-  fileWrite?: { fd: number; count: string; data?: string };
-  fileClose?: { fd: number };
+  fileOpen?: {
+    filename: string;
+    flags: number;
+  };
+  fileRead?: {
+    fd: number;
+    count: string;
+  };
+  fileWrite?: {
+    fd: number;
+    count: string;
+    data: string;
+  };
+  fileClose?: {
+    fd: number;
+  };
   networkConnect?: {
     saddr: number;
     daddr: number;
@@ -31,10 +44,9 @@ export interface BeemonEvent {
     family: number;
   };
   process?: {
+    isExit: boolean;
     isExec: boolean;
     isFork: boolean;
-    isExit: boolean;
-    comm: string;
     childPid: number;
     exitCode: number;
     filename: string;
@@ -45,6 +57,20 @@ export interface BeemonEvent {
     cpuQuotaUs: string;
     cpuPeriodUs: string;
     pidsLimit: string;
+  };
+  chroot?: {
+    path: string;
+  };
+  pivotRoot?: {
+    newRoot: string;
+    putOld: string;
+  };
+  setns?: {
+    fd: number;
+    nstype: number;
+  };
+  unshare?: {
+    flags: number;
   };
 }
 

@@ -18,6 +18,10 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define EVENT_TYPE_FILE_READ   5
 #define EVENT_TYPE_FILE_WRITE  6
 #define EVENT_TYPE_FILE_CLOSE  7
+#define EVENT_TYPE_CHROOT      8
+#define EVENT_TYPE_PIVOT_ROOT  9
+#define EVENT_TYPE_SETNS       10
+#define EVENT_TYPE_UNSHARE     11
 
 struct event_t {
     u32 pid;
@@ -58,6 +62,12 @@ struct event_t {
     struct {
         u32 fd;
     } close;
+    struct {
+        char path1[256];
+        char path2[256];
+        u32 val1;
+        int val2;
+    } isolate;
 };
 
 // Force BTF generation for event_t so bpf2go can generate the Go struct
@@ -310,6 +320,103 @@ int BPF_KPROBE(tcp_v4_connect, struct sock *sk, struct sockaddr *uaddr) {
     bpf_probe_read_kernel(&e->net.daddr, sizeof(e->net.daddr), &usin->sin_addr.s_addr);
     e->net.sport = BPF_CORE_READ(sk, __sk_common.skc_num);
     e->net.dport = bpf_ntohs(dport);
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+// NAMESPACE & ISOLATION
+// -----------------------------------------------------------------------------
+
+SEC("tracepoint/syscalls/sys_enter_chroot")
+int trace_sys_enter_chroot(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = user_tid;
+    e->tgid = user_pid;
+    e->type = EVENT_TYPE_CHROOT;
+    e->ts = bpf_ktime_get_ns();
+    
+    const char *filename = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&e->isolate.path1, sizeof(e->isolate.path1), filename);
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_pivot_root")
+int trace_sys_enter_pivot_root(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = user_tid;
+    e->tgid = user_pid;
+    e->type = EVENT_TYPE_PIVOT_ROOT;
+    e->ts = bpf_ktime_get_ns();
+    
+    const char *new_root = (const char *)ctx->args[0];
+    const char *put_old = (const char *)ctx->args[1];
+    bpf_probe_read_user_str(&e->isolate.path1, sizeof(e->isolate.path1), new_root);
+    bpf_probe_read_user_str(&e->isolate.path2, sizeof(e->isolate.path2), put_old);
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_setns")
+int trace_sys_enter_setns(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = user_tid;
+    e->tgid = user_pid;
+    e->type = EVENT_TYPE_SETNS;
+    e->ts = bpf_ktime_get_ns();
+    
+    e->isolate.val1 = (u32)ctx->args[0]; // fd
+    e->isolate.val2 = (int)ctx->args[1]; // nstype
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_unshare")
+int trace_sys_enter_unshare(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = user_tid;
+    e->tgid = user_pid;
+    e->type = EVENT_TYPE_UNSHARE;
+    e->ts = bpf_ktime_get_ns();
+    
+    e->isolate.val1 = (u32)ctx->args[0]; // flags
 
     bpf_ringbuf_submit(e, 0);
     return 0;

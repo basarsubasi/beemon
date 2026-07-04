@@ -44,6 +44,9 @@ message Process {
   uint64 cpu_quota_us = 8;       // 0 means no limit
   uint64 cpu_period_us = 9;
   uint64 pids_limit = 10;        // 0 means no limit (or max)
+
+  // Namespaces
+  repeated string namespaces = 11;
 }
 
 message StreamEventsRequest {
@@ -55,15 +58,37 @@ message Event {
   uint32 pid = 2;
   
   oneof event {
-    SyscallEvent syscall = 4;
-    FileOpenEvent file_open = 5;
-    NetworkConnectEvent network_connect = 6;
-    ProcessEvent process = 7;
+    ProcessEvent process = 4;
+    LimitChangedEvent limit_changed = 5;
+    SyscallEvent syscall = 6;
+    FileOpenEvent file_open = 7;
     FileReadEvent file_read = 8;
     FileWriteEvent file_write = 9;
     FileCloseEvent file_close = 10;
-    LimitChangedEvent limit_changed = 11;
+    NetworkConnectEvent network_connect = 11;
+    ChrootEvent chroot = 12;
+    PivotRootEvent pivot_root = 13;
+    SetnsEvent setns = 14;
+    UnshareEvent unshare = 15;
   }
+}
+
+message ChrootEvent {
+  string path = 1;
+}
+
+message PivotRootEvent {
+  string new_root = 1;
+  string put_old = 2;
+}
+
+message SetnsEvent {
+  uint32 fd = 1;
+  int32 nstype = 2;
+}
+
+message UnshareEvent {
+  uint32 flags = 1;
 }
 
 message FileReadEvent {

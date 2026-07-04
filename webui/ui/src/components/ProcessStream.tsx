@@ -4,17 +4,20 @@ import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Activity } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 
 export function ProcessStream({ pid }: { pid: number }) {
   const [events, setEvents] = useState<BeemonEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [lastPing, setLastPing] = useState<number | null>(null);
   const [limits, setLimits] = useState({ memory: "N/A", cpu: "N/A" });
+  const [syscallCounts, setSyscallCounts] = useState<Record<string, number>>({});
   
   useEffect(() => {
     setEvents([]);
     setIsConnected(false);
     setLastPing(null);
+    setSyscallCounts({});
 
     // Determine the WS protocol based on current location protocol
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -44,6 +47,13 @@ export function ProcessStream({ pid }: { pid: number }) {
             cpu: data.limitChanged.cpuQuotaUs !== "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
           });
         }
+
+        const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : 'syscall';
+
+        setSyscallCounts((prev) => ({
+          ...prev,
+          [type]: (prev[type] || 0) + 1
+        }));
 
         setEvents((prev) => {
           const newEvents = [...prev, data];
@@ -124,6 +134,11 @@ export function ProcessStream({ pid }: { pid: number }) {
       if (ev.process.isExit) return <span className="text-red-400">exit({ev.process.exitCode})</span>;
       if (ev.process.isFork) return <span className="text-yellow-400">fork() {"->"} {ev.process.childPid}</span>;
     }
+    if (ev.chroot) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">chroot("{ev.chroot.path}")</span>;
+    if (ev.pivotRoot) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">pivot_root("{ev.pivotRoot.newRoot}", "{ev.pivotRoot.putOld}")</span>;
+    if (ev.setns) return <span className="text-orange-500 font-bold bg-orange-950/50 px-1 py-0.5 rounded">setns(fd: {ev.setns.fd}, nstype: {ev.setns.nstype})</span>;
+    if (ev.unshare) return <span className="text-orange-500 font-bold bg-orange-950/50 px-1 py-0.5 rounded">unshare(flags: {ev.unshare.flags})</span>;
+
     if (ev.limitChanged) return <span className="text-orange-400">cgroup_limits_changed()</span>;
     return <span className="text-gray-600">syscall({ev.syscall?.syscallId})</span>;
   };
@@ -144,6 +159,9 @@ export function ProcessStream({ pid }: { pid: number }) {
     const secondsAgo = Math.floor((Date.now() - lastPing) / 1000);
     return `Last Ping: ${secondsAgo}s ago`;
   };
+
+  const pieData = Object.entries(syscallCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#ec4899', '#14b8a6', '#f97316'];
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -166,25 +184,62 @@ export function ProcessStream({ pid }: { pid: number }) {
         </div>
       </div>
       
-      <Card className="flex-1 bg-black overflow-hidden border-zinc-800 shadow-xl">
-        <ScrollArea className="h-[400px] w-full p-4 font-mono text-xs">
-          {events.map((ev, i) => (
-            <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
-              <span className="text-zinc-500 mr-4">
-                {formatTimestamp(ev.timestampNs || (ev as any).timestamp_ns)}
-              </span>
-              {renderEventDetails(ev)}
+      <div className="flex gap-6 h-full">
+        <Card className="flex-1 bg-black overflow-hidden border-zinc-800 shadow-xl flex flex-col h-[500px]">
+          <ScrollArea className="flex-1 w-full p-4 font-mono text-xs">
+            {events.map((ev, i) => (
+              <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
+                <span className="text-zinc-500 mr-4">
+                  {formatTimestamp(ev.timestampNs || (ev as any).timestamp_ns)}
+                </span>
+                {renderEventDetails(ev)}
+              </div>
+            ))}
+            {events.length === 0 && (
+              <div className="text-zinc-600 flex flex-col items-center justify-center mt-20 italic">
+                <Activity className="opacity-20 mb-4 h-12 w-12" />
+                <span>Waiting for eBPF events...</span>
+                <span className="text-[10px] mt-2 opacity-50">Ping connectivity is active. Safe to idle.</span>
+              </div>
+            )}
+          </ScrollArea>
+        </Card>
+
+        <Card className="w-[300px] bg-zinc-950 border-zinc-800 shadow-xl p-4 flex flex-col h-[500px]">
+          <h3 className="text-white font-semibold text-sm mb-4">Syscall Distribution</h3>
+          {pieData.length > 0 ? (
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          ))}
-          {events.length === 0 && (
-            <div className="text-zinc-600 flex flex-col items-center justify-center mt-20 italic">
-              <Activity className="opacity-20 mb-4 h-12 w-12" />
-              <span>Waiting for eBPF events...</span>
-              <span className="text-[10px] mt-2 opacity-50">Ping connectivity is active. Safe to idle.</span>
-            </div>
+          ) : (
+             <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
+                Waiting for syscalls...
+             </div>
           )}
-        </ScrollArea>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
