@@ -47,6 +47,15 @@ export function NamespaceDetails() {
     return () => clearInterval(interval);
   }, [type, inode]);
 
+  const formatBytes = (bytesStr: string) => {
+    const bytes = parseInt(bytesStr);
+    if (!bytes || bytes === 0) return "N/A";
+    const gb = bytes / 1024 / 1024 / 1024;
+    if (gb >= 1) return `${gb.toFixed(2)} GB`;
+    const mb = bytes / 1024 / 1024;
+    return `${mb.toFixed(1)} MB`;
+  };
+
   const isHost = hostNamespaces.includes(`${type}:${type}:[${inode}]`);
 
   return (
@@ -144,7 +153,30 @@ export function NamespaceDetails() {
                 {details.userMaps}
               </>
             )}
-            {!details?.mountInfo && !details?.netLinks && !details?.utsInfo && !details?.userMaps && !error && (
+            {type === "cgroup" && processes.length > 0 && (
+              <div className="space-y-4">
+                <div className="text-blue-500 font-bold mb-2">--- CGROUP LIMITS ---</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                  <div>
+                    <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">Memory Limit</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].memoryLimitBytes !== "0" ? formatBytes(processes[0].memoryLimitBytes) : "Max"}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">PIDs Limit</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].pidsLimit !== "0" ? processes[0].pidsLimit : "Max"}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">CPU Quota (us)</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].cpuQuotaUs !== "0" ? processes[0].cpuQuotaUs : "Max"}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">CPU Period (us)</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].cpuPeriodUs !== "0" ? processes[0].cpuPeriodUs : "Max"}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!details?.mountInfo && !details?.netLinks && !details?.utsInfo && !details?.userMaps && type !== "cgroup" && !error && (
               <span className="text-zinc-500 italic">No specific introspection logic available for '{type}' namespaces yet.</span>
             )}
           </div>

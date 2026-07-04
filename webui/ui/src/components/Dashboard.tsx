@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Process, ListProcessesResponse } from "../lib/types";
 import { Input } from "./ui/input";
@@ -99,29 +99,57 @@ export function Dashboard() {
 
   const sortedProcesses = getSortedProcesses();
 
-  // Aggregate namespaces
-  const nsMap = new Map<string, { type: string, inode: string, count: number, isHost: boolean }>();
-  processes.forEach(p => {
-    if (p.namespaces) {
-      p.namespaces.forEach(nsStr => {
-        if (!nsMap.has(nsStr)) {
-          const inodeMatch = nsStr.match(/\[(\d+)\]/);
-          if (inodeMatch) {
-            nsMap.set(nsStr, { 
-              type: nsStr.split(":")[0], 
-              inode: inodeMatch[1], 
-              count: 1,
-              isHost: hostNamespaces.includes(nsStr)
-            });
-          }
+  const namespaces = useMemo(() => {
+    const nsMap = new Map<string, { type: string, inode: string, count: number, isHost: boolean }>();
+    
+    processes.forEach(p => {
+      p.namespaces?.forEach(ns => {
+        if (ns.startsWith('cgroup:')) return; // exclude cgroups from general namespaces tab
+        if (!nsMap.has(ns)) {
+          const isHost = hostNamespaces.includes(ns);
+          const inodeMatch = ns.match(/\[(\d+)\]/);
+          nsMap.set(ns, {
+            type: ns.split(":")[0],
+            inode: inodeMatch ? inodeMatch[1] : "",
+            count: 1,
+            isHost
+          });
         } else {
-          nsMap.get(nsStr)!.count++;
+          nsMap.get(ns)!.count++;
         }
       });
-    }
-  });
-  const namespaces = Array.from(nsMap.values()).sort((a,b) => b.count - a.count);
-  
+    });
+
+    return Array.from(nsMap.values()).sort((a, b) => b.count - a.count);
+  }, [processes, hostNamespaces]);
+
+  const cgroups = useMemo(() => {
+    const cgMap = new Map<string, { inode: string, count: number, isHost: boolean, memoryLimit: string, pidsLimit: string, cpuQuota: string, cpuPeriod: string }>();
+    
+    processes.forEach(p => {
+      const cgroupNs = p.namespaces?.find(ns => ns.startsWith('cgroup:'));
+      if (cgroupNs) {
+        if (!cgMap.has(cgroupNs)) {
+          const isHost = hostNamespaces.includes(cgroupNs);
+          const inodeMatch = cgroupNs.match(/\[(\d+)\]/);
+          cgMap.set(cgroupNs, {
+            inode: inodeMatch ? inodeMatch[1] : "",
+            count: 1,
+            isHost,
+            memoryLimit: p.memoryLimitBytes,
+            pidsLimit: p.pidsLimit,
+            cpuQuota: p.cpuQuotaUs,
+            cpuPeriod: p.cpuPeriodUs
+          });
+        } else {
+          cgMap.get(cgroupNs)!.count++;
+        }
+      }
+    });
+
+    return Array.from(cgMap.values()).sort((a, b) => b.count - a.count);
+  }, [processes, hostNamespaces]);
+
   const totalMemory = processes.reduce((acc, p) => acc + (parseInt(p.memoryUsageBytes) || 0), 0);
   const totalCpu = processes.reduce((acc, p) => acc + (p.cpuUsagePercent || 0), 0);
 
@@ -165,6 +193,7 @@ export function Dashboard() {
         <TabsList className="bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-1">
           <TabsTrigger value="processes" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Processes</TabsTrigger>
           <TabsTrigger value="namespaces" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Namespaces</TabsTrigger>
+          <TabsTrigger value="cgroups" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Cgroups</TabsTrigger>
         </TabsList>
 
         <TabsContent value="processes" className="space-y-4 mt-6">
@@ -303,6 +332,63 @@ export function Dashboard() {
                   <TableRow>
                     <TableCell colSpan={4} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
                       No namespaces discovered yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cgroups" className="mt-6">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 overflow-hidden shadow-sm dark:shadow-2xl">
+            <Table>
+              <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
+                <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6 w-[200px]">Cgroup ID</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6">Scope</TableHead>
+                  <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">Mem Limit</TableHead>
+                  <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">PIDs Limit</TableHead>
+                  <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">CPU Quota</TableHead>
+                  <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">Process Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cgroups.map((cg) => (
+                  <TableRow 
+                    key={cg.inode} 
+                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
+                    onClick={() => navigate(`/namespace/cgroup/${cg.inode}`)}
+                  >
+                    <TableCell className="font-mono text-zinc-900 dark:text-white py-4 px-6 flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <Box className="w-4 h-4 text-orange-500 dark:text-orange-400" />
+                      [{cg.inode}]
+                    </TableCell>
+                    <TableCell className="py-4 px-6">
+                      {cg.isHost ? (
+                        <Badge variant="outline" className="border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30">Host</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30">Isolated</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
+                      {cg.memoryLimit !== "0" ? formatBytes(cg.memoryLimit) : "Max"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
+                      {cg.pidsLimit !== "0" ? cg.pidsLimit : "Max"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
+                      {cg.cpuQuota !== "0" ? cg.cpuQuota : "Max"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
+                      {cg.count}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {cgroups.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
+                      No cgroups discovered yet.
                     </TableCell>
                   </TableRow>
                 )}
