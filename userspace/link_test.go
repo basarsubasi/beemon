@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/basarsubasi/beemon/userspace/gen/x86_64"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 )
@@ -26,8 +25,8 @@ func requireRoot(t *testing.T) {
 func TestEBPF_FileOperations(t *testing.T) {
 	requireRoot(t)
 
-	var objs x86_64.BeemonObjects
-	if err := x86_64.LoadBeemonObjects(&objs, nil); err != nil {
+	var objs bpfObjects
+	if err := loadBpfObjects(&objs, nil); err != nil {
 		t.Fatalf("loading objects: %v", err)
 	}
 	defer objs.Close()
@@ -66,7 +65,7 @@ func TestEBPF_FileOperations(t *testing.T) {
 	defer objs.TargetPids.Delete(myPid)
 
 	// Channel to collect events
-	events := make(chan x86_64.BeemonEventT, 10)
+	events := make(chan bpfEventT, 10)
 
 	go func() {
 		for {
@@ -78,7 +77,7 @@ func TestEBPF_FileOperations(t *testing.T) {
 				continue
 			}
 
-			var bpfEvent x86_64.BeemonEventT
+			var bpfEvent bpfEventT
 			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &bpfEvent); err != nil {
 				continue
 			}
@@ -160,8 +159,8 @@ OuterLoop1:
 func TestEBPF_NetworkConnect(t *testing.T) {
 	requireRoot(t)
 
-	var objs x86_64.BeemonObjects
-	if err := x86_64.LoadBeemonObjects(&objs, nil); err != nil {
+	var objs bpfObjects
+	if err := loadBpfObjects(&objs, nil); err != nil {
 		t.Fatalf("loading objects: %v", err)
 	}
 	defer objs.Close()
@@ -184,7 +183,7 @@ func TestEBPF_NetworkConnect(t *testing.T) {
 	}
 	defer objs.TargetPids.Delete(myPid)
 
-	events := make(chan x86_64.BeemonEventT, 10)
+	events := make(chan bpfEventT, 10)
 
 	go func() {
 		for {
@@ -196,7 +195,7 @@ func TestEBPF_NetworkConnect(t *testing.T) {
 				continue
 			}
 
-			var bpfEvent x86_64.BeemonEventT
+			var bpfEvent bpfEventT
 			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &bpfEvent); err != nil {
 				continue
 			}

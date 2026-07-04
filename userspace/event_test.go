@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
-	"github.com/basarsubasi/beemon/userspace/gen/x86_64"
 )
 
 func TestDispatchEvent_Syscall(t *testing.T) {
@@ -16,7 +15,7 @@ func TestDispatchEvent_Syscall(t *testing.T) {
 	ch := make(chan *pb.Event, 1)
 	srv.streams[pid] = ch
 
-	bpfEv := x86_64.BeemonEventT{
+	bpfEv := bpfEventT{
 		Ts:   12345,
 		Pid:  pid,
 		Tgid: pid,
