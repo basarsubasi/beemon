@@ -3,6 +3,10 @@
 Beemon is a lightweight, real-time Linux process monitoring tool powered by eBPF.
 It allows you to inspect running processes and monitor their low-level kernel activities—such as file I/O, network connections, process creation, and namespace isolation events—live from a web interface.
 
+
+
+<img width="1500" height="1500" alt="Image" src="https://github.com/user-attachments/assets/8cec8d38-7ecc-489a-88b5-27f33c43bcf7" />
+
 ## What it does
 
 Beemon provides deep observability into Linux processes without requiring application-level instrumentation. It can capture:
