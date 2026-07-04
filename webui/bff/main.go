@@ -39,16 +39,14 @@ func run() error {
 	
 	httpMux := http.NewServeMux()
 	
-	// Register Custom SSE Endpoint
-	httpMux.Handle("/api/v1/processes/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// Register Custom SSE Endpoint and gRPC Gateway
+	httpMux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/events/sse") {
 			handleSSE(cfg)(w, r)
 			return
 		}
 		mux.ServeHTTP(w, r)
 	}))
-
-	httpMux.Handle("/", mux)
 	httpMux.Handle("/swagger/", swaggerHandler)
 
 
