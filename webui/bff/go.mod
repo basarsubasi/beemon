@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/basarsubasi/beemon/protobuf v0.0.0-00010101000000-000000000000
+	github.com/gorilla/websocket v1.5.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	google.golang.org/grpc v1.82.0
 	google.golang.org/protobuf v1.36.11

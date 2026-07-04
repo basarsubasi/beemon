@@ -60,7 +60,7 @@ func StartEBPF(srv *server) (func(), error) {
 		for {
 			record, err := rd.Read()
 			if err != nil {
-				if err == ringbuf.ErrClosed { return }
+				if err == ringbuf.ErrClosed || bytes.Contains([]byte(err.Error()), []byte("closed")) { return }
 				log.Printf("reading from reader: %s", err)
 				continue
 			}

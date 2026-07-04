@@ -40,8 +40,8 @@ func run() error {
 	httpMux := http.NewServeMux()
 	
 	httpMux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/stream/sse") {
-			handleSSE(cfg)(w, r)
+		if strings.Contains(r.URL.Path, "/stream/ws") {
+			handleWS(cfg)(w, r)
 			return
 		}
 		mux.ServeHTTP(w, r)
