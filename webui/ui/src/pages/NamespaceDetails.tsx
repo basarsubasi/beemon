@@ -28,7 +28,7 @@ export function NamespaceDetails() {
 
         if (inNs.length > 0) {
           const refPid = inNs[0].pid;
-          const detailsRes = await fetch(`/api/v1/namespaces/${type}/${inode}?pid=${refPid}`);
+          const detailsRes = await fetch(`/api/v1/namespaces/${type}/${inode}?reference_pid=${refPid}`);
           const detailsData = (await detailsRes.json()) as NamespaceDetailsResponse;
           setDetails(detailsData);
           setError(null);
