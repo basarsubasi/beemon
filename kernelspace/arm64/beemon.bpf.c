@@ -1,6 +1,9 @@
-// kernelspace/x86_64/beemon.bpf.c
-#define bpf_target_x86
+// kernelspace/arm64/beemon.bpf.c
+#define bpf_target_arm64
 #include "vmlinux.h"
+
+
+
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
@@ -158,7 +161,7 @@ int trace_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx) {
         e->process.is_fork = 1;
         e->process.is_exit = 0;
         e->process.child_pid = child_pid;
-        bpf_probe_read_kernel_str(&e->process.comm, sizeof(e->process.comm), ctx->child_comm);
+        bpf_probe_read_kernel_str(&e->process.comm, sizeof(e->process.comm), (void *)ctx + (ctx->__data_loc_child_comm & 0xffff));
         
         bpf_ringbuf_submit(e, 0);
     }
