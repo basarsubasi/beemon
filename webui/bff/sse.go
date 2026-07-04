@@ -17,7 +17,7 @@ import (
 // handleSSE creates a Server-Sent Events stream from the gRPC stream.
 func handleSSE(cfg *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract PID from URL path: /api/v1/processes/{pid}/events/sse
+		// Extract PID from URL path: /api/v1/processes/{pid}/stream/sse
 		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) < 5 {
 			http.Error(w, "invalid path", http.StatusBadRequest)
@@ -60,7 +60,7 @@ func handleSSE(cfg *Config) http.HandlerFunc {
 		}
 
 		marshaler := protojson.MarshalOptions{
-			UseProtoNames:   true,
+			UseProtoNames:   false,
 			EmitUnpopulated: true,
 		}
 
