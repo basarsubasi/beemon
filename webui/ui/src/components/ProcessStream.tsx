@@ -195,22 +195,22 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
             {isConnected ? "LIVE" : "DISCONNECTED"}
           </Badge>
           
-          <div className="flex items-center gap-2 text-xs font-mono bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
-            <Activity size={14} className={isConnected && lastPing && (Date.now() - lastPing < 5000) ? "text-green-500 animate-pulse" : "text-zinc-500"} />
-            <span className="text-zinc-400">{getPingStatus()}</span>
+          <div className="flex items-center gap-2 text-xs font-mono bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800">
+            <Activity size={14} className={isConnected && lastPing && (Date.now() - lastPing < 5000) ? "text-green-600 dark:text-green-500 animate-pulse" : "text-zinc-500"} />
+            <span className="text-zinc-500 dark:text-zinc-400">{getPingStatus()}</span>
           </div>
 
           <span className="text-sm text-zinc-500 ml-2">Monitoring PID {pid}</span>
         </div>
-        <div className="flex gap-4 text-xs font-mono text-zinc-400">
-          <span>MEM USAGE: <span className="text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
-          <span>MEM LIMIT: <span className="text-white">{limits.memory}</span></span>
-          <span>CPU LIMIT: <span className="text-white">{limits.cpu}</span></span>
+        <div className="flex gap-4 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+          <span>MEM USAGE: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
+          <span>MEM LIMIT: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
+          <span>CPU LIMIT: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
         </div>
       </div>
       
-      <div className="flex gap-6 h-full">
-        <Card className="flex-1 bg-black overflow-hidden border-zinc-800 shadow-xl flex flex-col h-[500px]">
+      <div className="flex gap-6 h-full pb-6 flex-col md:flex-row">
+        <Card className="flex-1 bg-white dark:bg-black overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col h-[500px]">
           <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
             {events.map((ev, i) => (
               <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
@@ -230,8 +230,8 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           </div>
         </Card>
 
-        <Card className="w-[300px] bg-zinc-950 border-zinc-800 shadow-xl p-4 flex flex-col h-[500px]">
-          <h3 className="text-white font-semibold text-sm mb-4">Syscall Distribution</h3>
+        <Card className="w-full md:w-[300px] bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl p-4 flex flex-col h-[300px] md:h-[500px]">
+          <h3 className="text-zinc-900 dark:text-white font-semibold text-sm mb-4">Syscall Distribution</h3>
           {pieData.length > 0 ? (
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">

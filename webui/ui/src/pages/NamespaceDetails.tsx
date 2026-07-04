@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Box } from "lucide-react";
+import { ThemeToggle } from "../components/ThemeToggle";
 import type { NamespaceDetailsResponse, Process, ListProcessesResponse } from "../lib/types";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -53,23 +54,26 @@ export function NamespaceDetails() {
       <div className="flex items-center gap-4">
         <Link 
           to="/" 
-          className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-white"
+          className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
         >
           <ArrowLeft size={20} />
         </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3 uppercase">
-            <Box className="w-8 h-8 text-blue-400" />
-            {type} Namespace
-          </h1>
-          <p className="text-zinc-400 font-mono text-sm mt-1">Inode: {inode}</p>
-        </div>
-        <div className="ml-auto">
-           {isHost ? (
-             <Badge variant="outline" className="border-green-800 text-green-400 bg-green-950/30 text-sm px-3 py-1">Host Scope</Badge>
-           ) : (
-             <Badge variant="outline" className="border-orange-800 text-orange-400 bg-orange-950/30 text-sm px-3 py-1">Isolated Scope</Badge>
-           )}
+        <div className="flex-1 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3 uppercase">
+              <Box className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+              {type} Namespace
+            </h1>
+            <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm mt-1">Inode: {inode}</p>
+          </div>
+          <div className="flex items-center gap-4">
+             {isHost ? (
+               <Badge variant="outline" className="border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 text-sm px-3 py-1">Host Scope</Badge>
+             ) : (
+               <Badge variant="outline" className="border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 text-sm px-3 py-1">Isolated Scope</Badge>
+             )}
+             <ThemeToggle />
+          </div>
         </div>
       </div>
 
@@ -80,28 +84,28 @@ export function NamespaceDetails() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-        <Card className="bg-zinc-950/50 border-zinc-800 shadow-xl flex flex-col overflow-hidden">
-          <div className="p-4 bg-zinc-900/50 border-b border-zinc-800 flex justify-between items-center">
-            <h2 className="text-white font-semibold">Associated Processes</h2>
-            <Badge variant="secondary" className="bg-zinc-800">{processes.length} total</Badge>
+        <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden">
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+            <h2 className="text-zinc-900 dark:text-white font-semibold">Associated Processes</h2>
+            <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">{processes.length} total</Badge>
           </div>
           <div className="flex-1 overflow-y-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-zinc-400">PID</TableHead>
-                  <TableHead className="text-zinc-400">Name</TableHead>
+                <TableRow className="border-zinc-200 dark:border-zinc-800">
+                  <TableHead className="text-zinc-500 dark:text-zinc-400">PID</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400">Name</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {processes.map(proc => (
                   <TableRow 
                     key={proc.pid} 
-                    className="border-zinc-800/50 cursor-pointer hover:bg-zinc-800/80 transition-colors"
+                    className="border-zinc-200 dark:border-zinc-800/50 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-colors"
                     onClick={() => navigate(`/process/${proc.pid}`)}
                   >
-                    <TableCell className="font-mono text-zinc-300">{proc.pid}</TableCell>
-                    <TableCell className="text-white">{proc.name}</TableCell>
+                    <TableCell className="font-mono text-zinc-600 dark:text-zinc-300">{proc.pid}</TableCell>
+                    <TableCell className="text-zinc-900 dark:text-white">{proc.name}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -109,11 +113,11 @@ export function NamespaceDetails() {
           </div>
         </Card>
 
-        <Card className="bg-black border-zinc-800 shadow-xl flex flex-col overflow-hidden">
-          <div className="p-4 bg-zinc-900/50 border-b border-zinc-800">
-            <h2 className="text-white font-semibold">Namespace Properties</h2>
+        <Card className="bg-white dark:bg-black border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden">
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
+            <h2 className="text-zinc-900 dark:text-white font-semibold">Namespace Properties</h2>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs text-zinc-300 whitespace-pre-wrap">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs text-zinc-800 dark:text-zinc-300 whitespace-pre-wrap">
             {details?.mountInfo && (
               <>
                 <div className="text-blue-400 font-bold mb-2">--- MOUNT TABLE ---</div>
