@@ -4,6 +4,7 @@ import type { Process, ListProcessesResponse } from "../lib/types";
 import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
+import { ThemeToggle } from "./ThemeToggle";
 import { Progress } from "./ui/progress";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -128,87 +129,90 @@ export function Dashboard() {
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">beemon dashboard</h1>
-          <p className="text-zinc-400">Real-time eBPF Linux process monitoring.</p>
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">beemon dashboard</h1>
+            <ThemeToggle />
+          </div>
+          <p className="text-zinc-500 dark:text-zinc-400">Real-time eBPF Linux process monitoring.</p>
         </div>
         
         <div className="flex gap-4">
-          <Card className="bg-zinc-950/50 border-zinc-800 p-4 min-w-[200px] flex items-center gap-4">
-            <div className="p-3 bg-zinc-900 rounded-full">
-              <MemoryStick className="text-blue-400 h-6 w-6" />
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
+            <div className="p-3 bg-blue-50 dark:bg-zinc-900 rounded-full">
+              <MemoryStick className="text-blue-500 dark:text-blue-400 h-6 w-6" />
             </div>
             <div>
               <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total Memory</p>
               <div className="flex items-baseline gap-2">
-                <p className="text-xl font-mono text-white">{formatBytes(totalMemory.toString())}</p>
+                <p className="text-xl font-mono text-zinc-900 dark:text-white">{formatBytes(totalMemory.toString())}</p>
                 {hostMem !== "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
               </div>
             </div>
           </Card>
-          <Card className="bg-zinc-950/50 border-zinc-800 p-4 min-w-[200px] flex items-center gap-4">
-            <div className="p-3 bg-zinc-900 rounded-full">
-              <Cpu className="text-green-400 h-6 w-6" />
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
+            <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full">
+              <Cpu className="text-green-600 dark:text-green-400 h-6 w-6" />
             </div>
             <div>
               <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
-              <p className="text-xl font-mono text-white">{totalCpu.toFixed(1)}%</p>
+              <p className="text-xl font-mono text-zinc-900 dark:text-white">{totalCpu.toFixed(1)}%</p>
             </div>
           </Card>
         </div>
       </div>
 
       <Tabs defaultValue="processes" className="w-full">
-        <TabsList className="grid w-[400px] grid-cols-2 bg-zinc-900 border border-zinc-800">
-          <TabsTrigger value="processes">Processes</TabsTrigger>
-          <TabsTrigger value="namespaces">Namespaces</TabsTrigger>
+        <TabsList className="bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-1">
+          <TabsTrigger value="processes" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Processes</TabsTrigger>
+          <TabsTrigger value="namespaces" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Namespaces</TabsTrigger>
         </TabsList>
 
         <TabsContent value="processes" className="space-y-4 mt-6">
           <div className="flex items-center space-x-2">
             <Input 
-          placeholder="Filter by name or PID..." 
-          className="max-w-md bg-zinc-900 border-zinc-800 text-white p-6 text-md"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-      </div>
+              placeholder="Filter by name or PID..." 
+              className="max-w-md bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 p-6 text-md"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 overflow-hidden backdrop-blur-xl shadow-2xl">
+      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 overflow-hidden shadow-sm dark:shadow-2xl">
         <Table>
-          <TableHeader className="bg-zinc-900/80">
-            <TableRow className="border-zinc-800 hover:bg-transparent">
+          <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
+            <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
               <TableHead 
-                className="w-[120px] text-zinc-400 cursor-pointer hover:text-white transition-colors py-4 px-6"
+                className="w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
                 onClick={() => handleSort('pid')}
               >
                 <div className="flex items-center">PID {renderSortIcon('pid')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-400 cursor-pointer hover:text-white transition-colors py-4 px-6"
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center">Name {renderSortIcon('name')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-400 cursor-pointer hover:text-white transition-colors py-4 px-6 w-[150px]"
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 w-[150px]"
                 onClick={() => handleSort('state')}
               >
                 <div className="flex items-center">State {renderSortIcon('state')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-400 cursor-pointer hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
                 onClick={() => handleSort('memory')}
               >
                 <div className="flex items-center justify-end">Memory {renderSortIcon('memory')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-400 cursor-pointer hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
                 onClick={() => handleSort('memLimit')}
               >
                 <div className="flex items-center justify-end">Mem Limit {renderSortIcon('memLimit')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-400 cursor-pointer hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
                 onClick={() => handleSort('pidsLimit')}
               >
                 <div className="flex items-center justify-end">PIDs Limit {renderSortIcon('pidsLimit')}</div>
@@ -219,19 +223,19 @@ export function Dashboard() {
             {sortedProcesses.map((proc) => (
               <TableRow 
                 key={proc.pid} 
-                className="cursor-pointer hover:bg-zinc-800/80 border-zinc-800/50 transition-colors group"
+                className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
                 onClick={() => navigate(`/process/${proc.pid}`)}
               >
-                <TableCell className="font-mono text-zinc-300 py-4 px-6">{proc.pid}</TableCell>
-                <TableCell className="font-medium text-white py-4 px-6 group-hover:text-blue-400 transition-colors">
+                <TableCell className="font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">{proc.pid}</TableCell>
+                <TableCell className="font-medium text-zinc-900 dark:text-zinc-300 py-4 px-6 group-hover:text-black dark:group-hover:text-white transition-colors">
                   {proc.name}
                 </TableCell>
                 <TableCell className="py-4 px-6">
-                  <Badge variant="outline" className="border-zinc-700 text-zinc-300">
+                  <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
                     {proc.state}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-300 py-4 px-6 w-[200px]">
+                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[200px]">
                   <div className="flex flex-col gap-1 items-end">
                     <span>{formatBytes(proc.memoryUsageBytes)}</span>
                     {proc.memoryLimitBytes !== "0" && (
@@ -242,17 +246,17 @@ export function Dashboard() {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-500 py-4 px-6">
+                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
                   {proc.memoryLimitBytes !== "0" ? formatBytes(proc.memoryLimitBytes) : "Max"}
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-500 py-4 px-6">
+                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
                   {proc.pidsLimit !== "0" ? proc.pidsLimit : "Max"}
                 </TableCell>
               </TableRow>
             ))}
             {processes.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-zinc-500">
+                <TableCell colSpan={6} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
                   No processes found matching your filter.
                 </TableCell>
               </TableRow>
@@ -263,41 +267,41 @@ export function Dashboard() {
         </TabsContent>
 
         <TabsContent value="namespaces" className="mt-6">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 overflow-hidden backdrop-blur-xl shadow-2xl">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 overflow-hidden shadow-sm dark:shadow-2xl">
             <Table>
-              <TableHeader className="bg-zinc-900/80">
-                <TableRow className="border-zinc-800 hover:bg-transparent">
-                  <TableHead className="text-zinc-400 py-4 px-6">Type</TableHead>
-                  <TableHead className="text-zinc-400 py-4 px-6">ID</TableHead>
-                  <TableHead className="text-zinc-400 py-4 px-6">Scope</TableHead>
-                  <TableHead className="text-zinc-400 py-4 px-6 text-right">Process Count</TableHead>
+              <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
+                <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6">Type</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6">ID</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6">Scope</TableHead>
+                  <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6 text-right">Process Count</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {namespaces.map((ns) => (
                   <TableRow 
                     key={ns.inode} 
-                    className="cursor-pointer hover:bg-zinc-800/80 border-zinc-800/50 transition-colors group"
+                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
                     onClick={() => navigate(`/namespace/${ns.type}/${ns.inode}`)}
                   >
-                    <TableCell className="font-medium text-white py-4 px-6 uppercase flex items-center gap-2">
-                      <Box className="w-4 h-4 text-blue-400" />
+                    <TableCell className="font-medium text-zinc-900 dark:text-white py-4 px-6 uppercase flex items-center gap-2">
+                      <Box className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                       {ns.type}
                     </TableCell>
-                    <TableCell className="font-mono text-zinc-300 py-4 px-6">{ns.type}:[{ns.inode}]</TableCell>
+                    <TableCell className="font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">{ns.type}:[{ns.inode}]</TableCell>
                     <TableCell className="py-4 px-6">
                       {ns.isHost ? (
-                        <Badge variant="outline" className="border-green-800 text-green-400 bg-green-950/30">Host</Badge>
+                        <Badge variant="outline" className="border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30">Host</Badge>
                       ) : (
-                        <Badge variant="outline" className="border-orange-800 text-orange-400 bg-orange-950/30">Isolated</Badge>
+                        <Badge variant="outline" className="border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30">Isolated</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-zinc-300 py-4 px-6">{ns.count}</TableCell>
+                    <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">{ns.count}</TableCell>
                   </TableRow>
                 ))}
                 {namespaces.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-zinc-500">
+                    <TableCell colSpan={4} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
                       No namespaces discovered yet.
                     </TableCell>
                   </TableRow>
