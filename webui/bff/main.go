@@ -39,9 +39,8 @@ func run() error {
 	
 	httpMux := http.NewServeMux()
 	
-	// Register Custom SSE Endpoint and gRPC Gateway
 	httpMux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/events/sse") {
+		if strings.HasSuffix(r.URL.Path, "/stream/sse") {
 			handleSSE(cfg)(w, r)
 			return
 		}

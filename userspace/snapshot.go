@@ -112,7 +112,7 @@ func ListProcesses(filter string) ([]*pb.Process, error) {
 			}
 		}
 
-		if filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(filter)) {
+		if filter != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(filter)) && !strings.Contains(d.Name(), filter) {
 			continue
 		}
 

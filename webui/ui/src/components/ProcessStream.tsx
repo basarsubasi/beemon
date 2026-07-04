@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import type { BeemonEvent } from "../lib/types";
 import { Badge } from "./ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 
 export function ProcessStream({ pid }: { pid: number }) {
@@ -16,7 +16,7 @@ export function ProcessStream({ pid }: { pid: number }) {
 
   useEffect(() => {
     setEvents([]);
-    const eventSource = new EventSource(`/api/v1/processes/${pid}/events/sse`);
+    const eventSource = new EventSource(`/api/v1/processes/${pid}/stream/sse`);
 
     eventSource.onopen = () => setIsConnected(true);
     
