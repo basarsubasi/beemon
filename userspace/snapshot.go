@@ -14,7 +14,25 @@ import (
 var (
 	procRoot   = "/proc"
 	cgroupRoot = "/sys/fs/cgroup"
+	cachedHostNs []string
 )
+
+func getHostNamespaces() []string {
+	if len(cachedHostNs) > 0 {
+		return cachedHostNs
+	}
+	nsPath := filepath.Join(procRoot, "1", "ns")
+	nsEntries, err := os.ReadDir(nsPath)
+	if err == nil {
+		for _, e := range nsEntries {
+			target, err := os.Readlink(filepath.Join(nsPath, e.Name()))
+			if err == nil {
+				cachedHostNs = append(cachedHostNs, fmt.Sprintf("%s:%s", e.Name(), target))
+			}
+		}
+	}
+	return cachedHostNs
+}
 
 func GetCgroupPathForPid(pid uint32) string {
 	cgroupData, err := os.ReadFile(filepath.Join(procRoot, fmt.Sprintf("%d", pid), "cgroup"))
@@ -188,5 +206,6 @@ func ListProcesses(filter string) (*pb.ListProcessesResponse, error) {
 	return &pb.ListProcessesResponse{
 		Processes: processes,
 		HostMemoryTotalBytes: hostMemTotalBytes,
+		HostNamespaces: getHostNamespaces(),
 	}, nil
 }

@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BeemonService_ListProcesses_FullMethodName = "/beemon.v1.BeemonService/ListProcesses"
-	BeemonService_StreamEvents_FullMethodName  = "/beemon.v1.BeemonService/StreamEvents"
+	BeemonService_ListProcesses_FullMethodName       = "/beemon.v1.BeemonService/ListProcesses"
+	BeemonService_StreamEvents_FullMethodName        = "/beemon.v1.BeemonService/StreamEvents"
+	BeemonService_GetNamespaceDetails_FullMethodName = "/beemon.v1.BeemonService/GetNamespaceDetails"
 )
 
 // BeemonServiceClient is the client API for BeemonService service.
@@ -29,6 +30,7 @@ const (
 type BeemonServiceClient interface {
 	ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error)
 	StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
+	GetNamespaceDetails(ctx context.Context, in *GetNamespaceDetailsRequest, opts ...grpc.CallOption) (*GetNamespaceDetailsResponse, error)
 }
 
 type beemonServiceClient struct {
@@ -68,12 +70,23 @@ func (c *beemonServiceClient) StreamEvents(ctx context.Context, in *StreamEvents
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type BeemonService_StreamEventsClient = grpc.ServerStreamingClient[Event]
 
+func (c *beemonServiceClient) GetNamespaceDetails(ctx context.Context, in *GetNamespaceDetailsRequest, opts ...grpc.CallOption) (*GetNamespaceDetailsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetNamespaceDetailsResponse)
+	err := c.cc.Invoke(ctx, BeemonService_GetNamespaceDetails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BeemonServiceServer is the server API for BeemonService service.
 // All implementations must embed UnimplementedBeemonServiceServer
 // for forward compatibility.
 type BeemonServiceServer interface {
 	ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error)
 	StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error
+	GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error)
 	mustEmbedUnimplementedBeemonServiceServer()
 }
 
@@ -89,6 +102,9 @@ func (UnimplementedBeemonServiceServer) ListProcesses(context.Context, *ListProc
 }
 func (UnimplementedBeemonServiceServer) StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error {
 	return status.Error(codes.Unimplemented, "method StreamEvents not implemented")
+}
+func (UnimplementedBeemonServiceServer) GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetNamespaceDetails not implemented")
 }
 func (UnimplementedBeemonServiceServer) mustEmbedUnimplementedBeemonServiceServer() {}
 func (UnimplementedBeemonServiceServer) testEmbeddedByValue()                       {}
@@ -140,6 +156,24 @@ func _BeemonService_StreamEvents_Handler(srv interface{}, stream grpc.ServerStre
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type BeemonService_StreamEventsServer = grpc.ServerStreamingServer[Event]
 
+func _BeemonService_GetNamespaceDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNamespaceDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeemonServiceServer).GetNamespaceDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BeemonService_GetNamespaceDetails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeemonServiceServer).GetNamespaceDetails(ctx, req.(*GetNamespaceDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BeemonService_ServiceDesc is the grpc.ServiceDesc for BeemonService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -150,6 +184,10 @@ var BeemonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListProcesses",
 			Handler:    _BeemonService_ListProcesses_Handler,
+		},
+		{
+			MethodName: "GetNamespaceDetails",
+			Handler:    _BeemonService_GetNamespaceDetails_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

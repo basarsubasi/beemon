@@ -15,6 +15,17 @@ export interface Process {
 export interface ListProcessesResponse {
   processes: Process[];
   hostMemoryTotalBytes: string;
+  hostNamespaces: string[];
+}
+
+export interface NamespaceDetailsResponse {
+  nsType: string;
+  nsInode: string;
+  mountInfo?: string;
+  netLinks?: string;
+  netRoutes?: string;
+  utsInfo?: string;
+  userMaps?: string;
 }
 
 export interface BeemonEvent {
