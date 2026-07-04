@@ -1,0 +1,30 @@
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile.daemon
+    privileged: true
+    pid: host
+    volumes:
+      - /sys/kernel/debug:/sys/kernel/debug:rw
+    restart: unless-stopped
+
+  bff:
+    build:
+      context: .
+      dockerfile: Dockerfile.bff
+    environment:
+      - BEEMON_GRPC_ENDPOINT=daemon:50051
+    depends_on:
+      - daemon
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - bff
+    restart: unless-stopped
