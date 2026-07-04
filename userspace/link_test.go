@@ -22,16 +22,7 @@ func requireRoot(t *testing.T) {
 	}
 }
 
-func int8ToStrLen(arr [256]int8) string {
-	var b []byte
-	for _, v := range arr {
-		if v == 0 {
-			break
-		}
-		b = append(b, byte(v))
-	}
-	return string(b)
-}
+
 
 func TestEBPF_FileOperations(t *testing.T) {
 	requireRoot(t)
@@ -138,7 +129,7 @@ OuterLoop1:
 		case ev := <-events:
 			switch ev.Type {
 			case 2: // EVENT_TYPE_FILE_OPEN
-				fname := int8ToStrLen(ev.File.Filename)
+				fname := int8ToStr(ev.File.Filename[:])
 				if strings.Contains(fname, "ebpf_test_file.txt") {
 					foundOpen = true
 				}

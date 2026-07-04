@@ -1,0 +1,146 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"sync"
+
+	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
+)
+
+type server struct {
+	pb.UnimplementedBeemonServiceServer
+	objs    *BeemonObjects
+	mu      sync.Mutex
+	streams map[uint32]chan *pb.Event
+}
+
+func (s *server) ListProcesses(ctx context.Context, req *pb.ListProcessesRequest) (*pb.ListProcessesResponse, error) {
+	procs, err := ListProcesses(req.FilterName)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ListProcessesResponse{Processes: procs}, nil
+}
+
+func (s *server) StreamEvents(req *pb.StreamEventsRequest, stream pb.BeemonService_StreamEventsServer) error {
+	pid := req.Pid
+
+	val := uint8(1)
+	err := s.objs.TargetPids.Put(pid, val)
+	if err != nil {
+		return fmt.Errorf("failed to add pid to map: %v", err)
+	}
+
+	ch := make(chan *pb.Event, 100)
+	s.mu.Lock()
+	if s.streams == nil {
+		s.streams = make(map[uint32]chan *pb.Event)
+	}
+	s.streams[pid] = ch
+	s.mu.Unlock()
+
+	watcher, err := WatchCgroupLimits(pid, ch)
+	if err != nil {
+		log.Printf("failed to watch cgroup limits for pid %d: %v", pid, err)
+	}
+
+	defer func() {
+		if watcher != nil {
+			watcher.Close()
+		}
+		s.mu.Lock()
+		delete(s.streams, pid)
+		s.mu.Unlock()
+		s.objs.TargetPids.Delete(pid)
+	}()
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case ev := <-ch:
+			if err := stream.Send(ev); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (s *server) dispatchEvent(bpfEvent BeemonEventT) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ch, ok := s.streams[bpfEvent.Pid]
+	if !ok {
+		return // no one listening
+	}
+
+	event := &pb.Event{
+		TimestampNs: bpfEvent.Ts,
+		Pid:         bpfEvent.Pid,
+	}
+
+	switch bpfEvent.Type {
+	case 1: // EVENT_TYPE_SYSCALL
+		event.Event = &pb.Event_Syscall{
+			Syscall: &pb.SyscallEvent{
+				SyscallId: bpfEvent.Syscall.SyscallId,
+			},
+		}
+	case 2: // EVENT_TYPE_FILE_OPEN
+		event.Event = &pb.Event_FileOpen{
+			FileOpen: &pb.FileOpenEvent{
+				Filename: int8ToStr(bpfEvent.File.Filename[:]),
+				Flags:    bpfEvent.File.Flags,
+			},
+		}
+	case 3: // EVENT_TYPE_NET_CONN
+		event.Event = &pb.Event_NetworkConnect{
+			NetworkConnect: &pb.NetworkConnectEvent{
+				Saddr:  bpfEvent.Net.Saddr,
+				Daddr:  bpfEvent.Net.Daddr,
+				Sport:  uint32(bpfEvent.Net.Sport),
+				Dport:  uint32(bpfEvent.Net.Dport),
+				Family: uint32(bpfEvent.Net.Family),
+			},
+		}
+	case 4: // EVENT_TYPE_PROCESS
+		event.Event = &pb.Event_Process{
+			Process: &pb.ProcessEvent{
+				IsExec:   bpfEvent.Process.IsExec > 0,
+				IsFork:   bpfEvent.Process.IsFork > 0,
+				IsExit:   bpfEvent.Process.IsExit > 0,
+				Comm:     int8ToStr(bpfEvent.Process.Comm[:]),
+				ChildPid: bpfEvent.Process.ChildPid,
+				ExitCode: bpfEvent.Process.ExitCode,
+				Filename: int8ToStr(bpfEvent.Process.Filename[:]),
+			},
+		}
+	case 5: // EVENT_TYPE_FILE_READ
+		event.Event = &pb.Event_FileRead{
+			FileRead: &pb.FileReadEvent{
+				Fd:    bpfEvent.Rw.Fd,
+				Count: bpfEvent.Rw.Count,
+			},
+		}
+	case 6: // EVENT_TYPE_FILE_WRITE
+		event.Event = &pb.Event_FileWrite{
+			FileWrite: &pb.FileWriteEvent{
+				Fd:    bpfEvent.Rw.Fd,
+				Count: bpfEvent.Rw.Count,
+			},
+		}
+	case 7: // EVENT_TYPE_FILE_CLOSE
+		event.Event = &pb.Event_FileClose{
+			FileClose: &pb.FileCloseEvent{
+				Fd: bpfEvent.Close.Fd,
+			},
+		}
+	}
+
+	select {
+	case ch <- event:
+	default: // drop if channel is full
+	}
+}
