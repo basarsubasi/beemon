@@ -23,6 +23,158 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type GetNamespaceDetailsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NsType        string                 `protobuf:"bytes,1,opt,name=ns_type,json=nsType,proto3" json:"ns_type,omitempty"` // "mnt", "net", "uts", "user"
+	NsInode       string                 `protobuf:"bytes,2,opt,name=ns_inode,json=nsInode,proto3" json:"ns_inode,omitempty"`
+	ReferencePid  uint32                 `protobuf:"varint,3,opt,name=reference_pid,json=referencePid,proto3" json:"reference_pid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNamespaceDetailsRequest) Reset() {
+	*x = GetNamespaceDetailsRequest{}
+	mi := &file_api_v1_beemon_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNamespaceDetailsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNamespaceDetailsRequest) ProtoMessage() {}
+
+func (x *GetNamespaceDetailsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNamespaceDetailsRequest.ProtoReflect.Descriptor instead.
+func (*GetNamespaceDetailsRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GetNamespaceDetailsRequest) GetNsType() string {
+	if x != nil {
+		return x.NsType
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsRequest) GetNsInode() string {
+	if x != nil {
+		return x.NsInode
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsRequest) GetReferencePid() uint32 {
+	if x != nil {
+		return x.ReferencePid
+	}
+	return 0
+}
+
+type GetNamespaceDetailsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NsType        string                 `protobuf:"bytes,1,opt,name=ns_type,json=nsType,proto3" json:"ns_type,omitempty"`
+	NsInode       string                 `protobuf:"bytes,2,opt,name=ns_inode,json=nsInode,proto3" json:"ns_inode,omitempty"`
+	MountInfo     string                 `protobuf:"bytes,3,opt,name=mount_info,json=mountInfo,proto3" json:"mount_info,omitempty"`
+	NetLinks      string                 `protobuf:"bytes,4,opt,name=net_links,json=netLinks,proto3" json:"net_links,omitempty"`
+	NetRoutes     string                 `protobuf:"bytes,5,opt,name=net_routes,json=netRoutes,proto3" json:"net_routes,omitempty"`
+	UtsInfo       string                 `protobuf:"bytes,6,opt,name=uts_info,json=utsInfo,proto3" json:"uts_info,omitempty"`
+	UserMaps      string                 `protobuf:"bytes,7,opt,name=user_maps,json=userMaps,proto3" json:"user_maps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNamespaceDetailsResponse) Reset() {
+	*x = GetNamespaceDetailsResponse{}
+	mi := &file_api_v1_beemon_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNamespaceDetailsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNamespaceDetailsResponse) ProtoMessage() {}
+
+func (x *GetNamespaceDetailsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNamespaceDetailsResponse.ProtoReflect.Descriptor instead.
+func (*GetNamespaceDetailsResponse) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetNamespaceDetailsResponse) GetNsType() string {
+	if x != nil {
+		return x.NsType
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsResponse) GetNsInode() string {
+	if x != nil {
+		return x.NsInode
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsResponse) GetMountInfo() string {
+	if x != nil {
+		return x.MountInfo
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsResponse) GetNetLinks() string {
+	if x != nil {
+		return x.NetLinks
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsResponse) GetNetRoutes() string {
+	if x != nil {
+		return x.NetRoutes
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsResponse) GetUtsInfo() string {
+	if x != nil {
+		return x.UtsInfo
+	}
+	return ""
+}
+
+func (x *GetNamespaceDetailsResponse) GetUserMaps() string {
+	if x != nil {
+		return x.UserMaps
+	}
+	return ""
+}
+
 type ListProcessesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FilterName    string                 `protobuf:"bytes,1,opt,name=filter_name,json=filterName,proto3" json:"filter_name,omitempty"`
@@ -32,7 +184,7 @@ type ListProcessesRequest struct {
 
 func (x *ListProcessesRequest) Reset() {
 	*x = ListProcessesRequest{}
-	mi := &file_api_v1_beemon_proto_msgTypes[0]
+	mi := &file_api_v1_beemon_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +196,7 @@ func (x *ListProcessesRequest) String() string {
 func (*ListProcessesRequest) ProtoMessage() {}
 
 func (x *ListProcessesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[0]
+	mi := &file_api_v1_beemon_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +209,7 @@ func (x *ListProcessesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProcessesRequest.ProtoReflect.Descriptor instead.
 func (*ListProcessesRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{0}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListProcessesRequest) GetFilterName() string {
@@ -71,13 +223,14 @@ type ListProcessesResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Processes            []*Process             `protobuf:"bytes,1,rep,name=processes,proto3" json:"processes,omitempty"`
 	HostMemoryTotalBytes uint64                 `protobuf:"varint,2,opt,name=host_memory_total_bytes,json=hostMemoryTotalBytes,proto3" json:"host_memory_total_bytes,omitempty"`
+	HostNamespaces       []string               `protobuf:"bytes,3,rep,name=host_namespaces,json=hostNamespaces,proto3" json:"host_namespaces,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListProcessesResponse) Reset() {
 	*x = ListProcessesResponse{}
-	mi := &file_api_v1_beemon_proto_msgTypes[1]
+	mi := &file_api_v1_beemon_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -89,7 +242,7 @@ func (x *ListProcessesResponse) String() string {
 func (*ListProcessesResponse) ProtoMessage() {}
 
 func (x *ListProcessesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[1]
+	mi := &file_api_v1_beemon_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -102,7 +255,7 @@ func (x *ListProcessesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProcessesResponse.ProtoReflect.Descriptor instead.
 func (*ListProcessesResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{1}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListProcessesResponse) GetProcesses() []*Process {
@@ -117,6 +270,13 @@ func (x *ListProcessesResponse) GetHostMemoryTotalBytes() uint64 {
 		return x.HostMemoryTotalBytes
 	}
 	return 0
+}
+
+func (x *ListProcessesResponse) GetHostNamespaces() []string {
+	if x != nil {
+		return x.HostNamespaces
+	}
+	return nil
 }
 
 type Process struct {
@@ -141,7 +301,7 @@ type Process struct {
 
 func (x *Process) Reset() {
 	*x = Process{}
-	mi := &file_api_v1_beemon_proto_msgTypes[2]
+	mi := &file_api_v1_beemon_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -153,7 +313,7 @@ func (x *Process) String() string {
 func (*Process) ProtoMessage() {}
 
 func (x *Process) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[2]
+	mi := &file_api_v1_beemon_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,7 +326,7 @@ func (x *Process) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Process.ProtoReflect.Descriptor instead.
 func (*Process) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{2}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Process) GetPid() uint32 {
@@ -255,7 +415,7 @@ type StreamEventsRequest struct {
 
 func (x *StreamEventsRequest) Reset() {
 	*x = StreamEventsRequest{}
-	mi := &file_api_v1_beemon_proto_msgTypes[3]
+	mi := &file_api_v1_beemon_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -267,7 +427,7 @@ func (x *StreamEventsRequest) String() string {
 func (*StreamEventsRequest) ProtoMessage() {}
 
 func (x *StreamEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[3]
+	mi := &file_api_v1_beemon_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -280,7 +440,7 @@ func (x *StreamEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamEventsRequest.ProtoReflect.Descriptor instead.
 func (*StreamEventsRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{3}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *StreamEventsRequest) GetPid() uint32 {
@@ -315,7 +475,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_api_v1_beemon_proto_msgTypes[4]
+	mi := &file_api_v1_beemon_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -327,7 +487,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[4]
+	mi := &file_api_v1_beemon_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -340,7 +500,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{4}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Event) GetTimestampNs() uint64 {
@@ -557,7 +717,7 @@ type ChrootEvent struct {
 
 func (x *ChrootEvent) Reset() {
 	*x = ChrootEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[5]
+	mi := &file_api_v1_beemon_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +729,7 @@ func (x *ChrootEvent) String() string {
 func (*ChrootEvent) ProtoMessage() {}
 
 func (x *ChrootEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[5]
+	mi := &file_api_v1_beemon_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +742,7 @@ func (x *ChrootEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChrootEvent.ProtoReflect.Descriptor instead.
 func (*ChrootEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{5}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ChrootEvent) GetPath() string {
@@ -602,7 +762,7 @@ type PivotRootEvent struct {
 
 func (x *PivotRootEvent) Reset() {
 	*x = PivotRootEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[6]
+	mi := &file_api_v1_beemon_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +774,7 @@ func (x *PivotRootEvent) String() string {
 func (*PivotRootEvent) ProtoMessage() {}
 
 func (x *PivotRootEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[6]
+	mi := &file_api_v1_beemon_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +787,7 @@ func (x *PivotRootEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PivotRootEvent.ProtoReflect.Descriptor instead.
 func (*PivotRootEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{6}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PivotRootEvent) GetNewRoot() string {
@@ -654,7 +814,7 @@ type SetnsEvent struct {
 
 func (x *SetnsEvent) Reset() {
 	*x = SetnsEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[7]
+	mi := &file_api_v1_beemon_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +826,7 @@ func (x *SetnsEvent) String() string {
 func (*SetnsEvent) ProtoMessage() {}
 
 func (x *SetnsEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[7]
+	mi := &file_api_v1_beemon_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +839,7 @@ func (x *SetnsEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetnsEvent.ProtoReflect.Descriptor instead.
 func (*SetnsEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{7}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SetnsEvent) GetFd() uint32 {
@@ -705,7 +865,7 @@ type UnshareEvent struct {
 
 func (x *UnshareEvent) Reset() {
 	*x = UnshareEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[8]
+	mi := &file_api_v1_beemon_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +877,7 @@ func (x *UnshareEvent) String() string {
 func (*UnshareEvent) ProtoMessage() {}
 
 func (x *UnshareEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[8]
+	mi := &file_api_v1_beemon_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +890,7 @@ func (x *UnshareEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnshareEvent.ProtoReflect.Descriptor instead.
 func (*UnshareEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{8}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UnshareEvent) GetFlags() uint32 {
@@ -750,7 +910,7 @@ type FileReadEvent struct {
 
 func (x *FileReadEvent) Reset() {
 	*x = FileReadEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[9]
+	mi := &file_api_v1_beemon_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -762,7 +922,7 @@ func (x *FileReadEvent) String() string {
 func (*FileReadEvent) ProtoMessage() {}
 
 func (x *FileReadEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[9]
+	mi := &file_api_v1_beemon_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -775,7 +935,7 @@ func (x *FileReadEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileReadEvent.ProtoReflect.Descriptor instead.
 func (*FileReadEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{9}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *FileReadEvent) GetFd() uint32 {
@@ -803,7 +963,7 @@ type FileWriteEvent struct {
 
 func (x *FileWriteEvent) Reset() {
 	*x = FileWriteEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[10]
+	mi := &file_api_v1_beemon_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -815,7 +975,7 @@ func (x *FileWriteEvent) String() string {
 func (*FileWriteEvent) ProtoMessage() {}
 
 func (x *FileWriteEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[10]
+	mi := &file_api_v1_beemon_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -828,7 +988,7 @@ func (x *FileWriteEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileWriteEvent.ProtoReflect.Descriptor instead.
 func (*FileWriteEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{10}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *FileWriteEvent) GetFd() uint32 {
@@ -861,7 +1021,7 @@ type FileCloseEvent struct {
 
 func (x *FileCloseEvent) Reset() {
 	*x = FileCloseEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[11]
+	mi := &file_api_v1_beemon_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -873,7 +1033,7 @@ func (x *FileCloseEvent) String() string {
 func (*FileCloseEvent) ProtoMessage() {}
 
 func (x *FileCloseEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[11]
+	mi := &file_api_v1_beemon_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +1046,7 @@ func (x *FileCloseEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileCloseEvent.ProtoReflect.Descriptor instead.
 func (*FileCloseEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{11}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *FileCloseEvent) GetFd() uint32 {
@@ -905,7 +1065,7 @@ type SyscallEvent struct {
 
 func (x *SyscallEvent) Reset() {
 	*x = SyscallEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[12]
+	mi := &file_api_v1_beemon_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +1077,7 @@ func (x *SyscallEvent) String() string {
 func (*SyscallEvent) ProtoMessage() {}
 
 func (x *SyscallEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[12]
+	mi := &file_api_v1_beemon_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1090,7 @@ func (x *SyscallEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyscallEvent.ProtoReflect.Descriptor instead.
 func (*SyscallEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{12}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SyscallEvent) GetSyscallId() uint32 {
@@ -950,7 +1110,7 @@ type FileOpenEvent struct {
 
 func (x *FileOpenEvent) Reset() {
 	*x = FileOpenEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[13]
+	mi := &file_api_v1_beemon_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -962,7 +1122,7 @@ func (x *FileOpenEvent) String() string {
 func (*FileOpenEvent) ProtoMessage() {}
 
 func (x *FileOpenEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[13]
+	mi := &file_api_v1_beemon_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -975,7 +1135,7 @@ func (x *FileOpenEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileOpenEvent.ProtoReflect.Descriptor instead.
 func (*FileOpenEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{13}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *FileOpenEvent) GetFilename() string {
@@ -1005,7 +1165,7 @@ type NetworkConnectEvent struct {
 
 func (x *NetworkConnectEvent) Reset() {
 	*x = NetworkConnectEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[14]
+	mi := &file_api_v1_beemon_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1017,7 +1177,7 @@ func (x *NetworkConnectEvent) String() string {
 func (*NetworkConnectEvent) ProtoMessage() {}
 
 func (x *NetworkConnectEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[14]
+	mi := &file_api_v1_beemon_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1030,7 +1190,7 @@ func (x *NetworkConnectEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkConnectEvent.ProtoReflect.Descriptor instead.
 func (*NetworkConnectEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{14}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *NetworkConnectEvent) GetSaddr() uint32 {
@@ -1084,7 +1244,7 @@ type ProcessEvent struct {
 
 func (x *ProcessEvent) Reset() {
 	*x = ProcessEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[15]
+	mi := &file_api_v1_beemon_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1096,7 +1256,7 @@ func (x *ProcessEvent) String() string {
 func (*ProcessEvent) ProtoMessage() {}
 
 func (x *ProcessEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[15]
+	mi := &file_api_v1_beemon_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1109,7 +1269,7 @@ func (x *ProcessEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessEvent.ProtoReflect.Descriptor instead.
 func (*ProcessEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{15}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ProcessEvent) GetIsExec() bool {
@@ -1180,7 +1340,7 @@ type LimitChangedEvent struct {
 
 func (x *LimitChangedEvent) Reset() {
 	*x = LimitChangedEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[16]
+	mi := &file_api_v1_beemon_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1192,7 +1352,7 @@ func (x *LimitChangedEvent) String() string {
 func (*LimitChangedEvent) ProtoMessage() {}
 
 func (x *LimitChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[16]
+	mi := &file_api_v1_beemon_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1205,7 +1365,7 @@ func (x *LimitChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LimitChangedEvent.ProtoReflect.Descriptor instead.
 func (*LimitChangedEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{16}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *LimitChangedEvent) GetMemoryLimitBytes() uint64 {
@@ -1240,13 +1400,28 @@ var File_api_v1_beemon_proto protoreflect.FileDescriptor
 
 const file_api_v1_beemon_proto_rawDesc = "" +
 	"\n" +
-	"\x13api/v1/beemon.proto\x12\tbeemon.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"7\n" +
+	"\x13api/v1/beemon.proto\x12\tbeemon.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"u\n" +
+	"\x1aGetNamespaceDetailsRequest\x12\x17\n" +
+	"\ans_type\x18\x01 \x01(\tR\x06nsType\x12\x19\n" +
+	"\bns_inode\x18\x02 \x01(\tR\ansInode\x12#\n" +
+	"\rreference_pid\x18\x03 \x01(\rR\freferencePid\"\xe4\x01\n" +
+	"\x1bGetNamespaceDetailsResponse\x12\x17\n" +
+	"\ans_type\x18\x01 \x01(\tR\x06nsType\x12\x19\n" +
+	"\bns_inode\x18\x02 \x01(\tR\ansInode\x12\x1d\n" +
+	"\n" +
+	"mount_info\x18\x03 \x01(\tR\tmountInfo\x12\x1b\n" +
+	"\tnet_links\x18\x04 \x01(\tR\bnetLinks\x12\x1d\n" +
+	"\n" +
+	"net_routes\x18\x05 \x01(\tR\tnetRoutes\x12\x19\n" +
+	"\buts_info\x18\x06 \x01(\tR\autsInfo\x12\x1b\n" +
+	"\tuser_maps\x18\a \x01(\tR\buserMaps\"7\n" +
 	"\x14ListProcessesRequest\x12\x1f\n" +
 	"\vfilter_name\x18\x01 \x01(\tR\n" +
-	"filterName\"\x80\x01\n" +
+	"filterName\"\xa9\x01\n" +
 	"\x15ListProcessesResponse\x120\n" +
 	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\x125\n" +
-	"\x17host_memory_total_bytes\x18\x02 \x01(\x04R\x14hostMemoryTotalBytes\"\xef\x02\n" +
+	"\x17host_memory_total_bytes\x18\x02 \x01(\x04R\x14hostMemoryTotalBytes\x12'\n" +
+	"\x0fhost_namespaces\x18\x03 \x03(\tR\x0ehostNamespaces\"\xef\x02\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +
@@ -1333,10 +1508,11 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"cpuQuotaUs\x12\"\n" +
 	"\rcpu_period_us\x18\x03 \x01(\x04R\vcpuPeriodUs\x12\x1d\n" +
 	"\n" +
-	"pids_limit\x18\x04 \x01(\x04R\tpidsLimit2\xea\x01\n" +
+	"pids_limit\x18\x04 \x01(\x04R\tpidsLimit2\x82\x03\n" +
 	"\rBeemonService\x12m\n" +
 	"\rListProcesses\x12\x1f.beemon.v1.ListProcessesRequest\x1a .beemon.v1.ListProcessesResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/processes\x12j\n" +
-	"\fStreamEvents\x12\x1e.beemon.v1.StreamEventsRequest\x1a\x10.beemon.v1.Event\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/processes/{pid}/events0\x01B?Z=github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1b\x06proto3"
+	"\fStreamEvents\x12\x1e.beemon.v1.StreamEventsRequest\x1a\x10.beemon.v1.Event\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/processes/{pid}/events0\x01\x12\x95\x01\n" +
+	"\x13GetNamespaceDetails\x12%.beemon.v1.GetNamespaceDetailsRequest\x1a&.beemon.v1.GetNamespaceDetailsResponse\"/\x82\xd3\xe4\x93\x02)\x12'/api/v1/namespaces/{ns_type}/{ns_inode}B?Z=github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1b\x06proto3"
 
 var (
 	file_api_v1_beemon_proto_rawDescOnce sync.Once
@@ -1350,46 +1526,50 @@ func file_api_v1_beemon_proto_rawDescGZIP() []byte {
 	return file_api_v1_beemon_proto_rawDescData
 }
 
-var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_api_v1_beemon_proto_goTypes = []any{
-	(*ListProcessesRequest)(nil),  // 0: beemon.v1.ListProcessesRequest
-	(*ListProcessesResponse)(nil), // 1: beemon.v1.ListProcessesResponse
-	(*Process)(nil),               // 2: beemon.v1.Process
-	(*StreamEventsRequest)(nil),   // 3: beemon.v1.StreamEventsRequest
-	(*Event)(nil),                 // 4: beemon.v1.Event
-	(*ChrootEvent)(nil),           // 5: beemon.v1.ChrootEvent
-	(*PivotRootEvent)(nil),        // 6: beemon.v1.PivotRootEvent
-	(*SetnsEvent)(nil),            // 7: beemon.v1.SetnsEvent
-	(*UnshareEvent)(nil),          // 8: beemon.v1.UnshareEvent
-	(*FileReadEvent)(nil),         // 9: beemon.v1.FileReadEvent
-	(*FileWriteEvent)(nil),        // 10: beemon.v1.FileWriteEvent
-	(*FileCloseEvent)(nil),        // 11: beemon.v1.FileCloseEvent
-	(*SyscallEvent)(nil),          // 12: beemon.v1.SyscallEvent
-	(*FileOpenEvent)(nil),         // 13: beemon.v1.FileOpenEvent
-	(*NetworkConnectEvent)(nil),   // 14: beemon.v1.NetworkConnectEvent
-	(*ProcessEvent)(nil),          // 15: beemon.v1.ProcessEvent
-	(*LimitChangedEvent)(nil),     // 16: beemon.v1.LimitChangedEvent
+	(*GetNamespaceDetailsRequest)(nil),  // 0: beemon.v1.GetNamespaceDetailsRequest
+	(*GetNamespaceDetailsResponse)(nil), // 1: beemon.v1.GetNamespaceDetailsResponse
+	(*ListProcessesRequest)(nil),        // 2: beemon.v1.ListProcessesRequest
+	(*ListProcessesResponse)(nil),       // 3: beemon.v1.ListProcessesResponse
+	(*Process)(nil),                     // 4: beemon.v1.Process
+	(*StreamEventsRequest)(nil),         // 5: beemon.v1.StreamEventsRequest
+	(*Event)(nil),                       // 6: beemon.v1.Event
+	(*ChrootEvent)(nil),                 // 7: beemon.v1.ChrootEvent
+	(*PivotRootEvent)(nil),              // 8: beemon.v1.PivotRootEvent
+	(*SetnsEvent)(nil),                  // 9: beemon.v1.SetnsEvent
+	(*UnshareEvent)(nil),                // 10: beemon.v1.UnshareEvent
+	(*FileReadEvent)(nil),               // 11: beemon.v1.FileReadEvent
+	(*FileWriteEvent)(nil),              // 12: beemon.v1.FileWriteEvent
+	(*FileCloseEvent)(nil),              // 13: beemon.v1.FileCloseEvent
+	(*SyscallEvent)(nil),                // 14: beemon.v1.SyscallEvent
+	(*FileOpenEvent)(nil),               // 15: beemon.v1.FileOpenEvent
+	(*NetworkConnectEvent)(nil),         // 16: beemon.v1.NetworkConnectEvent
+	(*ProcessEvent)(nil),                // 17: beemon.v1.ProcessEvent
+	(*LimitChangedEvent)(nil),           // 18: beemon.v1.LimitChangedEvent
 }
 var file_api_v1_beemon_proto_depIdxs = []int32{
-	2,  // 0: beemon.v1.ListProcessesResponse.processes:type_name -> beemon.v1.Process
-	15, // 1: beemon.v1.Event.process:type_name -> beemon.v1.ProcessEvent
-	16, // 2: beemon.v1.Event.limit_changed:type_name -> beemon.v1.LimitChangedEvent
-	12, // 3: beemon.v1.Event.syscall:type_name -> beemon.v1.SyscallEvent
-	13, // 4: beemon.v1.Event.file_open:type_name -> beemon.v1.FileOpenEvent
-	9,  // 5: beemon.v1.Event.file_read:type_name -> beemon.v1.FileReadEvent
-	10, // 6: beemon.v1.Event.file_write:type_name -> beemon.v1.FileWriteEvent
-	11, // 7: beemon.v1.Event.file_close:type_name -> beemon.v1.FileCloseEvent
-	14, // 8: beemon.v1.Event.network_connect:type_name -> beemon.v1.NetworkConnectEvent
-	5,  // 9: beemon.v1.Event.chroot:type_name -> beemon.v1.ChrootEvent
-	6,  // 10: beemon.v1.Event.pivot_root:type_name -> beemon.v1.PivotRootEvent
-	7,  // 11: beemon.v1.Event.setns:type_name -> beemon.v1.SetnsEvent
-	8,  // 12: beemon.v1.Event.unshare:type_name -> beemon.v1.UnshareEvent
-	0,  // 13: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
-	3,  // 14: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
-	1,  // 15: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
-	4,  // 16: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.Event
-	15, // [15:17] is the sub-list for method output_type
-	13, // [13:15] is the sub-list for method input_type
+	4,  // 0: beemon.v1.ListProcessesResponse.processes:type_name -> beemon.v1.Process
+	17, // 1: beemon.v1.Event.process:type_name -> beemon.v1.ProcessEvent
+	18, // 2: beemon.v1.Event.limit_changed:type_name -> beemon.v1.LimitChangedEvent
+	14, // 3: beemon.v1.Event.syscall:type_name -> beemon.v1.SyscallEvent
+	15, // 4: beemon.v1.Event.file_open:type_name -> beemon.v1.FileOpenEvent
+	11, // 5: beemon.v1.Event.file_read:type_name -> beemon.v1.FileReadEvent
+	12, // 6: beemon.v1.Event.file_write:type_name -> beemon.v1.FileWriteEvent
+	13, // 7: beemon.v1.Event.file_close:type_name -> beemon.v1.FileCloseEvent
+	16, // 8: beemon.v1.Event.network_connect:type_name -> beemon.v1.NetworkConnectEvent
+	7,  // 9: beemon.v1.Event.chroot:type_name -> beemon.v1.ChrootEvent
+	8,  // 10: beemon.v1.Event.pivot_root:type_name -> beemon.v1.PivotRootEvent
+	9,  // 11: beemon.v1.Event.setns:type_name -> beemon.v1.SetnsEvent
+	10, // 12: beemon.v1.Event.unshare:type_name -> beemon.v1.UnshareEvent
+	2,  // 13: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
+	5,  // 14: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
+	0,  // 15: beemon.v1.BeemonService.GetNamespaceDetails:input_type -> beemon.v1.GetNamespaceDetailsRequest
+	3,  // 16: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
+	6,  // 17: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.Event
+	1,  // 18: beemon.v1.BeemonService.GetNamespaceDetails:output_type -> beemon.v1.GetNamespaceDetailsResponse
+	16, // [16:19] is the sub-list for method output_type
+	13, // [13:16] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name
 	13, // [13:13] is the sub-list for extension extendee
 	0,  // [0:13] is the sub-list for field type_name
@@ -1400,7 +1580,7 @@ func file_api_v1_beemon_proto_init() {
 	if File_api_v1_beemon_proto != nil {
 		return
 	}
-	file_api_v1_beemon_proto_msgTypes[4].OneofWrappers = []any{
+	file_api_v1_beemon_proto_msgTypes[6].OneofWrappers = []any{
 		(*Event_Process)(nil),
 		(*Event_LimitChanged)(nil),
 		(*Event_Syscall)(nil),
@@ -1420,7 +1600,7 @@ func file_api_v1_beemon_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_beemon_proto_rawDesc), len(file_api_v1_beemon_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

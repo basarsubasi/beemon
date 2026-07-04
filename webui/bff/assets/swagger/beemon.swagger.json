@@ -16,6 +16,50 @@
     "application/json"
   ],
   "paths": {
+    "/api/v1/namespaces/{nsType}/{nsInode}": {
+      "get": {
+        "operationId": "BeemonService_GetNamespaceDetails",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetNamespaceDetailsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "nsType",
+            "description": "\"mnt\", \"net\", \"uts\", \"user\"",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "nsInode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "referencePid",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "BeemonService"
+        ]
+      }
+    },
     "/api/v1/processes": {
       "get": {
         "operationId": "BeemonService_ListProcesses",
@@ -224,6 +268,32 @@
         }
       }
     },
+    "v1GetNamespaceDetailsResponse": {
+      "type": "object",
+      "properties": {
+        "nsType": {
+          "type": "string"
+        },
+        "nsInode": {
+          "type": "string"
+        },
+        "mountInfo": {
+          "type": "string"
+        },
+        "netLinks": {
+          "type": "string"
+        },
+        "netRoutes": {
+          "type": "string"
+        },
+        "utsInfo": {
+          "type": "string"
+        },
+        "userMaps": {
+          "type": "string"
+        }
+      }
+    },
     "v1LimitChangedEvent": {
       "type": "object",
       "properties": {
@@ -258,6 +328,12 @@
         "hostMemoryTotalBytes": {
           "type": "string",
           "format": "uint64"
+        },
+        "hostNamespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

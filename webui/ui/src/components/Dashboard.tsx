@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Card } from "./ui/card";
-import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box } from "lucide-react";
 
 type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit';
 type SortDirection = 'asc' | 'desc';
@@ -14,6 +15,7 @@ type SortDirection = 'asc' | 'desc';
 export function Dashboard() {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [hostMem, setHostMem] = useState<string>("0");
+  const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>('memory');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -29,6 +31,9 @@ export function Dashboard() {
         setProcesses(data.processes || []);
         if (data.hostMemoryTotalBytes) {
           setHostMem(data.hostMemoryTotalBytes);
+        }
+        if (data.hostNamespaces) {
+          setHostNamespaces(data.hostNamespaces);
         }
       } catch (err) {
         console.error("Failed to fetch processes:", err);
@@ -92,6 +97,29 @@ export function Dashboard() {
   };
 
   const sortedProcesses = getSortedProcesses();
+
+  // Aggregate namespaces
+  const nsMap = new Map<string, { type: string, inode: string, count: number, isHost: boolean }>();
+  processes.forEach(p => {
+    if (p.namespaces) {
+      p.namespaces.forEach(nsStr => {
+        if (!nsMap.has(nsStr)) {
+          const parts = nsStr.split(":");
+          if (parts.length >= 2) {
+            nsMap.set(nsStr, { 
+              type: parts[0], 
+              inode: parts[1].replace(/\[|\]/g, ''), 
+              count: 1,
+              isHost: hostNamespaces.includes(nsStr)
+            });
+          }
+        } else {
+          nsMap.get(nsStr)!.count++;
+        }
+      });
+    }
+  });
+  const namespaces = Array.from(nsMap.values()).sort((a,b) => b.count - a.count);
   
   const totalMemory = processes.reduce((acc, p) => acc + (parseInt(p.memoryUsageBytes) || 0), 0);
   const totalCpu = processes.reduce((acc, p) => acc + (p.cpuUsagePercent || 0), 0);
@@ -129,8 +157,15 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Input 
+      <Tabs defaultValue="processes" className="w-full">
+        <TabsList className="grid w-[400px] grid-cols-2 bg-zinc-900 border border-zinc-800">
+          <TabsTrigger value="processes">Processes</TabsTrigger>
+          <TabsTrigger value="namespaces">Namespaces</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="processes" className="space-y-4 mt-6">
+          <div className="flex items-center space-x-2">
+            <Input 
           placeholder="Filter by name or PID..." 
           className="max-w-md bg-zinc-900 border-zinc-800 text-white p-6 text-md"
           value={filter}
@@ -225,6 +260,53 @@ export function Dashboard() {
           </TableBody>
         </Table>
       </div>
+        </TabsContent>
+
+        <TabsContent value="namespaces" className="mt-6">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 overflow-hidden backdrop-blur-xl shadow-2xl">
+            <Table>
+              <TableHeader className="bg-zinc-900/80">
+                <TableRow className="border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-400 py-4 px-6">Type</TableHead>
+                  <TableHead className="text-zinc-400 py-4 px-6">Inode</TableHead>
+                  <TableHead className="text-zinc-400 py-4 px-6">Scope</TableHead>
+                  <TableHead className="text-zinc-400 py-4 px-6 text-right">Process Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {namespaces.map((ns) => (
+                  <TableRow 
+                    key={ns.inode} 
+                    className="cursor-pointer hover:bg-zinc-800/80 border-zinc-800/50 transition-colors group"
+                    onClick={() => navigate(`/namespace/${ns.type}/${ns.inode}`)}
+                  >
+                    <TableCell className="font-medium text-white py-4 px-6 uppercase flex items-center gap-2">
+                      <Box className="w-4 h-4 text-blue-400" />
+                      {ns.type}
+                    </TableCell>
+                    <TableCell className="font-mono text-zinc-300 py-4 px-6">{ns.inode}</TableCell>
+                    <TableCell className="py-4 px-6">
+                      {ns.isHost ? (
+                        <Badge variant="outline" className="border-green-800 text-green-400 bg-green-950/30">Host</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-orange-800 text-orange-400 bg-orange-950/30">Isolated</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-zinc-300 py-4 px-6">{ns.count}</TableCell>
+                  </TableRow>
+                ))}
+                {namespaces.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-32 text-center text-zinc-500">
+                      No namespaces discovered yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

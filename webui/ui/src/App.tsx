@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Dashboard } from "./components/Dashboard"
 import { ProcessDetails } from "./pages/ProcessDetails"
+import { NamespaceDetails } from "./pages/NamespaceDetails"
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/process/:pid" element={<ProcessDetails />} />
+          <Route path="/namespace/:type/:inode" element={<NamespaceDetails />} />
         </Routes>
       </BrowserRouter>
     </div>

@@ -19,6 +19,28 @@ service BeemonService {
       get: "/api/v1/processes/{pid}/events"
     };
   }
+
+  rpc GetNamespaceDetails(GetNamespaceDetailsRequest) returns (GetNamespaceDetailsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/namespaces/{ns_type}/{ns_inode}"
+    };
+  }
+}
+
+message GetNamespaceDetailsRequest {
+  string ns_type = 1;       // "mnt", "net", "uts", "user"
+  string ns_inode = 2;
+  uint32 reference_pid = 3; 
+}
+
+message GetNamespaceDetailsResponse {
+  string ns_type = 1;
+  string ns_inode = 2;
+  string mount_info = 3;
+  string net_links = 4;
+  string net_routes = 5;
+  string uts_info = 6;
+  string user_maps = 7;
 }
 
 message ListProcessesRequest {
@@ -28,6 +50,7 @@ message ListProcessesRequest {
 message ListProcessesResponse {
   repeated Process processes = 1;
   uint64 host_memory_total_bytes = 2;
+  repeated string host_namespaces = 3;
 }
 
 message Process {

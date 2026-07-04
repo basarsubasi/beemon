@@ -12,6 +12,7 @@ export function ProcessDetails() {
   
   const [process, setProcess] = useState<Process | null>(null);
   const [children, setChildren] = useState<Process[]>([]);
+  const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
 
   useEffect(() => {
     if (!pid) return;
@@ -22,6 +23,7 @@ export function ProcessDetails() {
         const data = (await res.json()) as ListProcessesResponse;
         if (!data.processes) return;
         
+        setHostNamespaces(data.hostNamespaces || []);
         const target = data.processes.find(p => p.pid.toString() === pid);
         if (target) {
           setProcess(target);
@@ -63,15 +65,23 @@ export function ProcessDetails() {
             <Shield size={18} className="text-blue-400"/> Namespaces
           </h2>
           <div className="flex flex-wrap gap-2">
-            {process?.namespaces && process.namespaces.length > 0 ? (
-              process.namespaces.map(ns => (
-                <Badge key={ns} variant="secondary" className="bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border border-zinc-800 py-1.5 px-3">
-                  {ns}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-zinc-500 italic text-sm">No namespaces detected</span>
-            )}
+            {process?.namespaces?.map(ns => {
+                const parts = ns.split(":");
+                const type = parts[0];
+                const inode = parts.length > 1 ? parts[1].replace(/\[|\]/g, '') : '';
+                const isHost = hostNamespaces.includes(ns);
+                
+                return (
+                  <Badge 
+                    key={ns} 
+                    variant="outline" 
+                    className="border-zinc-800 bg-zinc-900 font-mono text-zinc-400 cursor-pointer hover:bg-zinc-800 transition-colors"
+                    onClick={() => navigate(`/namespace/${type}/${inode}`)}
+                  >
+                    {ns} {isHost && <span className="ml-1 text-green-500 text-[10px]">(Host)</span>}
+                  </Badge>
+                );
+              }) || <span className="text-zinc-600 italic text-sm">No namespaces detected</span>}
           </div>
         </Card>
         
