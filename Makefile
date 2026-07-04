@@ -6,6 +6,7 @@ generate-proto:
 	$(MAKE) -C protobuf generate
 
 generate-ebpf:
+	$(MAKE) -C kernelspace generatevmlinux
 	$(MAKE) -C userspace generate
 
 build: build-ebpf build-bff

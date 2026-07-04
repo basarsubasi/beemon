@@ -35,7 +35,11 @@ func run() error {
 	}
 
 	// Serve Swagger UI
-	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(swaggerAssets)))
+	subFS, err := fs.Sub(swaggerAssets, "assets/swagger")
+	if err != nil {
+		return err
+	}
+	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(subFS)))
 	
 	httpMux := http.NewServeMux()
 	
