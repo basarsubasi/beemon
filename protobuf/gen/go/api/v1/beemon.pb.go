@@ -112,13 +112,20 @@ func (x *ListProcessesResponse) GetProcesses() []*Process {
 }
 
 type Process struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Pid           uint32                 `protobuf:"varint,1,opt,name=pid,proto3" json:"pid,omitempty"`
-	Ppid          uint32                 `protobuf:"varint,2,opt,name=ppid,proto3" json:"ppid,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Pid   uint32                 `protobuf:"varint,1,opt,name=pid,proto3" json:"pid,omitempty"`
+	Ppid  uint32                 `protobuf:"varint,2,opt,name=ppid,proto3" json:"ppid,omitempty"`
+	Name  string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	State string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	// Usage
+	MemoryUsageBytes uint64  `protobuf:"varint,5,opt,name=memory_usage_bytes,json=memoryUsageBytes,proto3" json:"memory_usage_bytes,omitempty"`
+	CpuUsagePercent  float32 `protobuf:"fixed32,6,opt,name=cpu_usage_percent,json=cpuUsagePercent,proto3" json:"cpu_usage_percent,omitempty"`
+	// Limits
+	MemoryLimitBytes uint64 `protobuf:"varint,7,opt,name=memory_limit_bytes,json=memoryLimitBytes,proto3" json:"memory_limit_bytes,omitempty"` // 0 means no limit
+	CpuQuotaUs       uint64 `protobuf:"varint,8,opt,name=cpu_quota_us,json=cpuQuotaUs,proto3" json:"cpu_quota_us,omitempty"`                   // 0 means no limit
+	CpuPeriodUs      uint64 `protobuf:"varint,9,opt,name=cpu_period_us,json=cpuPeriodUs,proto3" json:"cpu_period_us,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Process) Reset() {
@@ -179,6 +186,41 @@ func (x *Process) GetState() string {
 	return ""
 }
 
+func (x *Process) GetMemoryUsageBytes() uint64 {
+	if x != nil {
+		return x.MemoryUsageBytes
+	}
+	return 0
+}
+
+func (x *Process) GetCpuUsagePercent() float32 {
+	if x != nil {
+		return x.CpuUsagePercent
+	}
+	return 0
+}
+
+func (x *Process) GetMemoryLimitBytes() uint64 {
+	if x != nil {
+		return x.MemoryLimitBytes
+	}
+	return 0
+}
+
+func (x *Process) GetCpuQuotaUs() uint64 {
+	if x != nil {
+		return x.CpuQuotaUs
+	}
+	return 0
+}
+
+func (x *Process) GetCpuPeriodUs() uint64 {
+	if x != nil {
+		return x.CpuPeriodUs
+	}
+	return 0
+}
+
 type StreamEventsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Pid           uint32                 `protobuf:"varint,1,opt,name=pid,proto3" json:"pid,omitempty"`
@@ -227,13 +269,16 @@ type Event struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	TimestampNs uint64                 `protobuf:"varint,1,opt,name=timestamp_ns,json=timestampNs,proto3" json:"timestamp_ns,omitempty"`
 	Pid         uint32                 `protobuf:"varint,2,opt,name=pid,proto3" json:"pid,omitempty"`
-	// Types that are valid to be assigned to EventData:
+	// Types that are valid to be assigned to Event:
 	//
 	//	*Event_Syscall
-	//	*Event_File
-	//	*Event_Network
+	//	*Event_FileOpen
+	//	*Event_NetworkConnect
 	//	*Event_Process
-	EventData     isEvent_EventData `protobuf_oneof:"event_data"`
+	//	*Event_FileRead
+	//	*Event_FileWrite
+	//	*Event_FileClose
+	Event         isEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -282,35 +327,35 @@ func (x *Event) GetPid() uint32 {
 	return 0
 }
 
-func (x *Event) GetEventData() isEvent_EventData {
+func (x *Event) GetEvent() isEvent_Event {
 	if x != nil {
-		return x.EventData
+		return x.Event
 	}
 	return nil
 }
 
 func (x *Event) GetSyscall() *SyscallEvent {
 	if x != nil {
-		if x, ok := x.EventData.(*Event_Syscall); ok {
+		if x, ok := x.Event.(*Event_Syscall); ok {
 			return x.Syscall
 		}
 	}
 	return nil
 }
 
-func (x *Event) GetFile() *FileEvent {
+func (x *Event) GetFileOpen() *FileOpenEvent {
 	if x != nil {
-		if x, ok := x.EventData.(*Event_File); ok {
-			return x.File
+		if x, ok := x.Event.(*Event_FileOpen); ok {
+			return x.FileOpen
 		}
 	}
 	return nil
 }
 
-func (x *Event) GetNetwork() *NetworkEvent {
+func (x *Event) GetNetworkConnect() *NetworkConnectEvent {
 	if x != nil {
-		if x, ok := x.EventData.(*Event_Network); ok {
-			return x.Network
+		if x, ok := x.Event.(*Event_NetworkConnect); ok {
+			return x.NetworkConnect
 		}
 	}
 	return nil
@@ -318,40 +363,233 @@ func (x *Event) GetNetwork() *NetworkEvent {
 
 func (x *Event) GetProcess() *ProcessEvent {
 	if x != nil {
-		if x, ok := x.EventData.(*Event_Process); ok {
+		if x, ok := x.Event.(*Event_Process); ok {
 			return x.Process
 		}
 	}
 	return nil
 }
 
-type isEvent_EventData interface {
-	isEvent_EventData()
+func (x *Event) GetFileRead() *FileReadEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_FileRead); ok {
+			return x.FileRead
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetFileWrite() *FileWriteEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_FileWrite); ok {
+			return x.FileWrite
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetFileClose() *FileCloseEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_FileClose); ok {
+			return x.FileClose
+		}
+	}
+	return nil
+}
+
+type isEvent_Event interface {
+	isEvent_Event()
 }
 
 type Event_Syscall struct {
-	Syscall *SyscallEvent `protobuf:"bytes,3,opt,name=syscall,proto3,oneof"`
+	Syscall *SyscallEvent `protobuf:"bytes,4,opt,name=syscall,proto3,oneof"`
 }
 
-type Event_File struct {
-	File *FileEvent `protobuf:"bytes,4,opt,name=file,proto3,oneof"`
+type Event_FileOpen struct {
+	FileOpen *FileOpenEvent `protobuf:"bytes,5,opt,name=file_open,json=fileOpen,proto3,oneof"`
 }
 
-type Event_Network struct {
-	Network *NetworkEvent `protobuf:"bytes,5,opt,name=network,proto3,oneof"`
+type Event_NetworkConnect struct {
+	NetworkConnect *NetworkConnectEvent `protobuf:"bytes,6,opt,name=network_connect,json=networkConnect,proto3,oneof"`
 }
 
 type Event_Process struct {
-	Process *ProcessEvent `protobuf:"bytes,6,opt,name=process,proto3,oneof"`
+	Process *ProcessEvent `protobuf:"bytes,7,opt,name=process,proto3,oneof"`
 }
 
-func (*Event_Syscall) isEvent_EventData() {}
+type Event_FileRead struct {
+	FileRead *FileReadEvent `protobuf:"bytes,8,opt,name=file_read,json=fileRead,proto3,oneof"`
+}
 
-func (*Event_File) isEvent_EventData() {}
+type Event_FileWrite struct {
+	FileWrite *FileWriteEvent `protobuf:"bytes,9,opt,name=file_write,json=fileWrite,proto3,oneof"`
+}
 
-func (*Event_Network) isEvent_EventData() {}
+type Event_FileClose struct {
+	FileClose *FileCloseEvent `protobuf:"bytes,10,opt,name=file_close,json=fileClose,proto3,oneof"`
+}
 
-func (*Event_Process) isEvent_EventData() {}
+func (*Event_Syscall) isEvent_Event() {}
+
+func (*Event_FileOpen) isEvent_Event() {}
+
+func (*Event_NetworkConnect) isEvent_Event() {}
+
+func (*Event_Process) isEvent_Event() {}
+
+func (*Event_FileRead) isEvent_Event() {}
+
+func (*Event_FileWrite) isEvent_Event() {}
+
+func (*Event_FileClose) isEvent_Event() {}
+
+type FileReadEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Fd            uint32                 `protobuf:"varint,1,opt,name=fd,proto3" json:"fd,omitempty"`
+	Count         uint64                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileReadEvent) Reset() {
+	*x = FileReadEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileReadEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileReadEvent) ProtoMessage() {}
+
+func (x *FileReadEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileReadEvent.ProtoReflect.Descriptor instead.
+func (*FileReadEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FileReadEvent) GetFd() uint32 {
+	if x != nil {
+		return x.Fd
+	}
+	return 0
+}
+
+func (x *FileReadEvent) GetCount() uint64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+type FileWriteEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Fd            uint32                 `protobuf:"varint,1,opt,name=fd,proto3" json:"fd,omitempty"`
+	Count         uint64                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileWriteEvent) Reset() {
+	*x = FileWriteEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileWriteEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileWriteEvent) ProtoMessage() {}
+
+func (x *FileWriteEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileWriteEvent.ProtoReflect.Descriptor instead.
+func (*FileWriteEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FileWriteEvent) GetFd() uint32 {
+	if x != nil {
+		return x.Fd
+	}
+	return 0
+}
+
+func (x *FileWriteEvent) GetCount() uint64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+type FileCloseEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Fd            uint32                 `protobuf:"varint,1,opt,name=fd,proto3" json:"fd,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileCloseEvent) Reset() {
+	*x = FileCloseEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileCloseEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileCloseEvent) ProtoMessage() {}
+
+func (x *FileCloseEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileCloseEvent.ProtoReflect.Descriptor instead.
+func (*FileCloseEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FileCloseEvent) GetFd() uint32 {
+	if x != nil {
+		return x.Fd
+	}
+	return 0
+}
 
 type SyscallEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -362,7 +600,7 @@ type SyscallEvent struct {
 
 func (x *SyscallEvent) Reset() {
 	*x = SyscallEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[5]
+	mi := &file_api_v1_beemon_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +612,7 @@ func (x *SyscallEvent) String() string {
 func (*SyscallEvent) ProtoMessage() {}
 
 func (x *SyscallEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[5]
+	mi := &file_api_v1_beemon_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +625,7 @@ func (x *SyscallEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyscallEvent.ProtoReflect.Descriptor instead.
 func (*SyscallEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{5}
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SyscallEvent) GetSyscallId() uint32 {
@@ -397,7 +635,7 @@ func (x *SyscallEvent) GetSyscallId() uint32 {
 	return 0
 }
 
-type FileEvent struct {
+type FileOpenEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
 	Flags         int32                  `protobuf:"varint,2,opt,name=flags,proto3" json:"flags,omitempty"`
@@ -405,21 +643,21 @@ type FileEvent struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FileEvent) Reset() {
-	*x = FileEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[6]
+func (x *FileOpenEvent) Reset() {
+	*x = FileOpenEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FileEvent) String() string {
+func (x *FileOpenEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FileEvent) ProtoMessage() {}
+func (*FileOpenEvent) ProtoMessage() {}
 
-func (x *FileEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[6]
+func (x *FileOpenEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -430,51 +668,51 @@ func (x *FileEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FileEvent.ProtoReflect.Descriptor instead.
-func (*FileEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{6}
+// Deprecated: Use FileOpenEvent.ProtoReflect.Descriptor instead.
+func (*FileOpenEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *FileEvent) GetFilename() string {
+func (x *FileOpenEvent) GetFilename() string {
 	if x != nil {
 		return x.Filename
 	}
 	return ""
 }
 
-func (x *FileEvent) GetFlags() int32 {
+func (x *FileOpenEvent) GetFlags() int32 {
 	if x != nil {
 		return x.Flags
 	}
 	return 0
 }
 
-type NetworkEvent struct {
+type NetworkConnectEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Saddr         string                 `protobuf:"bytes,1,opt,name=saddr,proto3" json:"saddr,omitempty"`
-	Daddr         string                 `protobuf:"bytes,2,opt,name=daddr,proto3" json:"daddr,omitempty"`
+	Saddr         uint32                 `protobuf:"varint,1,opt,name=saddr,proto3" json:"saddr,omitempty"`
+	Daddr         uint32                 `protobuf:"varint,2,opt,name=daddr,proto3" json:"daddr,omitempty"`
 	Sport         uint32                 `protobuf:"varint,3,opt,name=sport,proto3" json:"sport,omitempty"`
 	Dport         uint32                 `protobuf:"varint,4,opt,name=dport,proto3" json:"dport,omitempty"`
-	Family        string                 `protobuf:"bytes,5,opt,name=family,proto3" json:"family,omitempty"`
+	Family        uint32                 `protobuf:"varint,5,opt,name=family,proto3" json:"family,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *NetworkEvent) Reset() {
-	*x = NetworkEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[7]
+func (x *NetworkConnectEvent) Reset() {
+	*x = NetworkConnectEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *NetworkEvent) String() string {
+func (x *NetworkConnectEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*NetworkEvent) ProtoMessage() {}
+func (*NetworkConnectEvent) ProtoMessage() {}
 
-func (x *NetworkEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[7]
+func (x *NetworkConnectEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,60 +723,62 @@ func (x *NetworkEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use NetworkEvent.ProtoReflect.Descriptor instead.
-func (*NetworkEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{7}
+// Deprecated: Use NetworkConnectEvent.ProtoReflect.Descriptor instead.
+func (*NetworkConnectEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *NetworkEvent) GetSaddr() string {
+func (x *NetworkConnectEvent) GetSaddr() uint32 {
 	if x != nil {
 		return x.Saddr
 	}
-	return ""
+	return 0
 }
 
-func (x *NetworkEvent) GetDaddr() string {
+func (x *NetworkConnectEvent) GetDaddr() uint32 {
 	if x != nil {
 		return x.Daddr
 	}
-	return ""
+	return 0
 }
 
-func (x *NetworkEvent) GetSport() uint32 {
+func (x *NetworkConnectEvent) GetSport() uint32 {
 	if x != nil {
 		return x.Sport
 	}
 	return 0
 }
 
-func (x *NetworkEvent) GetDport() uint32 {
+func (x *NetworkConnectEvent) GetDport() uint32 {
 	if x != nil {
 		return x.Dport
 	}
 	return 0
 }
 
-func (x *NetworkEvent) GetFamily() string {
+func (x *NetworkConnectEvent) GetFamily() uint32 {
 	if x != nil {
 		return x.Family
 	}
-	return ""
+	return 0
 }
 
 type ProcessEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChildPid      uint32                 `protobuf:"varint,1,opt,name=child_pid,json=childPid,proto3" json:"child_pid,omitempty"`
-	Comm          string                 `protobuf:"bytes,2,opt,name=comm,proto3" json:"comm,omitempty"`
-	IsExec        bool                   `protobuf:"varint,3,opt,name=is_exec,json=isExec,proto3" json:"is_exec,omitempty"`
-	IsFork        bool                   `protobuf:"varint,4,opt,name=is_fork,json=isFork,proto3" json:"is_fork,omitempty"`
-	IsExit        bool                   `protobuf:"varint,5,opt,name=is_exit,json=isExit,proto3" json:"is_exit,omitempty"`
+	IsExec        bool                   `protobuf:"varint,1,opt,name=is_exec,json=isExec,proto3" json:"is_exec,omitempty"`
+	IsFork        bool                   `protobuf:"varint,2,opt,name=is_fork,json=isFork,proto3" json:"is_fork,omitempty"`
+	IsExit        bool                   `protobuf:"varint,3,opt,name=is_exit,json=isExit,proto3" json:"is_exit,omitempty"`
+	Comm          string                 `protobuf:"bytes,4,opt,name=comm,proto3" json:"comm,omitempty"`
+	ChildPid      uint32                 `protobuf:"varint,5,opt,name=child_pid,json=childPid,proto3" json:"child_pid,omitempty"`
+	ExitCode      int32                  `protobuf:"varint,6,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	Filename      string                 `protobuf:"bytes,7,opt,name=filename,proto3" json:"filename,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ProcessEvent) Reset() {
 	*x = ProcessEvent{}
-	mi := &file_api_v1_beemon_proto_msgTypes[8]
+	mi := &file_api_v1_beemon_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -550,7 +790,7 @@ func (x *ProcessEvent) String() string {
 func (*ProcessEvent) ProtoMessage() {}
 
 func (x *ProcessEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_beemon_proto_msgTypes[8]
+	mi := &file_api_v1_beemon_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,21 +803,7 @@ func (x *ProcessEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessEvent.ProtoReflect.Descriptor instead.
 func (*ProcessEvent) Descriptor() ([]byte, []int) {
-	return file_api_v1_beemon_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ProcessEvent) GetChildPid() uint32 {
-	if x != nil {
-		return x.ChildPid
-	}
-	return 0
-}
-
-func (x *ProcessEvent) GetComm() string {
-	if x != nil {
-		return x.Comm
-	}
-	return ""
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ProcessEvent) GetIsExec() bool {
@@ -601,6 +827,34 @@ func (x *ProcessEvent) GetIsExit() bool {
 	return false
 }
 
+func (x *ProcessEvent) GetComm() string {
+	if x != nil {
+		return x.Comm
+	}
+	return ""
+}
+
+func (x *ProcessEvent) GetChildPid() uint32 {
+	if x != nil {
+		return x.ChildPid
+	}
+	return 0
+}
+
+func (x *ProcessEvent) GetExitCode() int32 {
+	if x != nil {
+		return x.ExitCode
+	}
+	return 0
+}
+
+func (x *ProcessEvent) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
 var File_api_v1_beemon_proto protoreflect.FileDescriptor
 
 const file_api_v1_beemon_proto_rawDesc = "" +
@@ -610,41 +864,62 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\vfilter_name\x18\x01 \x01(\tR\n" +
 	"filterName\"I\n" +
 	"\x15ListProcessesResponse\x120\n" +
-	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\"Y\n" +
-	"\aProcess\x12\x10\n" +
-	"\x03pid\x18\x01 \x01(\rR\x03pid\x12\x12\n" +
+	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\"\xb0\x02\n" +
+	"\aProcess\x12\x19\n" +
+	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
-	"\x05state\x18\x04 \x01(\tR\x05state\"0\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\x12,\n" +
+	"\x12memory_usage_bytes\x18\x05 \x01(\x04R\x10memoryUsageBytes\x12*\n" +
+	"\x11cpu_usage_percent\x18\x06 \x01(\x02R\x0fcpuUsagePercent\x12,\n" +
+	"\x12memory_limit_bytes\x18\a \x01(\x04R\x10memoryLimitBytes\x12 \n" +
+	"\fcpu_quota_us\x18\b \x01(\x04R\n" +
+	"cpuQuotaUs\x12\"\n" +
+	"\rcpu_period_us\x18\t \x01(\x04R\vcpuPeriodUs\"0\n" +
 	"\x13StreamEventsRequest\x12\x19\n" +
-	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\"\x95\x02\n" +
+	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\"\xe4\x03\n" +
 	"\x05Event\x12!\n" +
 	"\ftimestamp_ns\x18\x01 \x01(\x04R\vtimestampNs\x12\x10\n" +
 	"\x03pid\x18\x02 \x01(\rR\x03pid\x123\n" +
-	"\asyscall\x18\x03 \x01(\v2\x17.beemon.v1.SyscallEventH\x00R\asyscall\x12*\n" +
-	"\x04file\x18\x04 \x01(\v2\x14.beemon.v1.FileEventH\x00R\x04file\x123\n" +
-	"\anetwork\x18\x05 \x01(\v2\x17.beemon.v1.NetworkEventH\x00R\anetwork\x123\n" +
-	"\aprocess\x18\x06 \x01(\v2\x17.beemon.v1.ProcessEventH\x00R\aprocessB\f\n" +
+	"\asyscall\x18\x04 \x01(\v2\x17.beemon.v1.SyscallEventH\x00R\asyscall\x127\n" +
+	"\tfile_open\x18\x05 \x01(\v2\x18.beemon.v1.FileOpenEventH\x00R\bfileOpen\x12I\n" +
+	"\x0fnetwork_connect\x18\x06 \x01(\v2\x1e.beemon.v1.NetworkConnectEventH\x00R\x0enetworkConnect\x123\n" +
+	"\aprocess\x18\a \x01(\v2\x17.beemon.v1.ProcessEventH\x00R\aprocess\x127\n" +
+	"\tfile_read\x18\b \x01(\v2\x18.beemon.v1.FileReadEventH\x00R\bfileRead\x12:\n" +
 	"\n" +
-	"event_data\"-\n" +
+	"file_write\x18\t \x01(\v2\x19.beemon.v1.FileWriteEventH\x00R\tfileWrite\x12:\n" +
+	"\n" +
+	"file_close\x18\n" +
+	" \x01(\v2\x19.beemon.v1.FileCloseEventH\x00R\tfileCloseB\a\n" +
+	"\x05event\"5\n" +
+	"\rFileReadEvent\x12\x0e\n" +
+	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x04R\x05count\"6\n" +
+	"\x0eFileWriteEvent\x12\x0e\n" +
+	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x04R\x05count\" \n" +
+	"\x0eFileCloseEvent\x12\x0e\n" +
+	"\x02fd\x18\x01 \x01(\rR\x02fd\"-\n" +
 	"\fSyscallEvent\x12\x1d\n" +
 	"\n" +
-	"syscall_id\x18\x01 \x01(\rR\tsyscallId\"=\n" +
-	"\tFileEvent\x12\x1a\n" +
+	"syscall_id\x18\x01 \x01(\rR\tsyscallId\"A\n" +
+	"\rFileOpenEvent\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
-	"\x05flags\x18\x02 \x01(\x05R\x05flags\"~\n" +
-	"\fNetworkEvent\x12\x14\n" +
-	"\x05saddr\x18\x01 \x01(\tR\x05saddr\x12\x14\n" +
-	"\x05daddr\x18\x02 \x01(\tR\x05daddr\x12\x14\n" +
+	"\x05flags\x18\x02 \x01(\x05R\x05flags\"\x85\x01\n" +
+	"\x13NetworkConnectEvent\x12\x14\n" +
+	"\x05saddr\x18\x01 \x01(\rR\x05saddr\x12\x14\n" +
+	"\x05daddr\x18\x02 \x01(\rR\x05daddr\x12\x14\n" +
 	"\x05sport\x18\x03 \x01(\rR\x05sport\x12\x14\n" +
 	"\x05dport\x18\x04 \x01(\rR\x05dport\x12\x16\n" +
-	"\x06family\x18\x05 \x01(\tR\x06family\"\x8a\x01\n" +
-	"\fProcessEvent\x12\x1b\n" +
-	"\tchild_pid\x18\x01 \x01(\rR\bchildPid\x12\x12\n" +
-	"\x04comm\x18\x02 \x01(\tR\x04comm\x12\x17\n" +
-	"\ais_exec\x18\x03 \x01(\bR\x06isExec\x12\x17\n" +
-	"\ais_fork\x18\x04 \x01(\bR\x06isFork\x12\x17\n" +
-	"\ais_exit\x18\x05 \x01(\bR\x06isExit2\xea\x01\n" +
+	"\x06family\x18\x05 \x01(\rR\x06family\"\xc3\x01\n" +
+	"\fProcessEvent\x12\x17\n" +
+	"\ais_exec\x18\x01 \x01(\bR\x06isExec\x12\x17\n" +
+	"\ais_fork\x18\x02 \x01(\bR\x06isFork\x12\x17\n" +
+	"\ais_exit\x18\x03 \x01(\bR\x06isExit\x12\x12\n" +
+	"\x04comm\x18\x04 \x01(\tR\x04comm\x12\x1b\n" +
+	"\tchild_pid\x18\x05 \x01(\rR\bchildPid\x12\x1b\n" +
+	"\texit_code\x18\x06 \x01(\x05R\bexitCode\x12\x1a\n" +
+	"\bfilename\x18\a \x01(\tR\bfilename2\xea\x01\n" +
 	"\rBeemonService\x12m\n" +
 	"\rListProcesses\x12\x1f.beemon.v1.ListProcessesRequest\x1a .beemon.v1.ListProcessesResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/processes\x12j\n" +
 	"\fStreamEvents\x12\x1e.beemon.v1.StreamEventsRequest\x1a\x10.beemon.v1.Event\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/processes/{pid}/events0\x01B?Z=github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1b\x06proto3"
@@ -661,33 +936,39 @@ func file_api_v1_beemon_proto_rawDescGZIP() []byte {
 	return file_api_v1_beemon_proto_rawDescData
 }
 
-var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_api_v1_beemon_proto_goTypes = []any{
 	(*ListProcessesRequest)(nil),  // 0: beemon.v1.ListProcessesRequest
 	(*ListProcessesResponse)(nil), // 1: beemon.v1.ListProcessesResponse
 	(*Process)(nil),               // 2: beemon.v1.Process
 	(*StreamEventsRequest)(nil),   // 3: beemon.v1.StreamEventsRequest
 	(*Event)(nil),                 // 4: beemon.v1.Event
-	(*SyscallEvent)(nil),          // 5: beemon.v1.SyscallEvent
-	(*FileEvent)(nil),             // 6: beemon.v1.FileEvent
-	(*NetworkEvent)(nil),          // 7: beemon.v1.NetworkEvent
-	(*ProcessEvent)(nil),          // 8: beemon.v1.ProcessEvent
+	(*FileReadEvent)(nil),         // 5: beemon.v1.FileReadEvent
+	(*FileWriteEvent)(nil),        // 6: beemon.v1.FileWriteEvent
+	(*FileCloseEvent)(nil),        // 7: beemon.v1.FileCloseEvent
+	(*SyscallEvent)(nil),          // 8: beemon.v1.SyscallEvent
+	(*FileOpenEvent)(nil),         // 9: beemon.v1.FileOpenEvent
+	(*NetworkConnectEvent)(nil),   // 10: beemon.v1.NetworkConnectEvent
+	(*ProcessEvent)(nil),          // 11: beemon.v1.ProcessEvent
 }
 var file_api_v1_beemon_proto_depIdxs = []int32{
-	2, // 0: beemon.v1.ListProcessesResponse.processes:type_name -> beemon.v1.Process
-	5, // 1: beemon.v1.Event.syscall:type_name -> beemon.v1.SyscallEvent
-	6, // 2: beemon.v1.Event.file:type_name -> beemon.v1.FileEvent
-	7, // 3: beemon.v1.Event.network:type_name -> beemon.v1.NetworkEvent
-	8, // 4: beemon.v1.Event.process:type_name -> beemon.v1.ProcessEvent
-	0, // 5: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
-	3, // 6: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
-	1, // 7: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
-	4, // 8: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.Event
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	2,  // 0: beemon.v1.ListProcessesResponse.processes:type_name -> beemon.v1.Process
+	8,  // 1: beemon.v1.Event.syscall:type_name -> beemon.v1.SyscallEvent
+	9,  // 2: beemon.v1.Event.file_open:type_name -> beemon.v1.FileOpenEvent
+	10, // 3: beemon.v1.Event.network_connect:type_name -> beemon.v1.NetworkConnectEvent
+	11, // 4: beemon.v1.Event.process:type_name -> beemon.v1.ProcessEvent
+	5,  // 5: beemon.v1.Event.file_read:type_name -> beemon.v1.FileReadEvent
+	6,  // 6: beemon.v1.Event.file_write:type_name -> beemon.v1.FileWriteEvent
+	7,  // 7: beemon.v1.Event.file_close:type_name -> beemon.v1.FileCloseEvent
+	0,  // 8: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
+	3,  // 9: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
+	1,  // 10: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
+	4,  // 11: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.Event
+	10, // [10:12] is the sub-list for method output_type
+	8,  // [8:10] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_beemon_proto_init() }
@@ -697,9 +978,12 @@ func file_api_v1_beemon_proto_init() {
 	}
 	file_api_v1_beemon_proto_msgTypes[4].OneofWrappers = []any{
 		(*Event_Syscall)(nil),
-		(*Event_File)(nil),
-		(*Event_Network)(nil),
+		(*Event_FileOpen)(nil),
+		(*Event_NetworkConnect)(nil),
 		(*Event_Process)(nil),
+		(*Event_FileRead)(nil),
+		(*Event_FileWrite)(nil),
+		(*Event_FileClose)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -707,7 +991,7 @@ func file_api_v1_beemon_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_beemon_proto_rawDesc), len(file_api_v1_beemon_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

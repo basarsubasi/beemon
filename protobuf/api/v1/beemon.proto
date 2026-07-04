@@ -30,10 +30,19 @@ message ListProcessesResponse {
 }
 
 message Process {
-  uint32 pid = 1;
+  uint32 pid = 1 [(buf.validate.field).uint32.gt = 0];
   uint32 ppid = 2;
   string name = 3;
   string state = 4;
+  
+  // Usage
+  uint64 memory_usage_bytes = 5;
+  float cpu_usage_percent = 6;
+  
+  // Limits
+  uint64 memory_limit_bytes = 7; // 0 means no limit
+  uint64 cpu_quota_us = 8;       // 0 means no limit
+  uint64 cpu_period_us = 9;
 }
 
 message StreamEventsRequest {
@@ -44,35 +53,54 @@ message Event {
   uint64 timestamp_ns = 1;
   uint32 pid = 2;
   
-  oneof event_data {
-    SyscallEvent syscall = 3;
-    FileEvent file = 4;
-    NetworkEvent network = 5;
-    ProcessEvent process = 6;
+  oneof event {
+    SyscallEvent syscall = 4;
+    FileOpenEvent file_open = 5;
+    NetworkConnectEvent network_connect = 6;
+    ProcessEvent process = 7;
+    FileReadEvent file_read = 8;
+    FileWriteEvent file_write = 9;
+    FileCloseEvent file_close = 10;
   }
+}
+
+message FileReadEvent {
+  uint32 fd = 1;
+  uint64 count = 2;
+}
+
+message FileWriteEvent {
+  uint32 fd = 1;
+  uint64 count = 2;
+}
+
+message FileCloseEvent {
+  uint32 fd = 1;
 }
 
 message SyscallEvent {
   uint32 syscall_id = 1;
 }
 
-message FileEvent {
+message FileOpenEvent {
   string filename = 1;
   int32 flags = 2;
 }
 
-message NetworkEvent {
-  string saddr = 1;
-  string daddr = 2;
+message NetworkConnectEvent {
+  uint32 saddr = 1;
+  uint32 daddr = 2;
   uint32 sport = 3;
   uint32 dport = 4;
-  string family = 5;
+  uint32 family = 5;
 }
 
 message ProcessEvent {
-  uint32 child_pid = 1;
-  string comm = 2;
-  bool is_exec = 3;
-  bool is_fork = 4;
-  bool is_exit = 5;
+  bool is_exec = 1;
+  bool is_fork = 2;
+  bool is_exit = 3;
+  string comm = 4;
+  uint32 child_pid = 5;
+  int32 exit_code = 6;
+  string filename = 7;
 }

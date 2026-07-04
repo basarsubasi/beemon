@@ -5,45 +5,56 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_endian.h>
-#include <bpf/bpf_core_read.h>
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 #define MAX_ENTRIES 1024
-#define EVENT_TYPE_SYSCALL   1
-#define EVENT_TYPE_FILE_OPEN 2
-#define EVENT_TYPE_NET_CONN  3
-#define EVENT_TYPE_PROCESS   4
+
+// Event Types
+#define EVENT_TYPE_SYSCALL     1
+#define EVENT_TYPE_FILE_OPEN   2
+#define EVENT_TYPE_NET_CONN    3
+#define EVENT_TYPE_PROCESS     4
+#define EVENT_TYPE_FILE_READ   5
+#define EVENT_TYPE_FILE_WRITE  6
+#define EVENT_TYPE_FILE_CLOSE  7
 
 struct event_t {
     u32 pid;
     u32 tgid;
     u32 type;
     u64 ts;
-    union {
-        struct {
-            u32 syscall_id;
-        } syscall;
-        struct {
-            char filename[256];
-            int flags;
-        } file;
-        struct {
-            u32 saddr;
-            u32 daddr;
-            u16 sport;
-            u16 dport;
-            u16 family;
-        } net;
-        struct {
-            u32 child_pid;
-            int exit_code;
-            char comm[16];
-            u8 is_exit;
-            u8 is_exec;
-            u8 is_fork;
-        } process;
-    };
+    // Flattened union to make bpf2go generation trivial
+    struct {
+        u32 syscall_id;
+    } syscall;
+    struct {
+        char filename[256];
+        int flags;
+    } file;
+    struct {
+        u32 saddr;
+        u32 daddr;
+        u16 sport;
+        u16 dport;
+        u16 family;
+    } net;
+    struct {
+        u32 child_pid;
+        int exit_code;
+        char comm[16];
+        u8 is_exit;
+        u8 is_exec;
+        u8 is_fork;
+        char filename[256];
+    } process;
+    struct {
+        u32 fd;
+        u64 count;
+    } rw;
+    struct {
+        u32 fd;
+    } close;
 };
 
 // Force BTF generation for event_t so bpf2go can generate the Go struct
@@ -67,31 +78,12 @@ static __always_inline bool should_trace(u32 pid) {
     return val != NULL;
 }
 
-// 1. Syscalls
-SEC("tracepoint/raw_syscalls/sys_enter")
-int trace_sys_enter(struct trace_event_raw_sys_enter *ctx) {
-    u64 id = bpf_get_current_pid_tgid();
-    u32 pid = id >> 32;
-    u32 tgid = id;
+// -----------------------------------------------------------------------------
+// PROCESS LIFECYCLE
+// -----------------------------------------------------------------------------
 
-    if (!should_trace(tgid)) return 0;
-
-    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
-    if (!e) return 0;
-
-    e->pid = pid;
-    e->tgid = tgid;
-    e->type = EVENT_TYPE_SYSCALL;
-    e->ts = bpf_ktime_get_ns();
-    e->syscall.syscall_id = ctx->id;
-
-    bpf_ringbuf_submit(e, 0);
-    return 0;
-}
-
-// 2. Process Lifecycle (Exec)
-SEC("tracepoint/sched/sched_process_exec")
-int trace_sched_process_exec(struct trace_event_raw_sched_process_exec *ctx) {
+SEC("tracepoint/syscalls/sys_enter_execve")
+int trace_sys_enter_execve(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id;
     
@@ -108,12 +100,15 @@ int trace_sched_process_exec(struct trace_event_raw_sched_process_exec *ctx) {
     e->process.is_fork = 0;
     e->process.is_exit = 0;
     bpf_get_current_comm(&e->process.comm, sizeof(e->process.comm));
+    
+    // args[0] is const char *filename
+    const char *filename = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&e->process.filename, sizeof(e->process.filename), filename);
 
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
 
-// 3. Process Lifecycle (Fork)
 SEC("tracepoint/sched/sched_process_fork")
 int trace_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx) {
     u32 parent_pid = ctx->parent_pid;
@@ -142,7 +137,6 @@ int trace_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx) {
     return 0;
 }
 
-// 4. Process Lifecycle (Exit)
 SEC("tracepoint/sched/sched_process_exit")
 int trace_sched_process_exit(struct trace_event_raw_sched_process_template *ctx) {
     u64 id = bpf_get_current_pid_tgid();
@@ -166,9 +160,74 @@ int trace_sched_process_exit(struct trace_event_raw_sched_process_template *ctx)
     return 0;
 }
 
-// 5. File Open
-SEC("kprobe/do_sys_openat2")
-int BPF_KPROBE(do_sys_openat2, int dfd, const char *filename, struct open_how *how) {
+// -----------------------------------------------------------------------------
+// FILE I/O (READ, WRITE, OPEN, CLOSE)
+// -----------------------------------------------------------------------------
+
+SEC("tracepoint/syscalls/sys_enter_read")
+int trace_sys_enter_read(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id;
+
+    if (!should_trace(tgid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = id >> 32;
+    e->tgid = tgid;
+    e->type = EVENT_TYPE_FILE_READ;
+    e->ts = bpf_ktime_get_ns();
+    e->rw.fd = (u32)ctx->args[0];
+    e->rw.count = (u64)ctx->args[2];
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_write")
+int trace_sys_enter_write(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id;
+
+    if (!should_trace(tgid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = id >> 32;
+    e->tgid = tgid;
+    e->type = EVENT_TYPE_FILE_WRITE;
+    e->ts = bpf_ktime_get_ns();
+    e->rw.fd = (u32)ctx->args[0];
+    e->rw.count = (u64)ctx->args[2];
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_close")
+int trace_sys_enter_close(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id;
+
+    if (!should_trace(tgid)) return 0;
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = id >> 32;
+    e->tgid = tgid;
+    e->type = EVENT_TYPE_FILE_CLOSE;
+    e->ts = bpf_ktime_get_ns();
+    e->close.fd = (u32)ctx->args[0];
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_openat")
+int trace_sys_enter_openat(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id;
 
@@ -181,14 +240,19 @@ int BPF_KPROBE(do_sys_openat2, int dfd, const char *filename, struct open_how *h
     e->tgid = tgid;
     e->type = EVENT_TYPE_FILE_OPEN;
     e->ts = bpf_ktime_get_ns();
-    e->file.flags = BPF_CORE_READ(how, flags);
+    e->file.flags = (int)ctx->args[2];
+    
+    const char *filename = (const char *)ctx->args[1];
     bpf_probe_read_user_str(&e->file.filename, sizeof(e->file.filename), filename);
 
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
 
-// 6. Network Connect
+// -----------------------------------------------------------------------------
+// NETWORK
+// -----------------------------------------------------------------------------
+
 SEC("kprobe/tcp_v4_connect")
 int BPF_KPROBE(tcp_v4_connect, struct sock *sk) {
     u64 id = bpf_get_current_pid_tgid();
