@@ -324,9 +324,9 @@ int BPF_KPROBE(tcp_v4_connect, struct sock *sk, struct sockaddr *uaddr) {
     u16 dport = 0;
     bpf_probe_read_kernel(&dport, sizeof(dport), &usin->sin_port);
     
-    e->net.saddr = BPF_CORE_READ(sk, __sk_common.skc_rcv_saddr);
+    bpf_probe_read_kernel(&e->net.saddr, sizeof(e->net.saddr), &sk->__sk_common.skc_rcv_saddr);
     bpf_probe_read_kernel(&e->net.daddr, sizeof(e->net.daddr), &usin->sin_addr.s_addr);
-    e->net.sport = BPF_CORE_READ(sk, __sk_common.skc_num);
+    bpf_probe_read_kernel(&e->net.sport, sizeof(e->net.sport), &sk->__sk_common.skc_num);
     e->net.dport = bpf_ntohs(dport);
 
     bpf_ringbuf_submit(e, 0);
