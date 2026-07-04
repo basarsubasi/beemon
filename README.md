@@ -34,6 +34,31 @@ The frontend is a modern React application. It displays a dashboard of all runni
 ## Cross-Architecture Support
 Beemon is designed to run on both **x86_64** and **arm64** (e.g., Raspberry Pi) architectures. It uses architecture-specific `vmlinux.h` headers and `bpf2go` to compile the correct eBPF bytecode for the target platform.
 
+> [!WARNING]
+> **Not CO-RE Compatible:** This project does **not** use CO-RE (Compile Once - Run Everywhere) relocations because the target environments lack BTF debug information (`/sys/kernel/btf/vmlinux`). 
+> The struct offsets are hardcoded at compile time. This specific build is designed exactly for **6.18 arm64** and **6.12 amd64** Linux kernels. Running it on different kernel versions may cause it to fail to load or read incorrect data unless you generate a new `vmlinux.h` for your kernel and recompile.
+
+## Directory Structure
+
+```text
+.
+├── Makefile                # Build orchestration
+├── docker-compose.yaml     # Docker deployment config
+├── kernelspace/            # eBPF C programs and kernel headers
+│   ├── arm64/              # Raspberry Pi/ARM64 specific eBPF and vmlinux.h
+│   └── x86_64/             # Intel/AMD64 specific eBPF and vmlinux.h
+├── protobuf/               # gRPC & Protocol Buffer definitions
+│   └── api/v1/beemon.proto # API contract between Daemon and BFF
+├── userspace/              # beemon-daemon (Go)
+│   ├── main.go             # Daemon entry point
+│   ├── link.go             # eBPF loader and ringbuffer reader
+│   ├── event.go            # Event dispatcher and gRPC server
+│   └── snapshot.go         # /proc process and cgroup limits reader
+└── webui/                  # Frontend stack
+    ├── bff/                # Backend-for-Frontend (Go, REST proxy + WebSockets)
+    └── ui/                 # React SPA (TypeScript, Vite, Tailwind)
+```
+
 ## Quick Start
 
 You can run the entire stack locally for development using Make:
