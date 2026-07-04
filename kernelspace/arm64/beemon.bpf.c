@@ -2,12 +2,7 @@
 #define bpf_target_arm64
 #include "vmlinux.h"
 
-struct user_pt_regs {
-	__u64		regs[31];
-	__u64		sp;
-	__u64		pc;
-	__u64		pstate;
-};
+
 
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
@@ -166,7 +161,7 @@ int trace_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx) {
         e->process.is_fork = 1;
         e->process.is_exit = 0;
         e->process.child_pid = child_pid;
-        bpf_probe_read_kernel_str(&e->process.comm, sizeof(e->process.comm), ctx->child_comm);
+        bpf_probe_read_kernel_str(&e->process.comm, sizeof(e->process.comm), (void *)ctx + (ctx->__data_loc_child_comm & 0xffff));
         
         bpf_ringbuf_submit(e, 0);
     }
