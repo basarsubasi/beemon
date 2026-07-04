@@ -9,6 +9,7 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /app/beemon-daemon .
 
 FROM alpine:latest
+RUN apk add --no-cache procps
 WORKDIR /app
 COPY --from=builder /app/beemon-daemon .
 CMD ["./beemon-daemon"]
