@@ -104,11 +104,11 @@ export function Dashboard() {
     if (p.namespaces) {
       p.namespaces.forEach(nsStr => {
         if (!nsMap.has(nsStr)) {
-          const parts = nsStr.split(":");
-          if (parts.length >= 2) {
+          const inodeMatch = nsStr.match(/\[(\d+)\]/);
+          if (inodeMatch) {
             nsMap.set(nsStr, { 
-              type: parts[0], 
-              inode: parts[1].replace(/\[|\]/g, ''), 
+              type: nsStr.split(":")[0], 
+              inode: inodeMatch[1], 
               count: 1,
               isHost: hostNamespaces.includes(nsStr)
             });
@@ -128,7 +128,7 @@ export function Dashboard() {
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">beemon Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">beemon dashboard</h1>
           <p className="text-zinc-400">Real-time eBPF Linux process monitoring.</p>
         </div>
         
@@ -268,7 +268,7 @@ export function Dashboard() {
               <TableHeader className="bg-zinc-900/80">
                 <TableRow className="border-zinc-800 hover:bg-transparent">
                   <TableHead className="text-zinc-400 py-4 px-6">Type</TableHead>
-                  <TableHead className="text-zinc-400 py-4 px-6">Inode</TableHead>
+                  <TableHead className="text-zinc-400 py-4 px-6">ID</TableHead>
                   <TableHead className="text-zinc-400 py-4 px-6">Scope</TableHead>
                   <TableHead className="text-zinc-400 py-4 px-6 text-right">Process Count</TableHead>
                 </TableRow>
@@ -284,7 +284,7 @@ export function Dashboard() {
                       <Box className="w-4 h-4 text-blue-400" />
                       {ns.type}
                     </TableCell>
-                    <TableCell className="font-mono text-zinc-300 py-4 px-6">{ns.inode}</TableCell>
+                    <TableCell className="font-mono text-zinc-300 py-4 px-6">{ns.type}:[{ns.inode}]</TableCell>
                     <TableCell className="py-4 px-6">
                       {ns.isHost ? (
                         <Badge variant="outline" className="border-green-800 text-green-400 bg-green-950/30">Host</Badge>

@@ -66,9 +66,9 @@ export function ProcessDetails() {
           </h2>
           <div className="flex flex-wrap gap-2">
             {process?.namespaces?.map(ns => {
-                const parts = ns.split(":");
-                const type = parts[0];
-                const inode = parts.length > 1 ? parts[1].replace(/\[|\]/g, '') : '';
+                const inodeMatch = ns.match(/\[(\d+)\]/);
+                const type = ns.split(":")[0];
+                const inode = inodeMatch ? inodeMatch[1] : '';
                 const isHost = hostNamespaces.includes(ns);
                 
                 return (
