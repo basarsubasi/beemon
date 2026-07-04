@@ -8,3 +8,6 @@ build:
 
 clean:
 	rm -f beemon_bpfeb.go beemon_bpfeb.o beemon_bpfel.go beemon_bpfel.o
+
+run: build
+	sudo ../bin/beemon-daemon
