@@ -27,6 +27,7 @@ message ListProcessesRequest {
 
 message ListProcessesResponse {
   repeated Process processes = 1;
+  uint64 host_memory_total_bytes = 2;
 }
 
 message Process {

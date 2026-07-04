@@ -5,13 +5,15 @@ import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Card } from "./ui/card";
+import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick } from "lucide-react";
 
 type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit';
 type SortDirection = 'asc' | 'desc';
 
 export function Dashboard() {
   const [processes, setProcesses] = useState<Process[]>([]);
+  const [hostMem, setHostMem] = useState<string>("0");
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>('memory');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -25,6 +27,9 @@ export function Dashboard() {
         const res = await fetch(url);
         const data = (await res.json()) as ListProcessesResponse;
         setProcesses(data.processes || []);
+        if (data.hostMemoryTotalBytes) {
+          setHostMem(data.hostMemoryTotalBytes);
+        }
       } catch (err) {
         console.error("Failed to fetch processes:", err);
       }
@@ -38,6 +43,8 @@ export function Dashboard() {
   const formatBytes = (bytesStr: string) => {
     const bytes = parseInt(bytesStr);
     if (!bytes || bytes === 0) return "N/A";
+    const gb = bytes / 1024 / 1024 / 1024;
+    if (gb >= 1) return `${gb.toFixed(2)} GB`;
     const mb = bytes / 1024 / 1024;
     return `${mb.toFixed(1)} MB`;
   };
@@ -85,12 +92,41 @@ export function Dashboard() {
   };
 
   const sortedProcesses = getSortedProcesses();
+  
+  const totalMemory = processes.reduce((acc, p) => acc + (parseInt(p.memoryUsageBytes) || 0), 0);
+  const totalCpu = processes.reduce((acc, p) => acc + (p.cpuUsagePercent || 0), 0);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">Beemon Dashboard</h1>
-        <p className="text-zinc-400">Real-time eBPF Linux process monitoring.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">beemon Dashboard</h1>
+          <p className="text-zinc-400">Real-time eBPF Linux process monitoring.</p>
+        </div>
+        
+        <div className="flex gap-4">
+          <Card className="bg-zinc-950/50 border-zinc-800 p-4 min-w-[200px] flex items-center gap-4">
+            <div className="p-3 bg-zinc-900 rounded-full">
+              <MemoryStick className="text-blue-400 h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total Memory</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-xl font-mono text-white">{formatBytes(totalMemory.toString())}</p>
+                {hostMem !== "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
+              </div>
+            </div>
+          </Card>
+          <Card className="bg-zinc-950/50 border-zinc-800 p-4 min-w-[200px] flex items-center gap-4">
+            <div className="p-3 bg-zinc-900 rounded-full">
+              <Cpu className="text-green-400 h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
+              <p className="text-xl font-mono text-white">{totalCpu.toFixed(1)}%</p>
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="flex items-center space-x-2">

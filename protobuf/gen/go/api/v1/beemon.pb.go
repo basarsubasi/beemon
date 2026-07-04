@@ -68,10 +68,11 @@ func (x *ListProcessesRequest) GetFilterName() string {
 }
 
 type ListProcessesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Processes     []*Process             `protobuf:"bytes,1,rep,name=processes,proto3" json:"processes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Processes            []*Process             `protobuf:"bytes,1,rep,name=processes,proto3" json:"processes,omitempty"`
+	HostMemoryTotalBytes uint64                 `protobuf:"varint,2,opt,name=host_memory_total_bytes,json=hostMemoryTotalBytes,proto3" json:"host_memory_total_bytes,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListProcessesResponse) Reset() {
@@ -109,6 +110,13 @@ func (x *ListProcessesResponse) GetProcesses() []*Process {
 		return x.Processes
 	}
 	return nil
+}
+
+func (x *ListProcessesResponse) GetHostMemoryTotalBytes() uint64 {
+	if x != nil {
+		return x.HostMemoryTotalBytes
+	}
+	return 0
 }
 
 type Process struct {
@@ -1235,9 +1243,10 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x13api/v1/beemon.proto\x12\tbeemon.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"7\n" +
 	"\x14ListProcessesRequest\x12\x1f\n" +
 	"\vfilter_name\x18\x01 \x01(\tR\n" +
-	"filterName\"I\n" +
+	"filterName\"\x80\x01\n" +
 	"\x15ListProcessesResponse\x120\n" +
-	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\"\xef\x02\n" +
+	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\x125\n" +
+	"\x17host_memory_total_bytes\x18\x02 \x01(\x04R\x14hostMemoryTotalBytes\"\xef\x02\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +

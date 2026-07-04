@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
-import { ArrowLeft, Activity, Users, Shield, Cpu, MemoryStick } from "lucide-react";
+import { ArrowLeft, Users, Shield } from "lucide-react";
 import type { Process, ListProcessesResponse } from "../lib/types";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -105,7 +105,7 @@ export function ProcessDetails() {
       </div>
 
       <div className="h-[700px]">
-        <ProcessStream pid={parseInt(pid)} />
+        <ProcessStream pid={parseInt(pid)} process={process || undefined} />
       </div>
     </div>
   );
