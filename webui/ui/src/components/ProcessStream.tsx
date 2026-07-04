@@ -117,12 +117,22 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     }
   };
 
+  const intToIP = (ipInt: number | undefined) => {
+    if (ipInt === undefined) return "0.0.0.0";
+    // network byte order: first byte is the first octet
+    const part1 = ipInt & 255;
+    const part2 = ((ipInt >> 8) & 255);
+    const part3 = ((ipInt >> 16) & 255);
+    const part4 = ((ipInt >>> 24) & 255);
+    return `${part1}.${part2}.${part3}.${part4}`;
+  };
+
   const renderEventDetails = (ev: BeemonEvent) => {
     if (ev.fileOpen) return <span className="text-blue-400">openat("{ev.fileOpen.filename}", {ev.fileOpen.flags})</span>;
     if (ev.fileRead) return <span className="text-gray-400">read({ev.fileRead.fd}, {ev.fileRead.count})</span>;
     if (ev.fileWrite) return <span className="text-green-400">write({ev.fileWrite.fd}, {decodePayload(ev.fileWrite.data, ev.fileWrite.count)}, {ev.fileWrite.count})</span>;
     if (ev.fileClose) return <span className="text-gray-500">close({ev.fileClose.fd})</span>;
-    if (ev.networkConnect) return <span className="text-purple-400">connect(...) /* port {ev.networkConnect.dport} */</span>;
+    if (ev.networkConnect) return <span className="text-purple-400">connect({intToIP(ev.networkConnect.saddr)}:{ev.networkConnect.sport} {"->"} {intToIP(ev.networkConnect.daddr)}:{ev.networkConnect.dport})</span>;
     if (ev.process) {
       if (ev.process.isExec) {
         const argsStr = ev.process.args && ev.process.args.length > 0 
@@ -160,7 +170,22 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
   };
 
   const pieData = Object.entries(syscallCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#ec4899', '#14b8a6', '#f97316'];
+  
+  const SYSCALL_COLORS: Record<string, string> = {
+    open: '#60a5fa', // text-blue-400
+    read: '#9ca3af', // text-gray-400
+    write: '#4ade80', // text-green-400
+    close: '#6b7280', // text-gray-500
+    connect: '#c084fc', // text-purple-400
+    exec: '#facc15', // text-yellow-400
+    exit: '#f87171', // text-red-400
+    fork: '#facc15', // text-yellow-400
+    chroot: '#ef4444', // text-red-500
+    pivot_root: '#ef4444', // text-red-500
+    setns: '#f97316', // text-orange-500
+    unshare: '#f97316', // text-orange-500
+    syscall: '#4b5563', // text-gray-600
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -221,8 +246,8 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
                     dataKey="value"
                     stroke="none"
                   >
-                    {pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={SYSCALL_COLORS[entry.name] || '#ffffff'} />
                     ))}
                   </Pie>
                   <RechartsTooltip 
