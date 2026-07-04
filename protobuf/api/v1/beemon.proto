@@ -74,6 +74,7 @@ message FileReadEvent {
 message FileWriteEvent {
   uint32 fd = 1;
   uint64 count = 2;
+  bytes data = 3;
 }
 
 message FileCloseEvent {
@@ -105,6 +106,7 @@ message ProcessEvent {
   uint32 child_pid = 5;
   int32 exit_code = 6;
   string filename = 7;
+  repeated string args = 8;
 }
 
 message LimitChangedEvent {

@@ -11,8 +11,6 @@ export function ProcessStream({ pid }: { pid: number }) {
   const [lastPing, setLastPing] = useState<number | null>(null);
   const [limits, setLimits] = useState({ memory: "N/A", cpu: "N/A" });
   
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     setEvents([]);
     setIsConnected(false);
@@ -72,11 +70,9 @@ export function ProcessStream({ pid }: { pid: number }) {
 
   useEffect(() => {
     // Auto-scroll to bottom
-    if (scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+    const scrollContainer = document.querySelector('[data-slot="scroll-area-viewport"]');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
   }, [events]);
 
@@ -87,19 +83,49 @@ export function ProcessStream({ pid }: { pid: number }) {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
 
-  const renderEventDetails = (ev: BeemonEvent) => {
-    if (ev.fileOpen) return <span className="text-blue-400">OPEN: {ev.fileOpen.filename}</span>;
-    if (ev.fileRead) return <span className="text-gray-400">READ: fd {ev.fileRead.fd} ({ev.fileRead.count} bytes)</span>;
-    if (ev.fileWrite) return <span className="text-green-400">WRITE: fd {ev.fileWrite.fd} ({ev.fileWrite.count} bytes)</span>;
-    if (ev.fileClose) return <span className="text-gray-500">CLOSE: fd {ev.fileClose.fd}</span>;
-    if (ev.networkConnect) return <span className="text-purple-400">CONNECT: port {ev.networkConnect.dport}</span>;
-    if (ev.process) {
-      if (ev.process.isExec) return <span className="text-yellow-400">EXEC: {ev.process.filename}</span>;
-      if (ev.process.isExit) return <span className="text-red-400">EXIT: {ev.process.exitCode}</span>;
-      if (ev.process.isFork) return <span className="text-yellow-400">FORK: child {ev.process.childPid}</span>;
+  const decodePayload = (b64: string | undefined, totalBytes: string) => {
+    if (!b64) return `"..."`;
+    try {
+      const decoded = atob(b64);
+      let safeStr = "";
+      for (let i = 0; i < decoded.length; i++) {
+        const code = decoded.charCodeAt(i);
+        if (code >= 32 && code <= 126) safeStr += decoded[i];
+        else if (code === 10) safeStr += "\\n";
+        else if (code === 9) safeStr += "\\t";
+        else if (code === 13) safeStr += "\\r";
+        else if (code === 0) { break; } // stop at null terminator
+        else safeStr += ".";
+      }
+      
+      const total = parseInt(totalBytes);
+      if (total > decoded.length) {
+        return `"${safeStr}..." /* ${total} bytes total */`;
+      }
+      return `"${safeStr}"`;
+    } catch {
+      return `"<binary data>"`;
     }
-    if (ev.limitChanged) return <span className="text-orange-400">CGROUP LIMITS CHANGED</span>;
-    return <span className="text-gray-600">SYSCALL: {ev.syscall?.syscallId}</span>;
+  };
+
+  const renderEventDetails = (ev: BeemonEvent) => {
+    if (ev.fileOpen) return <span className="text-blue-400">openat("{ev.fileOpen.filename}", {ev.fileOpen.flags})</span>;
+    if (ev.fileRead) return <span className="text-gray-400">read({ev.fileRead.fd}, {ev.fileRead.count})</span>;
+    if (ev.fileWrite) return <span className="text-green-400">write({ev.fileWrite.fd}, {decodePayload(ev.fileWrite.data, ev.fileWrite.count)}, {ev.fileWrite.count})</span>;
+    if (ev.fileClose) return <span className="text-gray-500">close({ev.fileClose.fd})</span>;
+    if (ev.networkConnect) return <span className="text-purple-400">connect(...) /* port {ev.networkConnect.dport} */</span>;
+    if (ev.process) {
+      if (ev.process.isExec) {
+        const argsStr = ev.process.args && ev.process.args.length > 0 
+          ? `[${ev.process.args.map(a => `"${a}"`).join(", ")}]` 
+          : "[]";
+        return <span className="text-yellow-400">execve("{ev.process.filename}", {argsStr})</span>;
+      }
+      if (ev.process.isExit) return <span className="text-red-400">exit({ev.process.exitCode})</span>;
+      if (ev.process.isFork) return <span className="text-yellow-400">fork() {"->"} {ev.process.childPid}</span>;
+    }
+    if (ev.limitChanged) return <span className="text-orange-400">cgroup_limits_changed()</span>;
+    return <span className="text-gray-600">syscall({ev.syscall?.syscallId})</span>;
   };
 
   const formatTimestamp = (ts: string | undefined) => {
@@ -141,7 +167,7 @@ export function ProcessStream({ pid }: { pid: number }) {
       </div>
       
       <Card className="flex-1 bg-black overflow-hidden border-zinc-800 shadow-xl">
-        <ScrollArea className="h-[400px] w-full p-4 font-mono text-xs" ref={scrollRef}>
+        <ScrollArea className="h-[400px] w-full p-4 font-mono text-xs">
           {events.map((ev, i) => (
             <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
               <span className="text-zinc-500 mr-4">

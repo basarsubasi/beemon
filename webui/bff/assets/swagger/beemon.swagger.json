@@ -197,6 +197,10 @@
         "count": {
           "type": "string",
           "format": "uint64"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -331,6 +335,12 @@
         },
         "filename": {
           "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
