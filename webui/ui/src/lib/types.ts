@@ -46,3 +46,10 @@ export interface BeemonEvent {
     pidsLimit: string;
   };
 }
+
+export interface WSPing {
+  type: "ping";
+  timestamp: number;
+}
+
+export type WSMessage = WSPing | BeemonEvent;
