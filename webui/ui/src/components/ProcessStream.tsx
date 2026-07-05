@@ -7,18 +7,76 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 import { StateBadge } from "./StateBadge";
 
 export function ProcessStream({ pid, process }: { pid: number, process?: import("../lib/types").Process }) {
-  const [events, setEvents] = useState<BeemonEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<'all' | '5s' | '1s'>('all');
   const [lastPing, setLastPing] = useState<number | null>(null);
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
-  const [syscallCounts, setSyscallCounts] = useState<Record<string, number>>({});
+  
+  const [renderState, setRenderState] = useState({
+    displayedEvents: [] as BeemonEvent[],
+    pieData: [] as { name: string, value: number }[],
+    totalSyscalls: 0
+  });
+
   const scrollRef = useRef<HTMLDivElement>(null);
   
+  const allEventsRef = useRef<(BeemonEvent & { _localTs?: number, _type?: string })[]>([]);
+  const globalCountsRef = useRef<Record<string, number>>({});
+
   useEffect(() => {
-    setEvents([]);
+    // Reset state on PID change
     setIsConnected(false);
     setLastPing(null);
-    setSyscallCounts({});
+    setRenderState({ displayedEvents: [], pieData: [], totalSyscalls: 0 });
+    allEventsRef.current = [];
+    globalCountsRef.current = {};
+    setIsPaused(false);
+  }, [pid]);
+
+  // Render loop - decoupled from WebSocket frequency
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let cutoff = 0;
+      if (timeFilter === '5s') cutoff = now - 5000;
+      if (timeFilter === '1s') cutoff = now - 1000;
+
+      const validEvents = timeFilter === 'all' 
+        ? allEventsRef.current 
+        : allEventsRef.current.filter(e => e._localTs && e._localTs >= cutoff);
+
+      const displayedEvents = validEvents.slice(-500);
+
+      let currentPieData: {name: string, value: number}[];
+      
+      if (timeFilter === 'all') {
+        currentPieData = Object.entries(globalCountsRef.current)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a,b) => b.value - a.value);
+      } else {
+        const counts: Record<string, number> = {};
+        validEvents.forEach(e => {
+          if (e._type) counts[e._type] = (counts[e._type] || 0) + 1;
+        });
+        currentPieData = Object.entries(counts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a,b) => b.value - a.value);
+      }
+
+      const totalSyscalls = currentPieData.reduce((acc, entry) => acc + entry.value, 0);
+
+      setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [timeFilter]);
+
+  // WebSocket Connection
+  useEffect(() => {
+    if (isPaused) {
+      setIsConnected(false);
+      return;
+    }
 
     // Determine the WS protocol based on current location protocol
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -39,7 +97,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           return;
         }
 
-        const data = msg as BeemonEvent;
+        const data = msg as BeemonEvent & { _localTs?: number, _type?: string };
 
         // Handle LimitChanged uniquely to update local state
         if (data.limitChanged) {
@@ -51,16 +109,15 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
 
         const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : 'syscall';
 
-        setSyscallCounts((prev) => ({
-          ...prev,
-          [type]: (prev[type] || 0) + 1
-        }));
+        data._localTs = Date.now();
+        data._type = type;
 
-        setEvents((prev) => {
-          const newEvents = [...prev, data];
-          if (newEvents.length > 500) return newEvents.slice(newEvents.length - 500); // Keep last 500
-          return newEvents;
-        });
+        globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
+        
+        allEventsRef.current.push(data);
+        if (allEventsRef.current.length > 5000) {
+           allEventsRef.current = allEventsRef.current.slice(-5000);
+        }
       } catch (err) {
         console.error("Failed to parse WS data", err);
       }
@@ -77,14 +134,14 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     return () => {
       ws.close();
     };
-  }, [pid]);
+  }, [pid, isPaused]);
 
   useEffect(() => {
     // Auto-scroll to bottom
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [events]);
+  }, [renderState.displayedEvents]);
 
   const formatBytes = (bytesStr: string | undefined) => {
     if (!bytesStr || bytesStr === "0" || bytesStr === "max") return "Max";
@@ -201,8 +258,6 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     const secondsAgo = Math.floor((Date.now() - lastPing) / 1000);
     return `Last Ping: ${secondsAgo}s ago`;
   };
-
-  const pieData = Object.entries(syscallCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
   
   const SYSCALL_COLORS: Record<string, string> = {
     open: '#60a5fa', // text-blue-400
@@ -251,6 +306,19 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           <Badge variant={isConnected ? "default" : "destructive"}>
             {isConnected ? "LIVE" : "DISCONNECTED"}
           </Badge>
+
+          <button 
+            onClick={() => setIsPaused(!isPaused)}
+            className="px-3 py-1 text-xs font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+          >
+            {isPaused ? "Resume Streaming" : "Pause Streaming"}
+          </button>
+          
+          <div className="flex gap-1 border border-zinc-200 dark:border-zinc-800 rounded-md p-1 bg-white dark:bg-black">
+            <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All Time</button>
+            <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 5s</button>
+            <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 1s</button>
+          </div>
           
           <div className="flex items-center gap-2 text-xs font-mono bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800">
             <Activity size={14} className={isConnected && lastPing && (Date.now() - lastPing < 5000) ? "text-green-600 dark:text-green-500 animate-pulse" : "text-zinc-500"} />
@@ -274,7 +342,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
       <div className="flex gap-6 h-full pb-6 flex-col md:flex-row">
         <Card className="flex-1 bg-white dark:bg-black overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col h-[500px]">
           <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
-            {events.map((ev, i) => (
+            {renderState.displayedEvents.map((ev, i) => (
               <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
                 <span className="text-zinc-500 mr-4">
                   {formatTimestamp(ev.timestampNs || (ev as any).timestamp_ns)}
@@ -282,7 +350,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
                 {renderEventDetails(ev)}
               </div>
             ))}
-            {events.length === 0 && (
+            {renderState.displayedEvents.length === 0 && (
               <div className="text-zinc-600 flex flex-col items-center justify-center mt-20 italic">
                 <Activity className="opacity-20 mb-4 h-12 w-12" />
                 <span>Waiting for eBPF events...</span>
@@ -293,13 +361,20 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
         </Card>
 
         <Card className="w-full md:w-[300px] bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl p-4 flex flex-col h-[300px] md:h-[500px]">
-          <h3 className="text-zinc-900 dark:text-white font-semibold text-sm mb-4">Syscall Distribution</h3>
-          {pieData.length > 0 ? (
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-zinc-900 dark:text-white font-semibold text-sm">Syscall Distribution</h3>
+            {renderState.totalSyscalls > 0 && (
+              <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
+                Total: {renderState.totalSyscalls.toLocaleString()}
+              </span>
+            )}
+          </div>
+          {renderState.pieData.length > 0 ? (
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={renderState.pieData}
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
@@ -307,8 +382,9 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
                     paddingAngle={5}
                     dataKey="value"
                     stroke="none"
+                    isAnimationActive={false}
                   >
-                    {pieData.map((entry, index) => (
+                    {renderState.pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={SYSCALL_COLORS[entry.name] || '#ffffff'} />
                     ))}
                   </Pie>
@@ -316,7 +392,10 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
                     contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
                     itemStyle={{ color: '#fff' }}
                   />
-                  <Legend wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }} />
+                  <Legend 
+                    wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }} 
+                    formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
