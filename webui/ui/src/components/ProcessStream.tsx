@@ -9,6 +9,7 @@ import { StateBadge } from "./StateBadge";
 export function ProcessStream({ pid, process }: { pid: number, process?: import("../lib/types").Process }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
   const [timeFilter, setTimeFilter] = useState<'all' | '5s' | '1s'>('all');
   const [lastPing, setLastPing] = useState<number | null>(null);
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
@@ -32,11 +33,14 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     allEventsRef.current = [];
     globalCountsRef.current = {};
     setIsPaused(false);
+    isPausedRef.current = false;
   }, [pid]);
 
   // Render loop - decoupled from WebSocket frequency
   useEffect(() => {
     const interval = setInterval(() => {
+      if (isPausedRef.current) return;
+
       const now = Date.now();
       let cutoff = 0;
       if (timeFilter === '5s') cutoff = now - 5000;
@@ -308,7 +312,11 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           </Badge>
 
           <button 
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={() => {
+              const next = !isPaused;
+              setIsPaused(next);
+              isPausedRef.current = next;
+            }}
             className="px-3 py-1 text-xs font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
           >
             {isPaused ? "Resume Streaming" : "Pause Streaming"}
