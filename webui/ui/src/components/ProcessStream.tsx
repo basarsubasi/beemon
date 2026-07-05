@@ -86,12 +86,21 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     }
   }, [events]);
 
-  const formatBytes = (bytesStr: string) => {
-    if (bytesStr === "0" || bytesStr === "max") return "Max";
+  const formatBytes = (bytesStr: string | undefined) => {
+    if (!bytesStr || bytesStr === "0" || bytesStr === "max") return "Max";
     const bytes = parseInt(bytesStr);
     if (!bytes) return "N/A";
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
+
+  useEffect(() => {
+    if (process) {
+      setLimits({
+        memory: formatBytes(process.memoryLimitBytes),
+        cpu: process.cpuQuotaUs && process.cpuQuotaUs !== "0" ? `${process.cpuQuotaUs}us` : "Max"
+      });
+    }
+  }, [process?.memoryLimitBytes, process?.cpuQuotaUs]);
 
   const decodePayload = (b64: string | undefined, totalBytes: string) => {
     if (!b64) return `"..."`;

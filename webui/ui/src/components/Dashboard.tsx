@@ -11,7 +11,7 @@ import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box } from "lucide-react";
 
-type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu';
+type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit';
 type SortDirection = 'asc' | 'desc';
 
 export function Dashboard() {
@@ -88,6 +88,9 @@ export function Dashboard() {
       } else if (sortKey === 'cpu') {
         aVal = a.cpuUsagePercent || 0;
         bVal = b.cpuUsagePercent || 0;
+      } else if (sortKey === 'cpuLimit') {
+        aVal = parseInt(a.cpuQuotaUs) || 0;
+        bVal = parseInt(b.cpuQuotaUs) || 0;
       }
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -252,6 +255,12 @@ export function Dashboard() {
               </TableHead>
               <TableHead 
                 className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                onClick={() => handleSort('cpuLimit')}
+              >
+                <div className="flex items-center justify-end">CPU Limit {renderSortIcon('cpuLimit')}</div>
+              </TableHead>
+              <TableHead 
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
                 onClick={() => handleSort('pidsLimit')}
               >
                 <div className="flex items-center justify-end">PIDs Limit {renderSortIcon('pidsLimit')}</div>
@@ -288,6 +297,9 @@ export function Dashboard() {
                 </TableCell>
                 <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
                   {proc.memoryLimitBytes !== "0" ? formatBytes(proc.memoryLimitBytes) : "Max"}
+                </TableCell>
+                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
+                  {proc.cpuQuotaUs !== "0" ? `${proc.cpuQuotaUs}us` : "Max"}
                 </TableCell>
                 <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
                   {proc.pidsLimit !== "0" ? proc.pidsLimit : "Max"}
