@@ -71,7 +71,7 @@ export function NamespaceDetails() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3 uppercase">
               <Box className="w-8 h-8 text-blue-500 dark:text-blue-400" />
-              {type} Namespace
+              {type === "cgroup" ? type : `${type} Namespace`}
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm mt-1">Inode: {inode}</p>
           </div>
