@@ -239,10 +239,10 @@ export function Dashboard() {
                 <div className="flex items-center">State {renderSortIcon('state')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-center w-[120px]"
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[120px]"
                 onClick={() => handleSort('cpu')}
               >
-                <div className="flex items-center justify-center">CPU {renderSortIcon('cpu')}</div>
+                <div className="flex items-center justify-end">CPU {renderSortIcon('cpu')}</div>
               </TableHead>
               <TableHead 
                 className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
@@ -284,7 +284,7 @@ export function Dashboard() {
                 <TableCell className="py-4 px-6">
                   <StateBadge state={proc.state} />
                 </TableCell>
-                <TableCell className="text-center font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[120px]">
+                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[120px]">
                   {(proc.cpuUsagePercent || 0).toFixed(1)}%
                 </TableCell>
                 <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[200px]">
@@ -374,8 +374,8 @@ export function Dashboard() {
                   <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6 w-[200px]">Cgroup ID</TableHead>
                   <TableHead className="text-zinc-500 dark:text-zinc-400 py-4 px-6">Scope</TableHead>
                   <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">Mem Limit</TableHead>
-                  <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">PIDs Limit</TableHead>
                   <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">CPU Quota</TableHead>
+                  <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">PIDs Limit</TableHead>
                   <TableHead className="text-right text-zinc-500 dark:text-zinc-400 py-4 px-6">Process Count</TableHead>
                 </TableRow>
               </TableHeader>
@@ -386,7 +386,7 @@ export function Dashboard() {
                     className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
                     onClick={() => navigate(`/namespace/cgroup/${cg.inode}`)}
                   >
-                    <TableCell className="font-mono text-zinc-900 dark:text-white py-4 px-6 flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <TableCell className="font-mono text-zinc-900 dark:text-white py-4 px-6 flex items-center gap-2 group-hover:text-black dark:group-hover:text-white transition-colors">
                       <Box className="w-4 h-4 text-orange-500 dark:text-orange-400" />
                       [{cg.inode}]
                     </TableCell>
@@ -401,10 +401,10 @@ export function Dashboard() {
                       {cg.memoryLimit !== "0" ? formatBytes(cg.memoryLimit) : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.pidsLimit !== "0" ? cg.pidsLimit : "Max"}
+                      {cg.cpuQuota !== "0" ? cg.cpuQuota : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.cpuQuota !== "0" ? cg.cpuQuota : "Max"}
+                      {cg.pidsLimit !== "0" ? cg.pidsLimit : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                       {cg.count}

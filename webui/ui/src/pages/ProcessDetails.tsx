@@ -58,11 +58,11 @@ export function ProcessDetails() {
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
               {process ? process.name : "Loading..."} 
               <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 font-mono text-zinc-600 dark:text-zinc-300">PID {pid}</Badge>
+              <img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" />
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Live Process Tracing & Resource Monitoring</p>
           </div>
           <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="Beemon Logo" className="h-10 w-auto object-contain" />
             <ThemeToggle />
           </div>
         </div>
