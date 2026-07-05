@@ -87,6 +87,7 @@ struct event_t {
         int val2;
     } isolate;
     struct {
+        u32 pid;
         int options;
     } wait4;
     struct {
@@ -526,6 +527,7 @@ int trace_sys_enter_unshare(struct trace_event_raw_sys_enter *ctx) {
 SEC("tracepoint/syscalls/sys_enter_wait4")
 int trace_sys_enter_wait4(struct trace_event_raw_sys_enter *ctx) {
     NEW_EVENT(EVENT_TYPE_WAIT4)
+    e->wait4.pid = (u32)ctx->args[0];
     e->wait4.options = (int)ctx->args[2];
     bpf_ringbuf_submit(e, 0);
     return 0;
