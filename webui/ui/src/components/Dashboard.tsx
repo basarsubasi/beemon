@@ -43,7 +43,7 @@ export function Dashboard() {
     };
     
     fetchProcesses();
-    const interval = setInterval(fetchProcesses, 2000);
+    const interval = setInterval(fetchProcesses, 1000);
     return () => clearInterval(interval);
   }, [filter]);
 
@@ -191,7 +191,7 @@ export function Dashboard() {
             <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full">
               <Cpu className="text-green-600 dark:text-green-400 h-6 w-6" />
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
               <p className="text-xl font-mono text-zinc-900 dark:text-white">{totalCpu.toFixed(1)}%</p>
             </div>
@@ -221,49 +221,49 @@ export function Dashboard() {
           <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
             <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
               <TableHead 
-                className="w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
+                className="w-[90px] max-w-[90px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
                 onClick={() => handleSort('pid')}
               >
                 <div className="flex items-center">PID {renderSortIcon('pid')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
+                className="w-[200px] max-w-[200px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center">Name {renderSortIcon('name')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 w-[150px]"
+                className="w-[140px] max-w-[140px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
                 onClick={() => handleSort('state')}
               >
                 <div className="flex items-center">State {renderSortIcon('state')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[120px]"
+                className="w-[100px] max-w-[100px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('cpu')}
               >
                 <div className="flex items-center justify-end">CPU {renderSortIcon('cpu')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="w-[150px] max-w-[150px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('memory')}
               >
                 <div className="flex items-center justify-end">Memory {renderSortIcon('memory')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="w-[130px] max-w-[130px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('memLimit')}
               >
                 <div className="flex items-center justify-end">Mem Limit {renderSortIcon('memLimit')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="w-[130px] max-w-[130px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('cpuLimit')}
               >
                 <div className="flex items-center justify-end">CPU Limit {renderSortIcon('cpuLimit')}</div>
               </TableHead>
               <TableHead 
-                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
+                className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('pidsLimit')}
               >
                 <div className="flex items-center justify-end">PIDs Limit {renderSortIcon('pidsLimit')}</div>
@@ -277,19 +277,21 @@ export function Dashboard() {
                 className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
                 onClick={() => navigate(`/process/${proc.pid}`)}
               >
-                <TableCell className="font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">{proc.pid}</TableCell>
-                <TableCell className="font-medium text-zinc-900 dark:text-zinc-300 py-4 px-6 group-hover:text-black dark:group-hover:text-white transition-colors">
-                  {proc.name}
+                <TableCell className="w-[90px] max-w-[90px] font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
+                  <span className="block truncate" title={String(proc.pid)}>{proc.pid}</span>
                 </TableCell>
-                <TableCell className="py-4 px-6">
+                <TableCell className="w-[200px] max-w-[200px] font-medium text-zinc-900 dark:text-zinc-300 py-4 px-6 group-hover:text-black dark:group-hover:text-white transition-colors">
+                  <span className="block truncate" title={proc.name}>{proc.name}</span>
+                </TableCell>
+                <TableCell className="w-[140px] max-w-[140px] py-4 px-6">
                   <StateBadge state={proc.state} />
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[120px]">
-                  {(proc.cpuUsagePercent || 0).toFixed(1)}%
+                <TableCell className="w-[100px] max-w-[100px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
+                  <span className="block truncate text-right">{(proc.cpuUsagePercent || 0).toFixed(1)}%</span>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[200px]">
+                <TableCell className="w-[150px] max-w-[150px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end">
-                    <span>{formatBytes(proc.memoryUsageBytes)}</span>
+                    <span className="block truncate">{formatBytes(proc.memoryUsageBytes)}</span>
                     {proc.memoryLimitBytes !== "0" && (
                       <Progress 
                         value={(parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100} 
@@ -298,14 +300,14 @@ export function Dashboard() {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
-                  {proc.memoryLimitBytes !== "0" ? formatBytes(proc.memoryLimitBytes) : "Max"}
+                <TableCell className="w-[130px] max-w-[130px] text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
+                  <span className="block truncate text-right">{proc.memoryLimitBytes !== "0" ? formatBytes(proc.memoryLimitBytes) : "Max"}</span>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
-                  {proc.cpuQuotaUs !== "0" ? `${proc.cpuQuotaUs}us` : "Max"}
+                <TableCell className="w-[130px] max-w-[130px] text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
+                  <span className="block truncate text-right">{proc.cpuQuotaUs !== "0" ? `${proc.cpuQuotaUs}us` : "Max"}</span>
                 </TableCell>
-                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
-                  {proc.pidsLimit !== "0" ? proc.pidsLimit : "Max"}
+                <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
+                  <span className="block truncate text-right">{proc.pidsLimit !== "0" ? proc.pidsLimit : "Max"}</span>
                 </TableCell>
               </TableRow>
             ))}
