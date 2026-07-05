@@ -120,8 +120,10 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
         globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
         
         allEventsRef.current.push(data);
-        if (allEventsRef.current.length > 5000) {
-           allEventsRef.current = allEventsRef.current.slice(-5000);
+        // Optimize: Mutate array in-place and only trim when it gets 10% larger
+        // This avoids creating 150 new 5000-element arrays per second which causes heavy GC pressure and WS drops.
+        if (allEventsRef.current.length > 5500) {
+           allEventsRef.current.splice(0, allEventsRef.current.length - 5000);
         }
       } catch (err) {
         console.error("Failed to parse WS data", err);

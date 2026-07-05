@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -44,14 +44,14 @@ func handleWS(cfg *Config) http.HandlerFunc {
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Printf("WS upgrade failed: %v", err)
+			slog.Error("WS upgrade failed", "error", err)
 			return
 		}
 		defer conn.Close()
 
-		grpcConn, err := grpc.DialContext(r.Context(), cfg.GRPCEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpcConn, err := grpc.NewClient(cfg.GRPCEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			log.Printf("WS failed to dial gRPC: %v", err)
+			slog.Error("WS failed to dial gRPC", "error", err)
 			return
 		}
 		defer grpcConn.Close()
@@ -65,7 +65,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 
 		stream, err := client.StreamEvents(ctx, req)
 		if err != nil {
-			log.Printf("WS failed to start stream: %v", err)
+			slog.Error("WS failed to start stream", "error", err)
 			return
 		}
 
@@ -118,6 +118,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 					Timestamp: time.Now().UnixMilli(),
 				}
 				if err := conn.WriteJSON(pingMsg); err != nil {
+					slog.Error("WS ping write error", "error", err)
 					return
 				}
 			case res := <-eventCh:
@@ -129,7 +130,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 						return
 					}
 					if res.err.Error() != "rpc error: code = Canceled desc = context canceled" {
-						log.Printf("WS stream read error: %v", res.err)
+						slog.Error("WS stream read error", "error", res.err)
 					}
 					return
 				}
@@ -140,6 +141,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 				}
 
 				if err := conn.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
+					slog.Error("WS message write error", "error", err)
 					return
 				}
 			}

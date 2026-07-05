@@ -5,7 +5,8 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
+	"os"
 	"net/http"
 	"strings"
 
@@ -55,13 +56,13 @@ func run() error {
 
 
 
-	log.Printf("BFF Server listening on :%d\n", cfg.HTTPPort)
+	slog.Info("BFF Server listening", "port", cfg.HTTPPort)
 	return http.ListenAndServe(fmt.Sprintf(":%d", cfg.HTTPPort), corsHandler(httpMux))
 }
 
 func main() {
-	// no flags to parse
 	if err := run(); err != nil {
-		log.Fatal(err)
+		slog.Error("server error", "error", err)
+		os.Exit(1)
 	}
 }
