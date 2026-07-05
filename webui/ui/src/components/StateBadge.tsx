@@ -17,9 +17,11 @@ export function StateBadge({ state, className = "" }: { state: string, className
     colorClass = "border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/50";
   }
 
+  const display = state === "Frozen" ? "F (frozen)" : state;
+
   return (
     <Badge variant="outline" className={`font-mono flex items-center w-fit ${colorClass} ${className}`}>
-      <span>{state}</span>
+      <span>{display}</span>
     </Badge>
   );
 }
