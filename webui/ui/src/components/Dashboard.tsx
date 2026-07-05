@@ -4,6 +4,7 @@ import type { Process, ListProcessesResponse } from "../lib/types";
 import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
+import { StateBadge } from "./StateBadge";
 import { ThemeToggle } from "./ThemeToggle";
 import { Progress } from "./ui/progress";
 import { Card } from "./ui/card";
@@ -260,9 +261,7 @@ export function Dashboard() {
                   {proc.name}
                 </TableCell>
                 <TableCell className="py-4 px-6">
-                  <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
-                    {proc.state}
-                  </Badge>
+                  <StateBadge state={proc.state} />
                 </TableCell>
                 <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[200px]">
                   <div className="flex flex-col gap-1 items-end">

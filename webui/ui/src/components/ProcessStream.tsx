@@ -4,6 +4,7 @@ import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { Activity } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { StateBadge } from "./StateBadge";
 
 export function ProcessStream({ pid, process }: { pid: number, process?: import("../lib/types").Process }) {
   const [events, setEvents] = useState<BeemonEvent[]>([]);
@@ -205,7 +206,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
         <div className="flex gap-4 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
           <div className="flex items-center gap-2">
             <span>STATE:</span>
-            {process ? <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] py-0">{process.state}</Badge> : <span className="text-zinc-900 dark:text-white">Loading...</span>}
+            {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">Loading...</span>}
           </div>
           <span>MEM USAGE: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
           <span>MEM LIMIT: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
