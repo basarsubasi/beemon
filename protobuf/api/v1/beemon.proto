@@ -14,6 +14,12 @@ service BeemonService {
     };
   }
 
+  rpc GetProcessMetadata(GetProcessMetadataRequest) returns (GetProcessMetadataResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/processes/{pid}/metadata"
+    };
+  }
+
   rpc StreamEvents(StreamEventsRequest) returns (stream Event) {
     option (google.api.http) = {
       get: "/api/v1/processes/{pid}/events"
@@ -41,6 +47,17 @@ message GetNamespaceDetailsResponse {
   string net_routes = 5;
   string uts_info = 6;
   string user_maps = 7;
+}
+
+message GetProcessMetadataRequest {
+  uint32 pid = 1 [(buf.validate.field).uint32.gt = 0];
+}
+
+message GetProcessMetadataResponse {
+  Process process = 1;
+  Process parent = 2;
+  repeated Process children = 3;
+  repeated string host_namespaces = 4;
 }
 
 message ListProcessesRequest {

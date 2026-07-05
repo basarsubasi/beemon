@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	BeemonService_ListProcesses_FullMethodName       = "/beemon.v1.BeemonService/ListProcesses"
+	BeemonService_GetProcessMetadata_FullMethodName  = "/beemon.v1.BeemonService/GetProcessMetadata"
 	BeemonService_StreamEvents_FullMethodName        = "/beemon.v1.BeemonService/StreamEvents"
 	BeemonService_GetNamespaceDetails_FullMethodName = "/beemon.v1.BeemonService/GetNamespaceDetails"
 )
@@ -29,6 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BeemonServiceClient interface {
 	ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error)
+	GetProcessMetadata(ctx context.Context, in *GetProcessMetadataRequest, opts ...grpc.CallOption) (*GetProcessMetadataResponse, error)
 	StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
 	GetNamespaceDetails(ctx context.Context, in *GetNamespaceDetailsRequest, opts ...grpc.CallOption) (*GetNamespaceDetailsResponse, error)
 }
@@ -45,6 +47,16 @@ func (c *beemonServiceClient) ListProcesses(ctx context.Context, in *ListProcess
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListProcessesResponse)
 	err := c.cc.Invoke(ctx, BeemonService_ListProcesses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *beemonServiceClient) GetProcessMetadata(ctx context.Context, in *GetProcessMetadataRequest, opts ...grpc.CallOption) (*GetProcessMetadataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProcessMetadataResponse)
+	err := c.cc.Invoke(ctx, BeemonService_GetProcessMetadata_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +97,7 @@ func (c *beemonServiceClient) GetNamespaceDetails(ctx context.Context, in *GetNa
 // for forward compatibility.
 type BeemonServiceServer interface {
 	ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error)
+	GetProcessMetadata(context.Context, *GetProcessMetadataRequest) (*GetProcessMetadataResponse, error)
 	StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error
 	GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error)
 	mustEmbedUnimplementedBeemonServiceServer()
@@ -99,6 +112,9 @@ type UnimplementedBeemonServiceServer struct{}
 
 func (UnimplementedBeemonServiceServer) ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProcesses not implemented")
+}
+func (UnimplementedBeemonServiceServer) GetProcessMetadata(context.Context, *GetProcessMetadataRequest) (*GetProcessMetadataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetProcessMetadata not implemented")
 }
 func (UnimplementedBeemonServiceServer) StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error {
 	return status.Error(codes.Unimplemented, "method StreamEvents not implemented")
@@ -145,6 +161,24 @@ func _BeemonService_ListProcesses_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BeemonService_GetProcessMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProcessMetadataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeemonServiceServer).GetProcessMetadata(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BeemonService_GetProcessMetadata_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeemonServiceServer).GetProcessMetadata(ctx, req.(*GetProcessMetadataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _BeemonService_StreamEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamEventsRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -184,6 +218,10 @@ var BeemonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListProcesses",
 			Handler:    _BeemonService_ListProcesses_Handler,
+		},
+		{
+			MethodName: "GetProcessMetadata",
+			Handler:    _BeemonService_GetProcessMetadata_Handler,
 		},
 		{
 			MethodName: "GetNamespaceDetails",

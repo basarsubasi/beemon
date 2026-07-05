@@ -18,6 +18,14 @@ export interface ListProcessesResponse {
   hostNamespaces: string[];
 }
 
+export interface GetProcessMetadataResponse {
+  process: Process;
+  parent?: Process;
+  children: Process[];
+  hostNamespaces: string[];
+}
+
+
 export interface NamespaceDetailsResponse {
   nsType: string;
   nsInode: string;

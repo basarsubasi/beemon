@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
 import { ArrowLeft, Users, Box, Terminal } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
-import type { Process, ListProcessesResponse } from "../lib/types";
+import type { Process, GetProcessMetadataResponse } from "../lib/types";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 
@@ -21,17 +21,14 @@ export function ProcessDetails() {
     
     const fetchProcesses = async () => {
       try {
-        const res = await fetch(`/api/v1/processes`);
-        const data = (await res.json()) as ListProcessesResponse;
-        if (!data.processes) return;
+        const res = await fetch(`/api/v1/processes/${pid}/metadata`);
+        const data = (await res.json()) as GetProcessMetadataResponse;
+        if (!data.process) return;
         
         setHostNamespaces(data.hostNamespaces || []);
-        const target = data.processes.find(p => p.pid.toString() === pid);
-        if (target) {
-          setProcess(target);
-          setChildren(data.processes.filter(p => p.ppid === target.pid));
-          setParentProcess(data.processes.find(p => p.pid === target.ppid) || null);
-        }
+        setProcess(data.process);
+        setChildren(data.children || []);
+        setParentProcess(data.parent || null);
       } catch (err) {
         console.error("Failed to fetch process:", err);
       }

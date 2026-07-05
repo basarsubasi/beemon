@@ -129,6 +129,37 @@
           "BeemonService"
         ]
       }
+    },
+    "/api/v1/processes/{pid}/metadata": {
+      "get": {
+        "operationId": "BeemonService_GetProcessMetadata",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProcessMetadataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pid",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "BeemonService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -420,6 +451,30 @@
         },
         "userMaps": {
           "type": "string"
+        }
+      }
+    },
+    "v1GetProcessMetadataResponse": {
+      "type": "object",
+      "properties": {
+        "process": {
+          "$ref": "#/definitions/v1Process"
+        },
+        "parent": {
+          "$ref": "#/definitions/v1Process"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Process"
+          }
+        },
+        "hostNamespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
