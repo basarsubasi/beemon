@@ -522,6 +522,10 @@ int trace_sys_enter_unshare(struct trace_event_raw_sys_enter *ctx) {
     e->type = TYPE; \
     e->ts = bpf_ktime_get_ns();
 
+// -----------------------------------------------------------------------------
+// PROCESS / SCHEDULING
+// -----------------------------------------------------------------------------
+
 SEC("tracepoint/syscalls/sys_enter_wait4")
 int trace_sys_enter_wait4(struct trace_event_raw_sys_enter *ctx) {
     NEW_EVENT(EVENT_TYPE_WAIT4)
@@ -529,6 +533,10 @@ int trace_sys_enter_wait4(struct trace_event_raw_sys_enter *ctx) {
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
+
+// -----------------------------------------------------------------------------
+// MEMORY MANAGEMENT
+// -----------------------------------------------------------------------------
 
 SEC("tracepoint/syscalls/sys_enter_mmap")
 int trace_sys_enter_mmap(struct trace_event_raw_sys_enter *ctx) {
@@ -569,6 +577,10 @@ int trace_sys_enter_brk(struct trace_event_raw_sys_enter *ctx) {
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
+
+// -----------------------------------------------------------------------------
+// NETWORKING (EXTENDED)
+// -----------------------------------------------------------------------------
 
 SEC("tracepoint/syscalls/sys_enter_accept")
 int trace_sys_enter_accept(struct trace_event_raw_sys_enter *ctx) {
@@ -611,6 +623,10 @@ int trace_sys_enter_recvfrom(struct trace_event_raw_sys_enter *ctx) {
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
+
+// -----------------------------------------------------------------------------
+// FILE SYSTEM / VFS (EXTENDED)
+// -----------------------------------------------------------------------------
 
 SEC("tracepoint/syscalls/sys_enter_unlinkat")
 int trace_sys_enter_unlinkat(struct trace_event_raw_sys_enter *ctx) {
@@ -655,6 +671,10 @@ int trace_sys_enter_renameat2(struct trace_event_raw_sys_enter *ctx) {
     return 0;
 }
 
+// -----------------------------------------------------------------------------
+// IPC / SYNCHRONIZATION
+// -----------------------------------------------------------------------------
+
 SEC("tracepoint/syscalls/sys_enter_futex")
 int trace_sys_enter_futex(struct trace_event_raw_sys_enter *ctx) {
     NEW_EVENT(EVENT_TYPE_FUTEX)
@@ -689,6 +709,10 @@ int trace_sys_enter_poll(struct trace_event_raw_sys_enter *ctx) {
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
+
+// -----------------------------------------------------------------------------
+// SECURITY / PERMISSIONS
+// -----------------------------------------------------------------------------
 
 SEC("tracepoint/syscalls/sys_enter_ptrace")
 int trace_sys_enter_ptrace(struct trace_event_raw_sys_enter *ctx) {
