@@ -84,6 +84,24 @@ export interface BeemonEvent {
   unshare?: {
     flags: number;
   };
+  wait4?: { pid: number; options: number };
+  mmap?: { addr: string; len: string; prot: number; flags: number; fd: number; offset: string };
+  munmap?: { addr: string; len: string };
+  mprotect?: { start: string; len: string; prot: number };
+  brk?: { brk: string };
+  accept?: { fd: number };
+  bind?: { fd: number };
+  sendto?: { fd: number; len: string };
+  recvfrom?: { fd: number; len: string };
+  unlinkat?: { dfd: number; pathname: string };
+  rename?: { oldname: string; newname: string };
+  futex?: { uaddr: string; op: number; val: number };
+  epollWait?: { epfd: number; maxevents: number };
+  select?: { nfds: number };
+  poll?: { nfds: number };
+  ptrace?: { request: string; targetPid: number };
+  bpf?: { cmd: number };
+  capset?: { targetPid: number };
 }
 
 export interface WSPing {

@@ -160,11 +160,69 @@
         }
       }
     },
+    "v1AcceptEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1BindEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1BpfEvent": {
+      "type": "object",
+      "properties": {
+        "cmd": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1BrkEvent": {
+      "type": "object",
+      "properties": {
+        "brk": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1CapsetEvent": {
+      "type": "object",
+      "properties": {
+        "targetPid": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
     "v1ChrootEvent": {
       "type": "object",
       "properties": {
         "path": {
           "type": "string"
+        }
+      }
+    },
+    "v1EpollWaitEvent": {
+      "type": "object",
+      "properties": {
+        "epfd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxevents": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -214,6 +272,60 @@
         },
         "unshare": {
           "$ref": "#/definitions/v1UnshareEvent"
+        },
+        "wait4": {
+          "$ref": "#/definitions/v1Wait4Event"
+        },
+        "mmap": {
+          "$ref": "#/definitions/v1MmapEvent"
+        },
+        "munmap": {
+          "$ref": "#/definitions/v1MunmapEvent"
+        },
+        "mprotect": {
+          "$ref": "#/definitions/v1MprotectEvent"
+        },
+        "brk": {
+          "$ref": "#/definitions/v1BrkEvent"
+        },
+        "accept": {
+          "$ref": "#/definitions/v1AcceptEvent"
+        },
+        "bind": {
+          "$ref": "#/definitions/v1BindEvent"
+        },
+        "sendto": {
+          "$ref": "#/definitions/v1SendtoEvent"
+        },
+        "recvfrom": {
+          "$ref": "#/definitions/v1RecvfromEvent"
+        },
+        "unlinkat": {
+          "$ref": "#/definitions/v1UnlinkatEvent"
+        },
+        "rename": {
+          "$ref": "#/definitions/v1RenameEvent"
+        },
+        "futex": {
+          "$ref": "#/definitions/v1FutexEvent"
+        },
+        "epollWait": {
+          "$ref": "#/definitions/v1EpollWaitEvent"
+        },
+        "select": {
+          "$ref": "#/definitions/v1SelectEvent"
+        },
+        "poll": {
+          "$ref": "#/definitions/v1PollEvent"
+        },
+        "ptrace": {
+          "$ref": "#/definitions/v1PtraceEvent"
+        },
+        "bpf": {
+          "$ref": "#/definitions/v1BpfEvent"
+        },
+        "capset": {
+          "$ref": "#/definitions/v1CapsetEvent"
         }
       }
     },
@@ -265,6 +377,23 @@
         "data": {
           "type": "string",
           "format": "byte"
+        }
+      }
+    },
+    "v1FutexEvent": {
+      "type": "object",
+      "properties": {
+        "uaddr": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "op": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "val": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -337,6 +466,65 @@
         }
       }
     },
+    "v1MmapEvent": {
+      "type": "object",
+      "properties": {
+        "addr": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "len": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "prot": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "flags": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1MprotectEvent": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "len": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "prot": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1MunmapEvent": {
+      "type": "object",
+      "properties": {
+        "addr": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "len": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
     "v1NetworkConnectEvent": {
       "type": "object",
       "properties": {
@@ -370,6 +558,15 @@
         },
         "putOld": {
           "type": "string"
+        }
+      }
+    },
+    "v1PollEvent": {
+      "type": "object",
+      "properties": {
+        "nfds": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -462,6 +659,65 @@
         }
       }
     },
+    "v1PtraceEvent": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "string",
+          "format": "int64"
+        },
+        "targetPid": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RecvfromEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "len": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1RenameEvent": {
+      "type": "object",
+      "properties": {
+        "oldname": {
+          "type": "string"
+        },
+        "newname": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SelectEvent": {
+      "type": "object",
+      "properties": {
+        "nfds": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SendtoEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "len": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
     "v1SetnsEvent": {
       "type": "object",
       "properties": {
@@ -484,12 +740,37 @@
         }
       }
     },
+    "v1UnlinkatEvent": {
+      "type": "object",
+      "properties": {
+        "dfd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pathname": {
+          "type": "string"
+        }
+      }
+    },
     "v1UnshareEvent": {
       "type": "object",
       "properties": {
         "flags": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "v1Wait4Event": {
+      "type": "object",
+      "properties": {
+        "pid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "options": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     }

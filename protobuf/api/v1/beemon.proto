@@ -94,6 +94,24 @@ message Event {
     PivotRootEvent pivot_root = 13;
     SetnsEvent setns = 14;
     UnshareEvent unshare = 15;
+    Wait4Event wait4 = 16;
+    MmapEvent mmap = 17;
+    MunmapEvent munmap = 18;
+    MprotectEvent mprotect = 19;
+    BrkEvent brk = 20;
+    AcceptEvent accept = 21;
+    BindEvent bind = 22;
+    SendtoEvent sendto = 23;
+    RecvfromEvent recvfrom = 24;
+    UnlinkatEvent unlinkat = 25;
+    RenameEvent rename = 26;
+    FutexEvent futex = 27;
+    EpollWaitEvent epoll_wait = 28;
+    SelectEvent select = 29;
+    PollEvent poll = 30;
+    PtraceEvent ptrace = 31;
+    BpfEvent bpf = 32;
+    CapsetEvent capset = 33;
   }
 }
 
@@ -163,4 +181,93 @@ message LimitChangedEvent {
   uint64 cpu_quota_us = 2;
   uint64 cpu_period_us = 3;
   uint64 pids_limit = 4;
+}
+
+message Wait4Event {
+  uint32 pid = 1;
+  int32 options = 2;
+}
+
+message MmapEvent {
+  uint64 addr = 1;
+  uint64 len = 2;
+  int32 prot = 3;
+  int32 flags = 4;
+  int32 fd = 5;
+  uint64 offset = 6;
+}
+
+message MunmapEvent {
+  uint64 addr = 1;
+  uint64 len = 2;
+}
+
+message MprotectEvent {
+  uint64 start = 1;
+  uint64 len = 2;
+  int32 prot = 3;
+}
+
+message BrkEvent {
+  uint64 brk = 1;
+}
+
+message AcceptEvent {
+  int32 fd = 1;
+}
+
+message BindEvent {
+  int32 fd = 1;
+}
+
+message SendtoEvent {
+  int32 fd = 1;
+  uint64 len = 2;
+}
+
+message RecvfromEvent {
+  int32 fd = 1;
+  uint64 len = 2;
+}
+
+message UnlinkatEvent {
+  int32 dfd = 1;
+  string pathname = 2;
+}
+
+message RenameEvent {
+  string oldname = 1;
+  string newname = 2;
+}
+
+message FutexEvent {
+  uint64 uaddr = 1;
+  int32 op = 2;
+  uint32 val = 3;
+}
+
+message EpollWaitEvent {
+  int32 epfd = 1;
+  int32 maxevents = 2;
+}
+
+message SelectEvent {
+  int32 nfds = 1;
+}
+
+message PollEvent {
+  int32 nfds = 1;
+}
+
+message PtraceEvent {
+  int64 request = 1;
+  uint32 target_pid = 2;
+}
+
+message BpfEvent {
+  int32 cmd = 1;
+}
+
+message CapsetEvent {
+  uint32 target_pid = 1;
 }

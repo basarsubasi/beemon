@@ -49,7 +49,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           });
         }
 
-        const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : 'syscall';
+        const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : 'syscall';
 
         setSyscallCounts((prev) => ({
           ...prev,
@@ -159,6 +159,29 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     if (ev.unshare) return <span className="text-orange-500 font-bold bg-orange-950/50 px-1 py-0.5 rounded">unshare(flags: {ev.unshare.flags})</span>;
 
     if (ev.limitChanged) return <span className="text-orange-400">cgroup_limits_changed()</span>;
+
+    if (ev.wait4) return <span className="text-gray-400">wait4(pid: {ev.wait4.pid}, options: {ev.wait4.options})</span>;
+    if (ev.mmap) return <span className="text-pink-400">mmap(addr: {ev.mmap.addr}, len: {ev.mmap.len}, prot: {ev.mmap.prot}, flags: {ev.mmap.flags}, fd: {ev.mmap.fd})</span>;
+    if (ev.munmap) return <span className="text-pink-400">munmap(addr: {ev.munmap.addr}, len: {ev.munmap.len})</span>;
+    if (ev.mprotect) return <span className="text-pink-400">mprotect(start: {ev.mprotect.start}, len: {ev.mprotect.len}, prot: {ev.mprotect.prot})</span>;
+    if (ev.brk) return <span className="text-pink-400">brk({ev.brk.brk})</span>;
+    
+    if (ev.accept) return <span className="text-purple-400">accept(fd: {ev.accept.fd})</span>;
+    if (ev.bind) return <span className="text-purple-400">bind(fd: {ev.bind.fd})</span>;
+    if (ev.sendto) return <span className="text-purple-400">sendto(fd: {ev.sendto.fd}, len: {ev.sendto.len})</span>;
+    if (ev.recvfrom) return <span className="text-purple-400">recvfrom(fd: {ev.recvfrom.fd}, len: {ev.recvfrom.len})</span>;
+    
+    if (ev.unlinkat) return <span className="text-red-400">unlinkat(dfd: {ev.unlinkat.dfd}, "{ev.unlinkat.pathname}")</span>;
+    if (ev.rename) return <span className="text-blue-400">rename("{ev.rename.oldname}", "{ev.rename.newname}")</span>;
+    
+    if (ev.futex) return <span className="text-teal-400">futex(uaddr: {ev.futex.uaddr}, op: {ev.futex.op}, val: {ev.futex.val})</span>;
+    if (ev.epollWait) return <span className="text-teal-400">epoll_wait(epfd: {ev.epollWait.epfd}, maxevents: {ev.epollWait.maxevents})</span>;
+    if (ev.select) return <span className="text-teal-400">select(nfds: {ev.select.nfds})</span>;
+    if (ev.poll) return <span className="text-teal-400">poll(nfds: {ev.poll.nfds})</span>;
+    
+    if (ev.ptrace) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">ptrace(request: {ev.ptrace.request}, pid: {ev.ptrace.targetPid})</span>;
+    if (ev.bpf) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">bpf(cmd: {ev.bpf.cmd})</span>;
+    if (ev.capset) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">capset(pid: {ev.capset.targetPid})</span>;
     return <span className="text-gray-600">syscall({ev.syscall?.syscallId})</span>;
   };
 
@@ -194,6 +217,30 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     pivot_root: '#ef4444', // text-red-500
     setns: '#f97316', // text-orange-500
     unshare: '#f97316', // text-orange-500
+    
+    wait4: '#9ca3af',
+    mmap: '#f472b6', // text-pink-400
+    munmap: '#f472b6',
+    mprotect: '#f472b6',
+    brk: '#f472b6',
+    
+    accept: '#c084fc',
+    bind: '#c084fc',
+    sendto: '#c084fc',
+    recvfrom: '#c084fc',
+    
+    unlinkat: '#f87171',
+    rename: '#60a5fa',
+    
+    futex: '#2dd4bf', // text-teal-400
+    epoll_wait: '#2dd4bf',
+    select: '#2dd4bf',
+    poll: '#2dd4bf',
+    
+    ptrace: '#ef4444',
+    bpf: '#ef4444',
+    capset: '#ef4444',
+
     syscall: '#4b5563', // text-gray-600
   };
 
