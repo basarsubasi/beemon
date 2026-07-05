@@ -20,6 +20,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isUserScrollingRef = useRef(false);
   
   const allEventsRef = useRef<(BeemonEvent & { _localTs?: number, _type?: string })[]>([]);
   const globalCountsRef = useRef<Record<string, number>>({});
@@ -140,12 +141,21 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     };
   }, [pid, isPaused]);
 
-  useEffect(() => {
-    // Auto-scroll to bottom
+  const handleScroll = () => {
     if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      // If we are within 50px of the bottom, we consider it "at the bottom"
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+      isUserScrollingRef.current = !isNearBottom;
+    }
+  };
+
+  useEffect(() => {
+    // Auto-scroll to bottom only when new events arrive AND user hasn't scrolled up
+    if (scrollRef.current && !isUserScrollingRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [renderState.displayedEvents]);
+  }, [renderState.totalSyscalls]);
 
   const formatBytes = (bytesStr: string | undefined) => {
     if (!bytesStr || bytesStr === "0" || bytesStr === "max") return "Max";
@@ -334,7 +344,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
       
       <div className="flex gap-6 h-full pb-6 flex-col md:flex-row">
         <Card className="flex-1 bg-white dark:bg-black overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col h-[500px]">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
+          <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
             {renderState.displayedEvents.map((ev, i) => (
               <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
                 <span className="text-zinc-500 mr-4">
