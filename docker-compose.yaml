@@ -5,8 +5,12 @@ services:
       dockerfile: Dockerfile.daemon
     privileged: true
     pid: host
+    cgroupns_mode: host
     volumes:
       - /sys/kernel/debug:/sys/kernel/debug:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    environment:
+      - BEEMON_LOG_LEVEL=warn
     restart: unless-stopped
 
   bff:
