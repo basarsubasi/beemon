@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import type { BeemonEvent, WSMessage } from "../lib/types";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
@@ -11,7 +11,6 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
   const [timeFilter, setTimeFilter] = useState<'all' | '5s' | '1s'>('all');
-  const [lastPing, setLastPing] = useState<number | null>(null);
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
   
   const [renderState, setRenderState] = useState({
@@ -28,7 +27,6 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
   useEffect(() => {
     // Reset state on PID change
     setIsConnected(false);
-    setLastPing(null);
     setRenderState({ displayedEvents: [], pieData: [], totalSyscalls: 0 });
     allEventsRef.current = [];
     globalCountsRef.current = {};
@@ -37,43 +35,46 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
   }, [pid]);
 
   // Render loop - decoupled from WebSocket frequency
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isPausedRef.current) return;
+  const updateRenderState = React.useCallback(() => {
+    const lastEvent = allEventsRef.current[allEventsRef.current.length - 1];
+    const now = lastEvent && lastEvent._localTs ? lastEvent._localTs : Date.now();
 
-      const now = Date.now();
-      let cutoff = 0;
-      if (timeFilter === '5s') cutoff = now - 5000;
-      if (timeFilter === '1s') cutoff = now - 1000;
+    let cutoff = 0;
+    if (timeFilter === '5s') cutoff = now - 5000;
+    if (timeFilter === '1s') cutoff = now - 1000;
 
-      const validEvents = timeFilter === 'all' 
-        ? allEventsRef.current 
-        : allEventsRef.current.filter(e => e._localTs && e._localTs >= cutoff);
+    const validEvents = timeFilter === 'all' 
+      ? allEventsRef.current 
+      : allEventsRef.current.filter(e => e._localTs && e._localTs >= cutoff);
 
-      const displayedEvents = validEvents.slice(-500);
+    const displayedEvents = validEvents.slice(-500);
 
-      let currentPieData: {name: string, value: number}[];
-      
-      if (timeFilter === 'all') {
-        currentPieData = Object.entries(globalCountsRef.current)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a,b) => b.value - a.value);
-      } else {
-        const counts: Record<string, number> = {};
-        validEvents.forEach(e => {
-          if (e._type) counts[e._type] = (counts[e._type] || 0) + 1;
-        });
-        currentPieData = Object.entries(counts)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a,b) => b.value - a.value);
-      }
+    let currentPieData: {name: string, value: number}[];
+    
+    if (timeFilter === 'all') {
+      currentPieData = Object.entries(globalCountsRef.current)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a,b) => b.value - a.value);
+    } else {
+      const counts: Record<string, number> = {};
+      validEvents.forEach(e => {
+        if (e._type) counts[e._type] = (counts[e._type] || 0) + 1;
+      });
+      currentPieData = Object.entries(counts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a,b) => b.value - a.value);
+    }
 
-      const totalSyscalls = currentPieData.reduce((acc, entry) => acc + entry.value, 0);
+    const totalSyscalls = currentPieData.reduce((acc, entry) => acc + entry.value, 0);
 
-      setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls });
-    }, 500);
-    return () => clearInterval(interval);
+    setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls });
   }, [timeFilter]);
+
+  useEffect(() => {
+    updateRenderState(); // Instant update when timeFilter changes
+    const interval = setInterval(updateRenderState, 500);
+    return () => clearInterval(interval);
+  }, [updateRenderState]);
 
   // WebSocket Connection
   useEffect(() => {
@@ -95,9 +96,8 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
       try {
         const msg = JSON.parse(event.data) as WSMessage;
 
-        // Connectivity Test (Ping)
+        // Ignore Ping
         if ("type" in msg && msg.type === "ping") {
-          setLastPing(Date.now());
           return;
         }
 
@@ -254,14 +254,6 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
       return "00:00:00.000";
     }
   };
-
-  // Render time ago for ping
-  const getPingStatus = () => {
-    if (!isConnected) return "Disconnected";
-    if (!lastPing) return "Waiting for ping...";
-    const secondsAgo = Math.floor((Date.now() - lastPing) / 1000);
-    return `Last Ping: ${secondsAgo}s ago`;
-  };
   
   const SYSCALL_COLORS: Record<string, string> = {
     open: '#60a5fa', // text-blue-400
@@ -327,13 +319,6 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
             <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 5s</button>
             <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 1s</button>
           </div>
-          
-          <div className="flex items-center gap-2 text-xs font-mono bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800">
-            <Activity size={14} className={isConnected && lastPing && (Date.now() - lastPing < 5000) ? "text-green-600 dark:text-green-500 animate-pulse" : "text-zinc-500"} />
-            <span className="text-zinc-500 dark:text-zinc-400">{getPingStatus()}</span>
-          </div>
-
-          <span className="text-sm text-zinc-500 ml-2">Monitoring PID {pid}</span>
         </div>
         <div className="flex gap-4 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
           <div className="flex items-center gap-2">
