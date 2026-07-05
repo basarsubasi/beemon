@@ -165,7 +165,10 @@ export function Dashboard() {
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-4 mb-2">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">beemon dashboard</h1>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Beemon Logo" className="h-10 w-auto object-contain" />
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">beemon dashboard</h1>
+            </div>
             <ThemeToggle />
           </div>
           <p className="text-zinc-500 dark:text-zinc-400">Real-time eBPF Linux process monitoring.</p>

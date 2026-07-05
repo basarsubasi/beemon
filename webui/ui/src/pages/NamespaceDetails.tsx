@@ -81,6 +81,7 @@ export function NamespaceDetails() {
              ) : (
                <Badge variant="outline" className="border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 text-sm px-3 py-1">Isolated Scope</Badge>
              )}
+             <img src="/logo.png" alt="Beemon Logo" className="h-10 w-auto object-contain" />
              <ThemeToggle />
           </div>
         </div>

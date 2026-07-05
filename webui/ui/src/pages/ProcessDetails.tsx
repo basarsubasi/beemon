@@ -61,7 +61,10 @@ export function ProcessDetails() {
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Live Process Tracing & Resource Monitoring</p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <img src="/logo.png" alt="Beemon Logo" className="h-10 w-auto object-contain" />
+            <ThemeToggle />
+          </div>
         </div>
       </div>
       
