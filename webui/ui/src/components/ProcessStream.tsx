@@ -208,6 +208,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
             <span>STATE:</span>
             {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">Loading...</span>}
           </div>
+          <span>CPU USAGE: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "Loading..."}</span></span>
           <span>MEM USAGE: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
           <span>MEM LIMIT: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
           <span>CPU LIMIT: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>

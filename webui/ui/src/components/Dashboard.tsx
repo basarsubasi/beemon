@@ -11,7 +11,7 @@ import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box } from "lucide-react";
 
-type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit';
+type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu';
 type SortDirection = 'asc' | 'desc';
 
 export function Dashboard() {
@@ -85,6 +85,9 @@ export function Dashboard() {
       } else if (sortKey === 'pidsLimit') {
         aVal = parseInt(a.pidsLimit);
         bVal = parseInt(b.pidsLimit);
+      } else if (sortKey === 'cpu') {
+        aVal = a.cpuUsagePercent || 0;
+        bVal = b.cpuUsagePercent || 0;
       }
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -230,6 +233,12 @@ export function Dashboard() {
                 <div className="flex items-center">State {renderSortIcon('state')}</div>
               </TableHead>
               <TableHead 
+                className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[120px]"
+                onClick={() => handleSort('cpu')}
+              >
+                <div className="flex items-center justify-end">CPU {renderSortIcon('cpu')}</div>
+              </TableHead>
+              <TableHead 
                 className="text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right w-[150px]"
                 onClick={() => handleSort('memory')}
               >
@@ -262,6 +271,9 @@ export function Dashboard() {
                 </TableCell>
                 <TableCell className="py-4 px-6">
                   <StateBadge state={proc.state} />
+                </TableCell>
+                <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[120px]">
+                  {(proc.cpuUsagePercent || 0).toFixed(1)}%
                 </TableCell>
                 <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6 w-[200px]">
                   <div className="flex flex-col gap-1 items-end">
