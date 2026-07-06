@@ -231,7 +231,7 @@ export function ProcessDetails() {
                     className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'network' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                     onClick={() => setSidePanelTab('network')}
                   >
-                    <Network size={16} className={sidePanelTab === 'network' ? "text-green-500" : ""} /> Network
+                    <Network size={16} className={sidePanelTab === 'network' ? "text-green-500" : ""} /> Network Connections
                     <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{process?.activeConnections?.length || 0}</Badge>
                   </h2>
                 </div>

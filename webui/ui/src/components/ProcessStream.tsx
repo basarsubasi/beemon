@@ -389,18 +389,34 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
           <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>1s</button>
         </div>
       </div>
-      <div className="flex gap-3 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400 overflow-hidden">
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span>STATE:</span>
-          {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">…</span>}
+      <div className="flex flex-col gap-1 items-end overflow-hidden">
+        <div className="flex gap-3 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span>STATE:</span>
+            {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">…</span>}
+          </div>
+          <span className="flex-shrink-0">CPU: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "…"}</span></span>
+          <span className="flex-shrink-0">MEM: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "…"}</span></span>
+          <span className="flex-shrink-0 text-zinc-400">|</span>
+          <span className="flex-shrink-0">MEM LIM: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
+          <span className="flex-shrink-0">CPU LIM: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
         </div>
-        <span className="flex-shrink-0">CPU: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "…"}</span></span>
-        <span className="flex-shrink-0">MEM: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "…"}</span></span>
-        <span className="flex-shrink-0">FILE: <span className="text-blue-500 mr-1">R {process ? formatBytes(process.ioReadBytes || '0') : '0'}</span><span className="text-orange-500">W {process ? formatBytes(process.ioWriteBytes || '0') : '0'}</span></span>
-        <span className="flex-shrink-0">NET: <span className="text-green-500 mr-1">Rx {process ? formatBytes(process.netRxBytes || '0') : '0'}</span><span className="text-purple-500">Tx {process ? formatBytes(process.netTxBytes || '0') : '0'}</span></span>
-        <span className="flex-shrink-0 text-zinc-400">|</span>
-        <span className="flex-shrink-0">MEM LIM: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
-        <span className="flex-shrink-0">CPU LIM: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
+        <div className="flex gap-4 items-start text-xs font-mono text-zinc-500 dark:text-zinc-400">
+          <div className="flex flex-col items-end">
+            <span className="flex-shrink-0 font-semibold">FILE I/O</span>
+            <div className="flex gap-1.5 text-[10px]">
+              <span className="text-blue-500">R: {process ? formatBytes(process.ioReadBytes || '0') : '0'}</span>
+              <span className="text-orange-500">W: {process ? formatBytes(process.ioWriteBytes || '0') : '0'}</span>
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="flex-shrink-0 font-semibold">NET I/O</span>
+            <div className="flex gap-1.5 text-[10px]">
+              <span className="text-green-500">Rx: {process ? formatBytes(process.netRxBytes || '0') : '0'}</span>
+              <span className="text-purple-500">Tx: {process ? formatBytes(process.netTxBytes || '0') : '0'}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
