@@ -201,30 +201,21 @@ export function ProcessDetails() {
         {/* Side Panel - overlays on top of the event stream when expanded */}
         <div className="absolute left-0 top-0 bottom-0 z-20 flex items-start" style={{ paddingBottom: '24px' }}>
           {!sidePanelExpanded ? (
-            <div className="flex flex-col gap-2">
-              <Button 
-                variant="outline" 
-                className="h-[246px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
-                onClick={() => { setSidePanelTab('files'); setSidePanelExpanded(true); }}
-                title="Show Open Files"
-              >
-                <PanelLeftOpen size={18} className="text-zinc-500" />
-                <div className="flex items-center gap-2 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                  <FileText size={14} className="transform rotate-90" /> OPEN FILES <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.openFiles?.length || 0}</Badge>
+            <Button 
+              variant="outline" 
+              className="h-[500px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
+              onClick={() => { setSidePanelExpanded(true); }}
+              title="Show Process Resources"
+            >
+              <PanelLeftOpen size={18} className="text-zinc-500" />
+              <div className="flex items-center gap-3 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                PROCESS I/O
+                <div className="flex items-center gap-1 mt-2">
+                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-green-100/50 text-green-700 dark:bg-green-900/30 dark:text-green-400">{process?.activeConnections?.length || 0}</Badge>
+                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-blue-100/50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{process?.openFiles?.length || 0}</Badge>
                 </div>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-[246px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
-                onClick={() => { setSidePanelTab('network'); setSidePanelExpanded(true); }}
-                title="Show Network Connections"
-              >
-                <PanelLeftOpen size={18} className="text-zinc-500" />
-                <div className="flex items-center gap-2 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                  <Network size={14} className="transform rotate-90" /> NETWORK <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.activeConnections?.length || 0}</Badge>
-                </div>
-              </Button>
-            </div>
+              </div>
+            </Button>
           ) : (
             <Card className={`${sidePanelWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
               <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">

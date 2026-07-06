@@ -446,7 +446,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
                 <div className="flex flex-col items-end gap-1">
                   {renderState.totalNetworkEvents > 0 && (
                     <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
-                      Evts: {renderState.totalNetworkEvents.toLocaleString()}
+                      Events: {renderState.totalNetworkEvents.toLocaleString()}
                     </span>
                   )}
                   {(renderState.packetsSent > 0 || renderState.packetsReceived > 0) && (
