@@ -63,6 +63,11 @@ export function Dashboard() {
     return `${mb.toFixed(1)} MB`;
   };
 
+  const formatIoBytes = (bytesStr?: string) => {
+    if (!bytesStr || bytesStr === '0') return 'N/A';
+    return formatBytes(bytesStr) + '/s';
+  };
+
   const handleSort = (key: SortKey | 'file' | 'net') => {
     if (key === 'file') {
       if (sortKey === 'file_read') {
@@ -367,14 +372,14 @@ export function Dashboard() {
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end text-[10px]">
-                    <span className="text-blue-500">R: {formatBytes(proc.ioReadBytes || '0')}</span>
-                    <span className="text-orange-500">W: {formatBytes(proc.ioWriteBytes || '0')}</span>
+                    <span className="text-blue-500">R: {formatIoBytes(proc.ioReadBytes)}</span>
+                    <span className="text-orange-500">W: {formatIoBytes(proc.ioWriteBytes)}</span>
                   </div>
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end text-[10px]">
-                    <span className="text-green-500">Rx: {formatBytes(proc.netRxBytes || '0')}</span>
-                    <span className="text-purple-500">Tx: {formatBytes(proc.netTxBytes || '0')}</span>
+                    <span className="text-green-500">Rx: {formatIoBytes(proc.netRxBytes)}</span>
+                    <span className="text-purple-500">Tx: {formatIoBytes(proc.netTxBytes)}</span>
                   </div>
                 </TableCell>
                 <TableCell className="w-[130px] max-w-[130px] text-right font-mono text-zinc-500 dark:text-zinc-400 py-4 px-6">

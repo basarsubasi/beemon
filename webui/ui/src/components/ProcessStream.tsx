@@ -225,6 +225,18 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
 
+  const formatIoBytes = (bytesStr: string | undefined) => {
+    if (!bytesStr || bytesStr === "0") return "N/A";
+    const bytes = parseInt(bytesStr);
+    if (isNaN(bytes)) return "N/A";
+    const gb = bytes / 1024 / 1024 / 1024;
+    if (gb >= 1) return `${gb.toFixed(2)} GB/s`;
+    const mb = bytes / 1024 / 1024;
+    if (mb >= 1) return `${mb.toFixed(1)} MB/s`;
+    const kb = bytes / 1024;
+    if (kb >= 1) return `${kb.toFixed(1)} KB/s`;
+    return `${bytes} B/s`;
+  };
   useEffect(() => {
     if (process) {
       setLimits({
@@ -405,15 +417,15 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">FILE I/O</span>
             <div className="flex gap-1.5 text-[10px]">
-              <span className="text-blue-500">R: {process ? formatBytes(process.ioReadBytes || '0') : '0'}</span>
-              <span className="text-orange-500">W: {process ? formatBytes(process.ioWriteBytes || '0') : '0'}</span>
+              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytes) : '0'}</span>
+              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'}</span>
             </div>
           </div>
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">NET I/O</span>
             <div className="flex gap-1.5 text-[10px]">
-              <span className="text-green-500">Rx: {process ? formatBytes(process.netRxBytes || '0') : '0'}</span>
-              <span className="text-purple-500">Tx: {process ? formatBytes(process.netTxBytes || '0') : '0'}</span>
+              <span className="text-green-500">Rx: {process ? formatIoBytes(process.netRxBytes) : '0'}</span>
+              <span className="text-purple-500">Tx: {process ? formatIoBytes(process.netTxBytes) : '0'}</span>
             </div>
           </div>
         </div>
