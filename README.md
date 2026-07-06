@@ -41,7 +41,7 @@ Beemon is designed to run on both **x86_64** and **arm64** (e.g., Raspberry Pi) 
 
 > [!WARNING]
 > **Not CO-RE Compatible:** This project does **not** use CO-RE (Compile Once - Run Everywhere) relocations because the target environments lack BTF debug information (`/sys/kernel/btf/vmlinux`). 
-> The struct offsets are hardcoded at compile time. This specific build is designed exactly for **6.18 arm64** and **6.12 amd64** Linux kernels. Running it on different kernel versions may cause it to fail to load or read incorrect data unless you generate a new `vmlinux.h` for your kernel and recompile.
+> The struct offsets are hardcoded at compile time. This specific build is designed exactly for **6.18 arm64** and **6.18 amd64** Linux kernels. Running it on different kernel versions may cause it to fail to load or read incorrect data unless you generate a new `vmlinux.h` for your kernel and recompile.
 
 ## Directory Structure
 
