@@ -605,6 +605,22 @@
         }
       }
     },
+    "v1OpenFile": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "title": "e.g., \"socket\", \"pipe\", \"regular\", \"directory\", \"char\", \"fifo\", \"other\""
+        }
+      }
+    },
     "v1PivotRootEvent": {
       "type": "object",
       "properties": {
@@ -677,6 +693,14 @@
             "type": "string"
           },
           "title": "Namespaces"
+        },
+        "openFiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OpenFile"
+          },
+          "title": "Open Files"
         }
       }
     },

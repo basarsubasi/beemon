@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { BeemonEvent, WSMessage } from "../lib/types";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { Activity } from "lucide-react";
+import { Activity, Maximize2, Minimize2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { StateBadge } from "./StateBadge";
 
-export function ProcessStream({ pid, process }: { pid: number, process?: import("../lib/types").Process }) {
+export function ProcessStream({ pid, process, infoBarRef }: { pid: number, process?: import("../lib/types").Process, infoBarRef?: React.RefObject<HTMLDivElement | null> }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
   const [timeFilter, setTimeFilter] = useState<'all' | '5s' | '1s'>('all');
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
+  const [isEventExpanded, setIsEventExpanded] = useState(false);
 
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
@@ -306,45 +308,61 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     syscall: '#4b5563', // text-gray-600
   };
 
-  return (
-    <div className="flex flex-col h-full gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-4 items-center">
-          <Badge variant={isConnected ? "default" : "destructive"}>
-            {isConnected ? "LIVE" : "DISCONNECTED"}
-          </Badge>
+  const infoBar = (
+    <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex gap-4 items-center">
+        <Badge variant={isConnected ? "default" : "destructive"}>
+          {isConnected ? "LIVE" : "DISCONNECTED"}
+        </Badge>
 
-          <button
-            onClick={() => {
-              const next = !isPaused;
-              setIsPaused(next);
-              isPausedRef.current = next;
-            }}
-            className="px-3 py-1 text-xs font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-          >
-            {isPaused ? "Resume Streaming" : "Pause Streaming"}
-          </button>
+        <button
+          onClick={() => {
+            const next = !isPaused;
+            setIsPaused(next);
+            isPausedRef.current = next;
+          }}
+          className="px-3 py-1 text-xs font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+        >
+          {isPaused ? "Resume Streaming" : "Pause Streaming"}
+        </button>
 
-          <div className="flex gap-1 border border-zinc-200 dark:border-zinc-800 rounded-md p-1 bg-white dark:bg-black">
-            <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All Time</button>
-            <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 5s</button>
-            <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 1s</button>
-          </div>
-        </div>
-        <div className="flex gap-4 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
-          <div className="flex items-center gap-2">
-            <span>STATE:</span>
-            {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">Loading...</span>}
-          </div>
-          <span>CPU USAGE: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "Loading..."}</span></span>
-          <span>MEM USAGE: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
-          <span>MEM LIMIT: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
-          <span>CPU LIMIT: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
+        <div className="flex gap-1 border border-zinc-200 dark:border-zinc-800 rounded-md p-1 bg-white dark:bg-black">
+          <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All Time</button>
+          <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 5s</button>
+          <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 1s</button>
         </div>
       </div>
+      <div className="flex gap-4 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-2">
+          <span>STATE:</span>
+          {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">Loading...</span>}
+        </div>
+        <span>CPU USAGE: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "Loading..."}</span></span>
+        <span>MEM USAGE: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
+        <span>MEM LIMIT: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
+        <span>CPU LIMIT: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full gap-4">
+      {infoBarRef?.current ? createPortal(infoBar, infoBarRef.current) : infoBar}
 
       <div className="flex gap-6 h-full pb-6 flex-col md:flex-row">
         <Card className="flex-1 bg-white dark:bg-black overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col h-[500px]">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+              <Activity size={14} className="text-green-500" /> Event Stream
+            </h3>
+            <button
+              onClick={() => setIsEventExpanded(!isEventExpanded)}
+              className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+              title={isEventExpanded ? "Show Pie Chart" : "Expand Event Box"}
+            >
+              {isEventExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+          </div>
           <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
             {renderState.displayedEvents.map((ev, i) => (
               <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
@@ -364,51 +382,53 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           </div>
         </Card>
 
-        <Card className="w-full md:w-[300px] bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl p-4 flex flex-col h-[300px] md:h-[500px]">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-zinc-900 dark:text-white font-semibold text-sm">Syscall Distribution</h3>
-            {renderState.totalSyscalls > 0 && (
-              <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
-                Total: {renderState.totalSyscalls.toLocaleString()}
-              </span>
+        {!isEventExpanded && (
+          <Card className="w-full md:w-[300px] bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl p-4 flex flex-col h-[300px] md:h-[500px]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-zinc-900 dark:text-white font-semibold text-sm">Syscall Distribution</h3>
+              {renderState.totalSyscalls > 0 && (
+                <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
+                  Total: {renderState.totalSyscalls.toLocaleString()}
+                </span>
+              )}
+            </div>
+            {renderState.pieData.length > 0 ? (
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={renderState.pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {renderState.pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={SYSCALL_COLORS[entry.name] || '#ffffff'} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
+                      formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
+                Waiting for syscalls...
+              </div>
             )}
-          </div>
-          {renderState.pieData.length > 0 ? (
-            <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={renderState.pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                    isAnimationActive={false}
-                  >
-                    {renderState.pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={SYSCALL_COLORS[entry.name] || '#ffffff'} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
-                    formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
-              Waiting for syscalls...
-            </div>
-          )}
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ export interface Process {
   cpuPeriodUs: string;
   pidsLimit: string;
   namespaces?: string[];
+  openFiles?: { fd: number; path: string; type: string }[];
 }
 
 export interface ListProcessesResponse {

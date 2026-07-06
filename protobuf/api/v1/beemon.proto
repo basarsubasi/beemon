@@ -88,6 +88,15 @@ message Process {
 
   // Namespaces
   repeated string namespaces = 11;
+
+  // Open Files
+  repeated OpenFile open_files = 12;
+}
+
+message OpenFile {
+  uint32 fd = 1;
+  string path = 2;
+  string type = 3; // e.g., "socket", "pipe", "regular", "directory", "char", "fifo", "other"
 }
 
 message StreamEventsRequest {
