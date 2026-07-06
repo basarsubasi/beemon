@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { BeemonEvent, WSMessage } from "../lib/types";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { Activity, Maximize2, Minimize2 } from "lucide-react";
+import { Activity, PanelRightOpen, PanelLeftOpen } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { StateBadge } from "./StateBadge";
 
@@ -309,8 +309,8 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
   };
 
   const infoBar = (
-    <div className="flex items-center justify-between flex-wrap gap-2">
-      <div className="flex gap-4 items-center">
+    <div className="flex items-center justify-between gap-2 overflow-hidden">
+      <div className="flex gap-3 items-center flex-shrink-0">
         <Badge variant={isConnected ? "default" : "destructive"}>
           {isConnected ? "LIVE" : "DISCONNECTED"}
         </Badge>
@@ -323,24 +323,24 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
           }}
           className="px-3 py-1 text-xs font-semibold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
         >
-          {isPaused ? "Resume Streaming" : "Pause Streaming"}
+          {isPaused ? "Resume" : "Pause"}
         </button>
 
         <div className="flex gap-1 border border-zinc-200 dark:border-zinc-800 rounded-md p-1 bg-white dark:bg-black">
-          <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All Time</button>
-          <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 5s</button>
-          <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 1s</button>
+          <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All</button>
+          <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>5s</button>
+          <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>1s</button>
         </div>
       </div>
-      <div className="flex gap-4 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
-        <div className="flex items-center gap-2">
+      <div className="flex gap-3 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400 overflow-hidden">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <span>STATE:</span>
-          {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">Loading...</span>}
+          {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">…</span>}
         </div>
-        <span>CPU USAGE: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "Loading..."}</span></span>
-        <span>MEM USAGE: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "Loading..."}</span></span>
-        <span>MEM LIMIT: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
-        <span>CPU LIMIT: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
+        <span className="flex-shrink-0">CPU: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "…"}</span></span>
+        <span className="flex-shrink-0">MEM: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "…"}</span></span>
+        <span className="flex-shrink-0">MEM LIM: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
+        <span className="flex-shrink-0">CPU LIM: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
       </div>
     </div>
   );
@@ -360,7 +360,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
               className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
               title={isEventExpanded ? "Show Pie Chart" : "Expand Event Box"}
             >
-              {isEventExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              {isEventExpanded ? <PanelRightOpen size={18} /> : <PanelLeftOpen size={18} />}
             </button>
           </div>
           <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">

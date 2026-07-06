@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
-import { ArrowLeft, Users, Box, Terminal, FolderOpen, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import type { Process, GetProcessMetadataResponse } from "../lib/types";
 import { Card } from "../components/ui/card";
@@ -26,7 +26,7 @@ export function ProcessDetails() {
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
   const [isOpenFilesExpanded, setIsOpenFilesExpanded] = useState(false);
   const [isOpenFilesWide, setIsOpenFilesWide] = useState(false);
-  const [openFilesSortConfig, setOpenFilesSortConfig] = useState<{key: 'fd' | 'type' | 'path', direction: 'asc' | 'desc'} | null>(null);
+  const [openFilesSortConfig, setOpenFilesSortConfig] = useState<{key: 'fd' | 'type' | 'path', direction: 'asc' | 'desc'} | null>({key: 'fd', direction: 'asc'});
   const infoBarRef = useRef<HTMLDivElement>(null);
 
   const sortedOpenFiles = useMemo(() => {
@@ -52,6 +52,16 @@ export function ProcessDetails() {
       direction = 'desc';
     }
     setOpenFilesSortConfig({ key, direction });
+  };
+
+  const STDIO_NAMES: Record<number, string> = { 0: 'stdin', 1: 'stdout', 2: 'stderr' };
+
+  const getDisplayPath = (fd: number, path: string): string => {
+    if (fd in STDIO_NAMES) {
+      // Strip " (deleted)" suffix for standard streams — they are not real files
+      return path.replace(/ \(deleted\)$/, '');
+    }
+    return path;
   };
 
   useEffect(() => {
@@ -198,14 +208,14 @@ export function ProcessDetails() {
             >
               <PanelLeftOpen size={18} className="text-zinc-500" />
               <div className="flex items-center gap-2 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                <FolderOpen size={14} className="transform rotate-90" /> OPEN FILES <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.openFiles?.length || 0}</Badge>
+                <FileText size={14} className="transform rotate-90" /> OPEN FILES <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.openFiles?.length || 0}</Badge>
               </div>
             </Button>
           ) : (
             <Card className={`${isOpenFilesWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
               <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
                 <h2 className="font-semibold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
-                  <FolderOpen size={16} className="text-blue-500" /> Open Files
+                  <FileText size={16} className="text-blue-500" /> Open Files
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{process?.openFiles?.length || 0}</Badge>
                 </h2>
                 <div className="flex items-center gap-1">
@@ -236,14 +246,19 @@ export function ProcessDetails() {
                     {sortedOpenFiles.length ? (
                       sortedOpenFiles.map(f => (
                         <TableRow key={f.fd} className="border-zinc-200 dark:border-zinc-800/50 border-b last:border-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-default transition-colors">
-                          <TableCell className="font-mono text-xs py-2 px-4">{f.fd}</TableCell>
+                          <TableCell className="font-mono text-xs py-2 px-4">
+                            {f.fd}
+                            {f.fd in STDIO_NAMES && (
+                              <span className="ml-1.5 text-[9px] text-zinc-400 dark:text-zinc-500 font-sans">{STDIO_NAMES[f.fd]}</span>
+                            )}
+                          </TableCell>
                           <TableCell className="py-2 px-4">
                             <Badge variant="outline" className="text-[9px] px-1 py-0 border-zinc-300 dark:border-zinc-700 whitespace-nowrap">
                               {f.type}
                             </Badge>
                           </TableCell>
-                          <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${isOpenFilesWide ? 'max-w-[800px]' : 'max-w-[200px]'}`} title={f.path}>
-                            {f.path}
+                          <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${isOpenFilesWide ? 'max-w-[800px]' : 'max-w-[200px]'}`} title={getDisplayPath(f.fd, f.path)}>
+                            {getDisplayPath(f.fd, f.path)}
                           </TableCell>
                         </TableRow>
                       ))
