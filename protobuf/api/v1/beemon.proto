@@ -133,7 +133,9 @@ message NetworkFlow {
   string protocol = 5; // "TCP", "UDP"
   uint64 rx_bytes = 6;
   uint64 tx_bytes = 7;
-  string dns_query = 8;
+  uint64 rx_packets = 8;
+  uint64 tx_packets = 9;
+  string dns_query = 10;
 }
 
 message GetNetworkFlowsResponse {

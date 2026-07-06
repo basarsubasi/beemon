@@ -750,7 +750,9 @@ type NetworkFlow struct {
 	Protocol      string                 `protobuf:"bytes,5,opt,name=protocol,proto3" json:"protocol,omitempty"` // "TCP", "UDP"
 	RxBytes       uint64                 `protobuf:"varint,6,opt,name=rx_bytes,json=rxBytes,proto3" json:"rx_bytes,omitempty"`
 	TxBytes       uint64                 `protobuf:"varint,7,opt,name=tx_bytes,json=txBytes,proto3" json:"tx_bytes,omitempty"`
-	DnsQuery      string                 `protobuf:"bytes,8,opt,name=dns_query,json=dnsQuery,proto3" json:"dns_query,omitempty"`
+	RxPackets     uint64                 `protobuf:"varint,8,opt,name=rx_packets,json=rxPackets,proto3" json:"rx_packets,omitempty"`
+	TxPackets     uint64                 `protobuf:"varint,9,opt,name=tx_packets,json=txPackets,proto3" json:"tx_packets,omitempty"`
+	DnsQuery      string                 `protobuf:"bytes,10,opt,name=dns_query,json=dnsQuery,proto3" json:"dns_query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -830,6 +832,20 @@ func (x *NetworkFlow) GetRxBytes() uint64 {
 func (x *NetworkFlow) GetTxBytes() uint64 {
 	if x != nil {
 		return x.TxBytes
+	}
+	return 0
+}
+
+func (x *NetworkFlow) GetRxPackets() uint64 {
+	if x != nil {
+		return x.RxPackets
+	}
+	return 0
+}
+
+func (x *NetworkFlow) GetTxPackets() uint64 {
+	if x != nil {
+		return x.TxPackets
 	}
 	return 0
 }
@@ -3252,7 +3268,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x05state\x18\x03 \x01(\tR\x05state\x12\x1c\n" +
 	"\tdirection\x18\x04 \x01(\tR\tdirection\"*\n" +
 	"\x16GetNetworkFlowsRequest\x12\x10\n" +
-	"\x03pid\x18\x01 \x01(\rR\x03pid\"\x88\x02\n" +
+	"\x03pid\x18\x01 \x01(\rR\x03pid\"\xc6\x02\n" +
 	"\vNetworkFlow\x12#\n" +
 	"\rlocal_address\x18\x01 \x01(\tR\flocalAddress\x12%\n" +
 	"\x0eremote_address\x18\x02 \x01(\tR\rremoteAddress\x12\x1d\n" +
@@ -3262,8 +3278,13 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"remotePort\x12\x1a\n" +
 	"\bprotocol\x18\x05 \x01(\tR\bprotocol\x12\x19\n" +
 	"\brx_bytes\x18\x06 \x01(\x04R\arxBytes\x12\x19\n" +
-	"\btx_bytes\x18\a \x01(\x04R\atxBytes\x12\x1b\n" +
-	"\tdns_query\x18\b \x01(\tR\bdnsQuery\"G\n" +
+	"\btx_bytes\x18\a \x01(\x04R\atxBytes\x12\x1d\n" +
+	"\n" +
+	"rx_packets\x18\b \x01(\x04R\trxPackets\x12\x1d\n" +
+	"\n" +
+	"tx_packets\x18\t \x01(\x04R\ttxPackets\x12\x1b\n" +
+	"\tdns_query\x18\n" +
+	" \x01(\tR\bdnsQuery\"G\n" +
 	"\x17GetNetworkFlowsResponse\x12,\n" +
 	"\x05flows\x18\x01 \x03(\v2\x16.beemon.v1.NetworkFlowR\x05flows\"0\n" +
 	"\x13StreamEventsRequest\x12\x19\n" +

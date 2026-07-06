@@ -138,3 +138,20 @@ export interface WSPing {
 }
 
 export type WSMessage = WSPing | BeemonEvent;
+
+export interface NetworkFlow {
+  localAddress: string;
+  remoteAddress: string;
+  localPort: number;
+  remotePort: number;
+  protocol: string;
+  rxBytes: string;
+  txBytes: string;
+  rxPackets: string;
+  txPackets: string;
+  dnsQuery?: string;
+}
+
+export interface GetNetworkFlowsResponse {
+  flows: NetworkFlow[];
+}

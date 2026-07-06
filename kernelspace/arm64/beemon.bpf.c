@@ -211,6 +211,8 @@ struct net_flow_key {
 struct net_flow_stat {
     u64 rx_bytes;
     u64 tx_bytes;
+    u64 rx_packets;
+    u64 tx_packets;
     char dns_query[256];
 };
 
@@ -239,7 +241,7 @@ struct {
     __type(value, struct msghdr *);
 } udp_recv_msg SEC(".maps");
 
-static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx, struct msghdr *msg) {
+static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx, struct msghdr *msg, u16 protocol) {
     if (pid == 0 || !sk) return;
     
     struct net_flow_key key = {};
@@ -256,18 +258,24 @@ static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx,
     bpf_probe_read_kernel(&family, sizeof(family), &sk->__sk_common.skc_family);
     key.family = family;
     
-    // We can infer protocol by port, or we can assume tcp/udp based on caller, but passing protocol is cleaner.
-    // For now we will rely on the caller or just look it up. Let's look up protocol from sk:
-    key.protocol = 0;
+    key.protocol = protocol;
 
     struct net_flow_stat *stat = bpf_map_lookup_elem(&process_net_flow_stats, &key);
     if (stat) {
-        if (rx) __sync_fetch_and_add(&stat->rx_bytes, rx);
-        if (tx) __sync_fetch_and_add(&stat->tx_bytes, tx);
+        if (rx) {
+            __sync_fetch_and_add(&stat->rx_bytes, rx);
+            __sync_fetch_and_add(&stat->rx_packets, 1);
+        }
+        if (tx) {
+            __sync_fetch_and_add(&stat->tx_bytes, tx);
+            __sync_fetch_and_add(&stat->tx_packets, 1);
+        }
     } else {
         struct net_flow_stat new_stat = {};
         new_stat.rx_bytes = rx;
         new_stat.tx_bytes = tx;
+        if (rx) new_stat.rx_packets = 1;
+        if (tx) new_stat.tx_packets = 1;
         
         // If this is DNS (port 53 UDP), grab payload
         if ((key.dport == 53 || key.sport == 53) && msg && tx > 0) {
@@ -335,7 +343,7 @@ SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(trace_tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id >> 32;
-    add_net_io(sk, tgid, 0, size, msg);
+    add_net_io(sk, tgid, 0, size, msg, IPPROTO_TCP);
     return 0;
 }
 
@@ -344,7 +352,7 @@ int BPF_KPROBE(trace_tcp_cleanup_rbuf, struct sock *sk, int copied) {
     if (copied <= 0) return 0;
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id >> 32;
-    add_net_io(sk, tgid, copied, 0, NULL);
+    add_net_io(sk, tgid, copied, 0, NULL, IPPROTO_TCP);
     return 0;
 }
 
@@ -352,7 +360,7 @@ SEC("kprobe/udp_sendmsg")
 int BPF_KPROBE(trace_udp_sendmsg, struct sock *sk, struct msghdr *msg, size_t len) {
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id >> 32;
-    add_net_io(sk, tgid, 0, len, msg);
+    add_net_io(sk, tgid, 0, len, msg, IPPROTO_UDP);
     return 0;
 }
 
@@ -378,7 +386,7 @@ int BPF_KRETPROBE(trace_udp_recvmsg_ret, int ret) {
     struct sock **skpp = bpf_map_lookup_elem(&udp_recv_sk, &tid);
     struct msghdr **msgpp = bpf_map_lookup_elem(&udp_recv_msg, &tid);
     if (skpp) {
-        add_net_io(*skpp, tgid, ret, 0, msgpp ? *msgpp : NULL);
+        add_net_io(*skpp, tgid, ret, 0, msgpp ? *msgpp : NULL, IPPROTO_UDP);
     }
     bpf_map_delete_elem(&udp_recv_sk, &tid);
     bpf_map_delete_elem(&udp_recv_msg, &tid);

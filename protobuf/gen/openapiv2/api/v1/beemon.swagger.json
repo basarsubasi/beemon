@@ -724,6 +724,14 @@
           "type": "string",
           "format": "uint64"
         },
+        "rxPackets": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "txPackets": {
+          "type": "string",
+          "format": "uint64"
+        },
         "dnsQuery": {
           "type": "string"
         }
