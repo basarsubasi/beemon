@@ -178,6 +178,109 @@ static __always_inline bool should_trace(u32 pid) {
 }
 
 // -----------------------------------------------------------------------------
+// IO STATS ACCOUNTING PROBES
+// -----------------------------------------------------------------------------
+
+struct io_stat {
+    u64 file_read_bytes;
+    u64 file_write_bytes;
+    u64 net_rx_bytes;
+    u64 net_tx_bytes;
+};
+
+// Force BTF generation
+struct io_stat _io_stat_force_btf __attribute__((unused));
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES);
+    __type(key, u32);
+    __type(value, struct io_stat);
+} process_io_stats SEC(".maps");
+
+static __always_inline void add_net_io(u32 pid, u64 rx, u64 tx) {
+    if (pid == 0) return;
+    struct io_stat *stat = bpf_map_lookup_elem(&process_io_stats, &pid);
+    if (stat) {
+        if (rx) __sync_fetch_and_add(&stat->net_rx_bytes, rx);
+        if (tx) __sync_fetch_and_add(&stat->net_tx_bytes, tx);
+    } else {
+        struct io_stat new_stat = {};
+        new_stat.net_rx_bytes = rx;
+        new_stat.net_tx_bytes = tx;
+        bpf_map_update_elem(&process_io_stats, &pid, &new_stat, BPF_ANY);
+    }
+}
+
+static __always_inline void add_file_io(u32 pid, u64 read_bytes, u64 write_bytes) {
+    if (pid == 0) return;
+    struct io_stat *stat = bpf_map_lookup_elem(&process_io_stats, &pid);
+    if (stat) {
+        if (read_bytes) __sync_fetch_and_add(&stat->file_read_bytes, read_bytes);
+        if (write_bytes) __sync_fetch_and_add(&stat->file_write_bytes, write_bytes);
+    } else {
+        struct io_stat new_stat = {};
+        new_stat.file_read_bytes = read_bytes;
+        new_stat.file_write_bytes = write_bytes;
+        bpf_map_update_elem(&process_io_stats, &pid, &new_stat, BPF_ANY);
+    }
+}
+
+SEC("kretprobe/vfs_read")
+int BPF_KRETPROBE(trace_vfs_read_ret, ssize_t ret) {
+    if (ret <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_file_io(tgid, ret, 0);
+    return 0;
+}
+
+SEC("kretprobe/vfs_write")
+int BPF_KRETPROBE(trace_vfs_write_ret, ssize_t ret) {
+    if (ret <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_file_io(tgid, 0, ret);
+    return 0;
+}
+
+SEC("kprobe/tcp_sendmsg")
+int BPF_KPROBE(trace_tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_net_io(tgid, 0, size);
+    return 0;
+}
+
+SEC("kprobe/tcp_cleanup_rbuf")
+int BPF_KPROBE(trace_tcp_cleanup_rbuf, struct sock *sk, int copied) {
+    if (copied <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_net_io(tgid, copied, 0);
+    return 0;
+}
+
+SEC("kprobe/udp_sendmsg")
+int BPF_KPROBE(trace_udp_sendmsg, struct sock *sk, struct msghdr *msg, size_t len) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_net_io(tgid, 0, len);
+    return 0;
+}
+
+SEC("kretprobe/udp_recvmsg")
+int BPF_KRETPROBE(trace_udp_recvmsg_ret, int ret) {
+    if (ret <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_net_io(tgid, ret, 0);
+    return 0;
+}
+
+
+
+// -----------------------------------------------------------------------------
 // PROCESS LIFECYCLE
 // -----------------------------------------------------------------------------
 
@@ -256,6 +359,10 @@ int trace_sched_process_exit(struct trace_event_raw_sched_process_template *ctx)
     u64 id = bpf_get_current_pid_tgid();
     u32 user_pid = id >> 32;
     u32 user_tid = (u32)id;
+
+    if (user_pid == user_tid) {
+        bpf_map_delete_elem(&process_io_stats, &user_pid);
+    }
 
     if (!should_trace(user_pid)) return 0;
 

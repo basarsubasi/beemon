@@ -55,7 +55,8 @@ export function Dashboard() {
 
   const formatBytes = (bytesStr: string) => {
     const bytes = parseInt(bytesStr);
-    if (!bytes || bytes === 0) return "N/A";
+    if (isNaN(bytes)) return "N/A";
+    if (bytes === 0) return "0 B";
     const gb = bytes / 1024 / 1024 / 1024;
     if (gb >= 1) return `${gb.toFixed(2)} GB`;
     const mb = bytes / 1024 / 1024;
@@ -112,17 +113,17 @@ export function Dashboard() {
         aVal = parseInt(a.memoryUsageBytes);
         bVal = parseInt(b.memoryUsageBytes);
       } else if (sortKey === 'memLimit') {
-        aVal = parseInt(a.memoryLimitBytes);
-        bVal = parseInt(b.memoryLimitBytes);
+        aVal = a.memoryLimitBytes === "0" ? Infinity : parseInt(a.memoryLimitBytes);
+        bVal = b.memoryLimitBytes === "0" ? Infinity : parseInt(b.memoryLimitBytes);
       } else if (sortKey === 'pidsLimit') {
-        aVal = parseInt(a.pidsLimit);
-        bVal = parseInt(b.pidsLimit);
+        aVal = a.pidsLimit === "0" ? Infinity : parseInt(a.pidsLimit);
+        bVal = b.pidsLimit === "0" ? Infinity : parseInt(b.pidsLimit);
       } else if (sortKey === 'cpu') {
         aVal = a.cpuUsagePercent || 0;
         bVal = b.cpuUsagePercent || 0;
       } else if (sortKey === 'cpuLimit') {
-        aVal = parseInt(a.cpuQuotaUs) || 0;
-        bVal = parseInt(b.cpuQuotaUs) || 0;
+        aVal = a.cpuQuotaUs === "0" ? Infinity : parseInt(a.cpuQuotaUs);
+        bVal = b.cpuQuotaUs === "0" ? Infinity : parseInt(b.cpuQuotaUs);
       } else if (sortKey === 'file_read') {
         aVal = parseInt(a.ioReadBytes || '0');
         bVal = parseInt(b.ioReadBytes || '0');
@@ -330,7 +331,7 @@ export function Dashboard() {
                 className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('pidsLimit')}
               >
-                <div className="flex items-center justify-end">PIDs Limit {renderSortIcon('pidsLimit')}</div>
+                <div className="flex items-center justify-end">PID Limit {renderSortIcon('pidsLimit')}</div>
               </TableHead>
             </TableRow>
           </TableHeader>
