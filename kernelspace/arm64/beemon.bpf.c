@@ -251,7 +251,22 @@ struct {
 
 static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx, struct msghdr *msg, u16 protocol) {
     if (pid == 0 || !sk) return;
-    
+
+    // First update the aggregate global map for all processes
+    struct io_stat *agg_stat = bpf_map_lookup_elem(&process_io_stats, &pid);
+    if (agg_stat) {
+        if (rx) __sync_fetch_and_add(&agg_stat->net_rx_bytes, rx);
+        if (tx) __sync_fetch_and_add(&agg_stat->net_tx_bytes, tx);
+    } else {
+        struct io_stat new_agg = {};
+        new_agg.net_rx_bytes = rx;
+        new_agg.net_tx_bytes = tx;
+        bpf_map_update_elem(&process_io_stats, &pid, &new_agg, BPF_ANY);
+    }
+
+    // ONLY parse connection 5-tuples and DNS if this process is actively being traced
+    if (!should_trace(pid)) return;
+
     struct net_flow_key key = {};
     key.pid = pid;
     bpf_probe_read_kernel(&key.saddr, sizeof(key.saddr), &sk->__sk_common.skc_rcv_saddr);
@@ -300,18 +315,6 @@ static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx,
             }
         }
         bpf_map_update_elem(&process_net_flow_stats, &key, &new_stat, BPF_ANY);
-    }
-    
-    // Also update the aggregate map
-    struct io_stat *agg_stat = bpf_map_lookup_elem(&process_io_stats, &pid);
-    if (agg_stat) {
-        if (rx) __sync_fetch_and_add(&agg_stat->net_rx_bytes, rx);
-        if (tx) __sync_fetch_and_add(&agg_stat->net_tx_bytes, tx);
-    } else {
-        struct io_stat new_agg = {};
-        new_agg.net_rx_bytes = rx;
-        new_agg.net_tx_bytes = tx;
-        bpf_map_update_elem(&process_io_stats, &pid, &new_agg, BPF_ANY);
     }
 }
 
@@ -374,7 +377,8 @@ int BPF_KPROBE(trace_udp_sendmsg, struct sock *sk, struct msghdr *msg, size_t le
 
 SEC("kprobe/udp_recvmsg")
 int BPF_KPROBE(trace_udp_recvmsg, struct sock *sk, struct msghdr *msg, size_t len) {
-    u32 tid = (u32)bpf_get_current_pid_tgid();
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tid = (u32)id;
     bpf_map_update_elem(&udp_recv_sk, &tid, &sk, BPF_ANY);
     bpf_map_update_elem(&udp_recv_msg, &tid, &msg, BPF_ANY);
     return 0;
@@ -389,8 +393,8 @@ int BPF_KRETPROBE(trace_udp_recvmsg_ret, int ret) {
         return 0;
     }
     u64 id = bpf_get_current_pid_tgid();
-    u32 tid = (u32)id;
     u32 tgid = id >> 32;
+    u32 tid = (u32)id;
     struct sock **skpp = bpf_map_lookup_elem(&udp_recv_sk, &tid);
     struct msghdr **msgpp = bpf_map_lookup_elem(&udp_recv_msg, &tid);
     if (skpp) {
