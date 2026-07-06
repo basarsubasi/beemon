@@ -57,49 +57,30 @@ export function Dashboard() {
     const bytes = parseInt(bytesStr);
     if (isNaN(bytes)) return "N/A";
     if (bytes === 0) return "0 B";
-    const gb = bytes / 1024 / 1024 / 1024;
+    
+    const gb = bytes / (1024 * 1024 * 1024);
     if (gb >= 1) return `${gb.toFixed(2)} GB`;
-    const mb = bytes / 1024 / 1024;
-    return `${mb.toFixed(1)} MB`;
+    
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) return `${mb.toFixed(1)} MB`;
+    
+    const kb = bytes / 1024;
+    if (kb >= 1) return `${kb.toFixed(1)} KB`;
+    
+    return `${bytes} B`;
   };
 
   const formatIoBytes = (bytesStr?: string) => {
-    if (!bytesStr || bytesStr === '0') return 'N/A';
+    if (!bytesStr) return '0 B/s';
     return formatBytes(bytesStr) + '/s';
   };
 
-  const handleSort = (key: SortKey | 'file' | 'net') => {
-    if (key === 'file') {
-      if (sortKey === 'file_read') {
-        if (sortDirection === 'desc') setSortDirection('asc');
-        else { setSortKey('file_write'); setSortDirection('desc'); }
-      } else if (sortKey === 'file_write') {
-        if (sortDirection === 'desc') setSortDirection('asc');
-        else { setSortKey('file_read'); setSortDirection('desc'); }
-      } else {
-        setSortKey('file_read'); setSortDirection('desc');
-      }
-      return;
-    }
-
-    if (key === 'net') {
-      if (sortKey === 'net_rx') {
-        if (sortDirection === 'desc') setSortDirection('asc');
-        else { setSortKey('net_tx'); setSortDirection('desc'); }
-      } else if (sortKey === 'net_tx') {
-        if (sortDirection === 'desc') setSortDirection('asc');
-        else { setSortKey('net_rx'); setSortDirection('desc'); }
-      } else {
-        setSortKey('net_rx'); setSortDirection('desc');
-      }
-      return;
-    }
-
+  const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortKey(key as SortKey);
-      setSortDirection('asc');
+      setSortKey(key);
+      setSortDirection('desc'); // Default to desc for metrics
     }
   };
 
@@ -149,17 +130,9 @@ export function Dashboard() {
     });
   };
 
-  const renderSortIcon = (key: SortKey | 'file' | 'net') => {
-    if (key === 'file') {
-      if (sortKey !== 'file_read' && sortKey !== 'file_write') return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
-      return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
-    }
-    if (key === 'net') {
-      if (sortKey !== 'net_rx' && sortKey !== 'net_tx') return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
-      return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
-    }
-    if (sortKey !== key) return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
-    return sortDirection === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
   const sortedProcesses = getSortedProcesses();
@@ -308,17 +281,25 @@ export function Dashboard() {
               >
                 <div className="flex items-center justify-end">Memory {renderSortIcon('memory')}</div>
               </TableHead>
-              <TableHead 
-                className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
-                onClick={() => handleSort('file')}
-              >
-                <div className="flex items-center justify-end">File I/O {renderSortIcon('file')}</div>
+              <TableHead className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 py-4 px-6 text-right">
+                <div className="flex flex-col items-end gap-1 text-[10px] uppercase font-semibold">
+                  <div className="flex items-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('file_read')}>
+                    R {renderSortIcon('file_read')}
+                  </div>
+                  <div className="flex items-center cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('file_write')}>
+                    W {renderSortIcon('file_write')}
+                  </div>
+                </div>
               </TableHead>
-              <TableHead 
-                className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
-                onClick={() => handleSort('net')}
-              >
-                <div className="flex items-center justify-end">Net I/O {renderSortIcon('net')}</div>
+              <TableHead className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 py-4 px-6 text-right">
+                <div className="flex flex-col items-end gap-1 text-[10px] uppercase font-semibold">
+                  <div className="flex items-center cursor-pointer hover:text-green-600 transition-colors" onClick={() => handleSort('net_rx')}>
+                    Rx {renderSortIcon('net_rx')}
+                  </div>
+                  <div className="flex items-center cursor-pointer hover:text-purple-600 transition-colors" onClick={() => handleSort('net_tx')}>
+                    Tx {renderSortIcon('net_tx')}
+                  </div>
+                </div>
               </TableHead>
               <TableHead 
                 className="w-[130px] max-w-[130px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
