@@ -9,7 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Progress } from "./ui/progress";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers } from "lucide-react";
 
 type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit';
 type SortDirection = 'asc' | 'desc';
@@ -389,7 +389,7 @@ export function Dashboard() {
                     onClick={() => navigate(`/namespace/cgroup/${cg.inode}`)}
                   >
                     <TableCell className="font-mono text-zinc-900 dark:text-white py-4 px-6 flex items-center gap-2 group-hover:text-black dark:group-hover:text-white transition-colors">
-                      <Box className="w-4 h-4 text-orange-500 dark:text-orange-400" />
+                      <Layers className="w-4 h-4 text-orange-500 dark:text-orange-400" />
                       [{cg.inode}]
                     </TableCell>
                     <TableCell className="py-4 px-6">

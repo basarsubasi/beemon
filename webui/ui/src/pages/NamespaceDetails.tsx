@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Box } from "lucide-react";
+import { ArrowLeft, Box, Layers } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import type { NamespaceDetailsResponse, Process, ListProcessesResponse } from "../lib/types";
 import { Card } from "../components/ui/card";
@@ -70,7 +70,11 @@ export function NamespaceDetails() {
         <div className="flex-1 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3 uppercase">
-              <Box className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+              {type === "cgroup" ? (
+                <Layers className="w-8 h-8 text-orange-500 dark:text-orange-400" />
+              ) : (
+                <Box className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+              )}
               {type === "cgroup" ? type : `${type} Namespace`}
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm mt-1">Inode: {inode}</p>
