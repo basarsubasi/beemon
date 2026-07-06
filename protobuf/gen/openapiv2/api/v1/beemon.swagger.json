@@ -160,6 +160,37 @@
           "BeemonService"
         ]
       }
+    },
+    "/api/v1/processes/{pid}/network_flows": {
+      "get": {
+        "operationId": "BeemonService_GetNetworkFlows",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetNetworkFlowsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pid",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "BeemonService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -457,6 +488,18 @@
         }
       }
     },
+    "v1GetNetworkFlowsResponse": {
+      "type": "object",
+      "properties": {
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NetworkFlow"
+          }
+        }
+      }
+    },
     "v1GetProcessMetadataResponse": {
       "type": "object",
       "properties": {
@@ -649,6 +692,40 @@
         "direction": {
           "type": "string",
           "title": "\"inbound\" or \"outbound\""
+        }
+      }
+    },
+    "v1NetworkFlow": {
+      "type": "object",
+      "properties": {
+        "localAddress": {
+          "type": "string"
+        },
+        "remoteAddress": {
+          "type": "string"
+        },
+        "localPort": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "remotePort": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "protocol": {
+          "type": "string",
+          "title": "\"TCP\", \"UDP\""
+        },
+        "rxBytes": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "txBytes": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "dnsQuery": {
+          "type": "string"
         }
       }
     },

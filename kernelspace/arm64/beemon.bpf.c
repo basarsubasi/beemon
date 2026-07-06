@@ -198,17 +198,104 @@ struct {
     __type(value, struct io_stat);
 } process_io_stats SEC(".maps");
 
-static __always_inline void add_net_io(u32 pid, u64 rx, u64 tx) {
-    if (pid == 0) return;
-    struct io_stat *stat = bpf_map_lookup_elem(&process_io_stats, &pid);
+struct net_flow_key {
+    u32 pid;
+    u32 saddr;
+    u32 daddr;
+    u16 sport;
+    u16 dport;
+    u16 family;
+    u16 protocol;
+};
+
+struct net_flow_stat {
+    u64 rx_bytes;
+    u64 tx_bytes;
+    char dns_query[256];
+};
+
+struct net_flow_key _net_flow_key_force_btf __attribute__((unused));
+struct net_flow_stat _net_flow_stat_force_btf __attribute__((unused));
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES * 10);
+    __type(key, struct net_flow_key);
+    __type(value, struct net_flow_stat);
+} process_net_flow_stats SEC(".maps");
+
+// For udp_recvmsg to pass sk between kprobe and kretprobe
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES);
+    __type(key, u32); // tid
+    __type(value, struct sock *);
+} udp_recv_sk SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES);
+    __type(key, u32); // tid
+    __type(value, struct msghdr *);
+} udp_recv_msg SEC(".maps");
+
+static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx, struct msghdr *msg) {
+    if (pid == 0 || !sk) return;
+    
+    struct net_flow_key key = {};
+    key.pid = pid;
+    bpf_probe_read_kernel(&key.saddr, sizeof(key.saddr), &sk->__sk_common.skc_rcv_saddr);
+    bpf_probe_read_kernel(&key.daddr, sizeof(key.daddr), &sk->__sk_common.skc_daddr);
+    bpf_probe_read_kernel(&key.sport, sizeof(key.sport), &sk->__sk_common.skc_num);
+    
+    u16 dport = 0;
+    bpf_probe_read_kernel(&dport, sizeof(dport), &sk->__sk_common.skc_dport);
+    key.dport = bpf_ntohs(dport);
+    
+    u16 family = 0;
+    bpf_probe_read_kernel(&family, sizeof(family), &sk->__sk_common.skc_family);
+    key.family = family;
+    
+    // We can infer protocol by port, or we can assume tcp/udp based on caller, but passing protocol is cleaner.
+    // For now we will rely on the caller or just look it up. Let's look up protocol from sk:
+    key.protocol = 0;
+
+    struct net_flow_stat *stat = bpf_map_lookup_elem(&process_net_flow_stats, &key);
     if (stat) {
-        if (rx) __sync_fetch_and_add(&stat->net_rx_bytes, rx);
-        if (tx) __sync_fetch_and_add(&stat->net_tx_bytes, tx);
+        if (rx) __sync_fetch_and_add(&stat->rx_bytes, rx);
+        if (tx) __sync_fetch_and_add(&stat->tx_bytes, tx);
     } else {
-        struct io_stat new_stat = {};
-        new_stat.net_rx_bytes = rx;
-        new_stat.net_tx_bytes = tx;
-        bpf_map_update_elem(&process_io_stats, &pid, &new_stat, BPF_ANY);
+        struct net_flow_stat new_stat = {};
+        new_stat.rx_bytes = rx;
+        new_stat.tx_bytes = tx;
+        
+        // If this is DNS (port 53 UDP), grab payload
+        if ((key.dport == 53 || key.sport == 53) && msg && tx > 0) {
+            // DNS parse. We need msg->msg_iter.iov->iov_base
+            // Just read up to 256 bytes from user buffer
+            struct iov_iter iter = {};
+            bpf_probe_read_kernel(&iter, sizeof(iter), &msg->msg_iter);
+            if (iter.iter_type == 0 /* ITER_IOVEC */) {
+                struct iovec iov = {};
+                bpf_probe_read_kernel(&iov, sizeof(iov), (void *)iter.__iov);
+                if (iov.iov_base) {
+                    bpf_probe_read_user(&new_stat.dns_query, sizeof(new_stat.dns_query), iov.iov_base);
+                }
+            }
+        }
+        bpf_map_update_elem(&process_net_flow_stats, &key, &new_stat, BPF_ANY);
+    }
+    
+    // Also update the aggregate map
+    struct io_stat *agg_stat = bpf_map_lookup_elem(&process_io_stats, &pid);
+    if (agg_stat) {
+        if (rx) __sync_fetch_and_add(&agg_stat->net_rx_bytes, rx);
+        if (tx) __sync_fetch_and_add(&agg_stat->net_tx_bytes, tx);
+    } else {
+        struct io_stat new_agg = {};
+        new_agg.net_rx_bytes = rx;
+        new_agg.net_tx_bytes = tx;
+        bpf_map_update_elem(&process_io_stats, &pid, &new_agg, BPF_ANY);
     }
 }
 
@@ -248,7 +335,7 @@ SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(trace_tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id >> 32;
-    add_net_io(tgid, 0, size);
+    add_net_io(sk, tgid, 0, size, msg);
     return 0;
 }
 
@@ -257,7 +344,7 @@ int BPF_KPROBE(trace_tcp_cleanup_rbuf, struct sock *sk, int copied) {
     if (copied <= 0) return 0;
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id >> 32;
-    add_net_io(tgid, copied, 0);
+    add_net_io(sk, tgid, copied, 0, NULL);
     return 0;
 }
 
@@ -265,16 +352,36 @@ SEC("kprobe/udp_sendmsg")
 int BPF_KPROBE(trace_udp_sendmsg, struct sock *sk, struct msghdr *msg, size_t len) {
     u64 id = bpf_get_current_pid_tgid();
     u32 tgid = id >> 32;
-    add_net_io(tgid, 0, len);
+    add_net_io(sk, tgid, 0, len, msg);
+    return 0;
+}
+
+SEC("kprobe/udp_recvmsg")
+int BPF_KPROBE(trace_udp_recvmsg, struct sock *sk, struct msghdr *msg, size_t len) {
+    u32 tid = (u32)bpf_get_current_pid_tgid();
+    bpf_map_update_elem(&udp_recv_sk, &tid, &sk, BPF_ANY);
+    bpf_map_update_elem(&udp_recv_msg, &tid, &msg, BPF_ANY);
     return 0;
 }
 
 SEC("kretprobe/udp_recvmsg")
 int BPF_KRETPROBE(trace_udp_recvmsg_ret, int ret) {
-    if (ret <= 0) return 0;
+    if (ret <= 0) {
+        u32 tid = (u32)bpf_get_current_pid_tgid();
+        bpf_map_delete_elem(&udp_recv_sk, &tid);
+        bpf_map_delete_elem(&udp_recv_msg, &tid);
+        return 0;
+    }
     u64 id = bpf_get_current_pid_tgid();
+    u32 tid = (u32)id;
     u32 tgid = id >> 32;
-    add_net_io(tgid, ret, 0);
+    struct sock **skpp = bpf_map_lookup_elem(&udp_recv_sk, &tid);
+    struct msghdr **msgpp = bpf_map_lookup_elem(&udp_recv_msg, &tid);
+    if (skpp) {
+        add_net_io(*skpp, tgid, ret, 0, msgpp ? *msgpp : NULL);
+    }
+    bpf_map_delete_elem(&udp_recv_sk, &tid);
+    bpf_map_delete_elem(&udp_recv_msg, &tid);
     return 0;
 }
 

@@ -23,6 +23,7 @@ const (
 	BeemonService_GetProcessMetadata_FullMethodName  = "/beemon.v1.BeemonService/GetProcessMetadata"
 	BeemonService_StreamEvents_FullMethodName        = "/beemon.v1.BeemonService/StreamEvents"
 	BeemonService_GetNamespaceDetails_FullMethodName = "/beemon.v1.BeemonService/GetNamespaceDetails"
+	BeemonService_GetNetworkFlows_FullMethodName     = "/beemon.v1.BeemonService/GetNetworkFlows"
 )
 
 // BeemonServiceClient is the client API for BeemonService service.
@@ -33,6 +34,7 @@ type BeemonServiceClient interface {
 	GetProcessMetadata(ctx context.Context, in *GetProcessMetadataRequest, opts ...grpc.CallOption) (*GetProcessMetadataResponse, error)
 	StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
 	GetNamespaceDetails(ctx context.Context, in *GetNamespaceDetailsRequest, opts ...grpc.CallOption) (*GetNamespaceDetailsResponse, error)
+	GetNetworkFlows(ctx context.Context, in *GetNetworkFlowsRequest, opts ...grpc.CallOption) (*GetNetworkFlowsResponse, error)
 }
 
 type beemonServiceClient struct {
@@ -92,6 +94,16 @@ func (c *beemonServiceClient) GetNamespaceDetails(ctx context.Context, in *GetNa
 	return out, nil
 }
 
+func (c *beemonServiceClient) GetNetworkFlows(ctx context.Context, in *GetNetworkFlowsRequest, opts ...grpc.CallOption) (*GetNetworkFlowsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetNetworkFlowsResponse)
+	err := c.cc.Invoke(ctx, BeemonService_GetNetworkFlows_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BeemonServiceServer is the server API for BeemonService service.
 // All implementations must embed UnimplementedBeemonServiceServer
 // for forward compatibility.
@@ -100,6 +112,7 @@ type BeemonServiceServer interface {
 	GetProcessMetadata(context.Context, *GetProcessMetadataRequest) (*GetProcessMetadataResponse, error)
 	StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error
 	GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error)
+	GetNetworkFlows(context.Context, *GetNetworkFlowsRequest) (*GetNetworkFlowsResponse, error)
 	mustEmbedUnimplementedBeemonServiceServer()
 }
 
@@ -121,6 +134,9 @@ func (UnimplementedBeemonServiceServer) StreamEvents(*StreamEventsRequest, grpc.
 }
 func (UnimplementedBeemonServiceServer) GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetNamespaceDetails not implemented")
+}
+func (UnimplementedBeemonServiceServer) GetNetworkFlows(context.Context, *GetNetworkFlowsRequest) (*GetNetworkFlowsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetNetworkFlows not implemented")
 }
 func (UnimplementedBeemonServiceServer) mustEmbedUnimplementedBeemonServiceServer() {}
 func (UnimplementedBeemonServiceServer) testEmbeddedByValue()                       {}
@@ -208,6 +224,24 @@ func _BeemonService_GetNamespaceDetails_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BeemonService_GetNetworkFlows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNetworkFlowsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeemonServiceServer).GetNetworkFlows(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BeemonService_GetNetworkFlows_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeemonServiceServer).GetNetworkFlows(ctx, req.(*GetNetworkFlowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BeemonService_ServiceDesc is the grpc.ServiceDesc for BeemonService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -226,6 +260,10 @@ var BeemonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNamespaceDetails",
 			Handler:    _BeemonService_GetNamespaceDetails_Handler,
+		},
+		{
+			MethodName: "GetNetworkFlows",
+			Handler:    _BeemonService_GetNetworkFlows_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

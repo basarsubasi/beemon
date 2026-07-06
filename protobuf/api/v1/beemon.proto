@@ -31,6 +31,12 @@ service BeemonService {
       get: "/api/v1/namespaces/{ns_type}/{ns_inode}"
     };
   }
+
+  rpc GetNetworkFlows(GetNetworkFlowsRequest) returns (GetNetworkFlowsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/processes/{pid}/network_flows"
+    };
+  }
 }
 
 message GetNamespaceDetailsRequest {
@@ -113,6 +119,25 @@ message NetworkConnection {
   string remote_address = 2;
   string state = 3; // e.g. "ESTABLISHED", "LISTEN", etc.
   string direction = 4; // "inbound" or "outbound"
+}
+
+message GetNetworkFlowsRequest {
+  uint32 pid = 1;
+}
+
+message NetworkFlow {
+  string local_address = 1;
+  string remote_address = 2;
+  uint32 local_port = 3;
+  uint32 remote_port = 4;
+  string protocol = 5; // "TCP", "UDP"
+  uint64 rx_bytes = 6;
+  uint64 tx_bytes = 7;
+  string dns_query = 8;
+}
+
+message GetNetworkFlowsResponse {
+  repeated NetworkFlow flows = 1;
 }
 
 message StreamEventsRequest {
