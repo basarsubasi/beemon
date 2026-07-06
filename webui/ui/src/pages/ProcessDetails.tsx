@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
 import { ArrowLeft, Users, Box, Terminal } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -44,12 +44,12 @@ export function ProcessDetails() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center gap-4 mb-2">
-        <Link 
-          to="/" 
+        <button 
+          onClick={() => navigate(-1)} 
           className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center justify-center p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800"
         >
-          <ArrowLeft size={20} />
-        </Link>
+          <ArrowLeft size={24} />
+        </button>
         <div className="flex-1 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">

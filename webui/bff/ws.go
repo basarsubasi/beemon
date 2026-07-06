@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
@@ -21,6 +22,11 @@ import (
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true }, // Allow all origins for dev
 }
+
+var (
+	bootTimeOffsetNs uint64
+	bootTimeOnce     sync.Once
+)
 
 type WSPing struct {
 	Type      string `json:"type"`
@@ -133,6 +139,13 @@ func handleWS(cfg *Config) http.HandlerFunc {
 						slog.Error("WS stream read error", "error", res.err)
 					}
 					return
+				}
+
+				if res.ev.TimestampNs > 0 {
+					bootTimeOnce.Do(func() {
+						bootTimeOffsetNs = uint64(time.Now().UnixNano()) - res.ev.TimestampNs
+					})
+					res.ev.TimestampNs += bootTimeOffsetNs
 				}
 
 				jsonBytes, err := marshaler.Marshal(res.ev)

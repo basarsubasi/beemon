@@ -12,7 +12,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
   const isPausedRef = useRef(false);
   const [timeFilter, setTimeFilter] = useState<'all' | '5s' | '1s'>('all');
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
-  
+
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
     pieData: [] as { name: string, value: number }[],
@@ -21,7 +21,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isUserScrollingRef = useRef(false);
-  
+
   const allEventsRef = useRef<(BeemonEvent & { _localTs?: number, _type?: string })[]>([]);
   const globalCountsRef = useRef<Record<string, number>>({});
 
@@ -44,18 +44,18 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     if (timeFilter === '5s') cutoff = now - 5000;
     if (timeFilter === '1s') cutoff = now - 1000;
 
-    const validEvents = timeFilter === 'all' 
-      ? allEventsRef.current 
+    const validEvents = timeFilter === 'all'
+      ? allEventsRef.current
       : allEventsRef.current.filter(e => e._localTs && e._localTs >= cutoff);
 
     const displayedEvents = validEvents.slice(-500);
 
-    let currentPieData: {name: string, value: number}[];
-    
+    let currentPieData: { name: string, value: number }[];
+
     if (timeFilter === 'all') {
       currentPieData = Object.entries(globalCountsRef.current)
         .map(([name, value]) => ({ name, value }))
-        .sort((a,b) => b.value - a.value);
+        .sort((a, b) => b.value - a.value);
     } else {
       const counts: Record<string, number> = {};
       validEvents.forEach(e => {
@@ -63,7 +63,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
       });
       currentPieData = Object.entries(counts)
         .map(([name, value]) => ({ name, value }))
-        .sort((a,b) => b.value - a.value);
+        .sort((a, b) => b.value - a.value);
     }
 
     const totalSyscalls = currentPieData.reduce((acc, entry) => acc + entry.value, 0);
@@ -88,11 +88,11 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     // Connect to the vite proxy (which is on the same host)
     const wsUrl = `${protocol}//${window.location.host}/api/v1/processes/${pid}/stream/ws`;
-    
+
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setIsConnected(true);
-    
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data) as WSMessage;
@@ -118,12 +118,12 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
         data._type = type;
 
         globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
-        
+
         allEventsRef.current.push(data);
         // Optimize: Mutate array in-place and only trim when it gets 10% larger
         // This avoids creating 150 new 5000-element arrays per second which causes heavy GC pressure and WS drops.
         if (allEventsRef.current.length > 5500) {
-           allEventsRef.current.splice(0, allEventsRef.current.length - 5000);
+          allEventsRef.current.splice(0, allEventsRef.current.length - 5000);
         }
       } catch (err) {
         console.error("Failed to parse WS data", err);
@@ -189,7 +189,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
         else if (code === 0) { break; } // stop at null terminator
         else safeStr += ".";
       }
-      
+
       const total = parseInt(totalBytes);
       if (total > decoded.length) {
         return `"${safeStr}..." /* ${total} bytes total */`;
@@ -218,8 +218,8 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     if (ev.networkConnect) return <span className="text-purple-400">connect({intToIP(ev.networkConnect.saddr)}:{ev.networkConnect.sport} {"->"} {intToIP(ev.networkConnect.daddr)}:{ev.networkConnect.dport})</span>;
     if (ev.process) {
       if (ev.process.isExec) {
-        const argsStr = ev.process.args && ev.process.args.length > 0 
-          ? `[${ev.process.args.map(a => `"${a}"`).join(", ")}]` 
+        const argsStr = ev.process.args && ev.process.args.length > 0
+          ? `[${ev.process.args.map(a => `"${a}"`).join(", ")}]`
           : "[]";
         return <span className="text-yellow-400">execve("{ev.process.filename}", {argsStr})</span>;
       }
@@ -238,20 +238,20 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     if (ev.munmap) return <span className="text-pink-400">munmap(addr: {ev.munmap.addr}, len: {ev.munmap.len})</span>;
     if (ev.mprotect) return <span className="text-pink-400">mprotect(start: {ev.mprotect.start}, len: {ev.mprotect.len}, prot: {ev.mprotect.prot})</span>;
     if (ev.brk) return <span className="text-pink-400">brk({ev.brk.brk})</span>;
-    
+
     if (ev.accept) return <span className="text-purple-400">accept(fd: {ev.accept.fd})</span>;
     if (ev.bind) return <span className="text-purple-400">bind(fd: {ev.bind.fd})</span>;
     if (ev.sendto) return <span className="text-purple-400">sendto(fd: {ev.sendto.fd}, len: {ev.sendto.len})</span>;
     if (ev.recvfrom) return <span className="text-purple-400">recvfrom(fd: {ev.recvfrom.fd}, len: {ev.recvfrom.len})</span>;
-    
+
     if (ev.unlinkat) return <span className="text-red-400">unlinkat(dfd: {ev.unlinkat.dfd}, "{ev.unlinkat.pathname}")</span>;
     if (ev.rename) return <span className="text-blue-400">rename("{ev.rename.oldname}", "{ev.rename.newname}")</span>;
-    
+
     if (ev.futex) return <span className="text-teal-400">futex(uaddr: {ev.futex.uaddr}, op: {ev.futex.op}, val: {ev.futex.val})</span>;
     if (ev.epollWait) return <span className="text-teal-400">epoll_wait(epfd: {ev.epollWait.epfd}, maxevents: {ev.epollWait.maxevents})</span>;
     if (ev.select) return <span className="text-teal-400">select(nfds: {ev.select.nfds})</span>;
     if (ev.poll) return <span className="text-teal-400">poll(nfds: {ev.poll.nfds})</span>;
-    
+
     if (ev.ptrace) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">ptrace(request: {ev.ptrace.request}, pid: {ev.ptrace.targetPid})</span>;
     if (ev.bpf) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">bpf(cmd: {ev.bpf.cmd})</span>;
     if (ev.capset) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">capset(pid: {ev.capset.targetPid})</span>;
@@ -260,13 +260,13 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
 
   const formatTimestamp = (ts: string | undefined) => {
     try {
-      if (!ts) return "00:00:00.000";
-      return new Date(parseInt(ts) / 1000000).toISOString().split('T')[1].slice(0, -1);
+      if (!ts) return "00:00:00.000 UTC";
+      return new Date(parseInt(ts) / 1000000).toISOString().split('T')[1].slice(0, -1) + " UTC";
     } catch {
-      return "00:00:00.000";
+      return "00:00:00.000 UTC";
     }
   };
-  
+
   const SYSCALL_COLORS: Record<string, string> = {
     open: '#60a5fa', // text-blue-400
     read: '#9ca3af', // text-gray-400
@@ -280,26 +280,26 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
     pivot_root: '#ef4444', // text-red-500
     setns: '#f97316', // text-orange-500
     unshare: '#f97316', // text-orange-500
-    
+
     wait4: '#9ca3af',
     mmap: '#f472b6', // text-pink-400
     munmap: '#f472b6',
     mprotect: '#f472b6',
     brk: '#f472b6',
-    
+
     accept: '#c084fc',
     bind: '#c084fc',
     sendto: '#c084fc',
     recvfrom: '#c084fc',
-    
+
     unlinkat: '#f87171',
     rename: '#60a5fa',
-    
+
     futex: '#2dd4bf', // text-teal-400
     epoll_wait: '#2dd4bf',
     select: '#2dd4bf',
     poll: '#2dd4bf',
-    
+
     ptrace: '#ef4444',
     bpf: '#ef4444',
     capset: '#ef4444',
@@ -315,7 +315,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
             {isConnected ? "LIVE" : "DISCONNECTED"}
           </Badge>
 
-          <button 
+          <button
             onClick={() => {
               const next = !isPaused;
               setIsPaused(next);
@@ -325,7 +325,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           >
             {isPaused ? "Resume Streaming" : "Pause Streaming"}
           </button>
-          
+
           <div className="flex gap-1 border border-zinc-200 dark:border-zinc-800 rounded-md p-1 bg-white dark:bg-black">
             <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All Time</button>
             <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Last 5s</button>
@@ -343,7 +343,7 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
           <span>CPU LIMIT: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
         </div>
       </div>
-      
+
       <div className="flex gap-6 h-full pb-6 flex-col md:flex-row">
         <Card className="flex-1 bg-white dark:bg-black overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col h-[500px]">
           <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
@@ -393,21 +393,21 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
                       <Cell key={`cell-${index}`} fill={SYSCALL_COLORS[entry.name] || '#ffffff'} />
                     ))}
                   </Pie>
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
                     itemStyle={{ color: '#fff' }}
                   />
-                  <Legend 
-                    wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }} 
+                  <Legend
+                    wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
                     formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
                   />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           ) : (
-             <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
-                Waiting for syscalls...
-             </div>
+            <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
+              Waiting for syscalls...
+            </div>
           )}
         </Card>
       </div>

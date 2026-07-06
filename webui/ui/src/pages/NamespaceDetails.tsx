@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Box, Layers, Maximize2, Minimize2 } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import type { NamespaceDetailsResponse, Process, ListProcessesResponse } from "../lib/types";
@@ -299,12 +299,12 @@ export function NamespaceDetails() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6 flex flex-col h-screen">
       <div className="flex items-center gap-4">
-        <Link 
-          to="/" 
+        <button 
+          onClick={() => navigate(-1)}
           className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
         >
           <ArrowLeft size={20} />
-        </Link>
+        </button>
         <div className="flex-1 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3 uppercase">
