@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
-import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown, Network } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import type { Process, GetProcessMetadataResponse } from "../lib/types";
 import { Card } from "../components/ui/card";
@@ -24,8 +24,9 @@ export function ProcessDetails() {
   const [children, setChildren] = useState<Process[]>([]);
   const [parentProcess, setParentProcess] = useState<Process | null>(null);
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
-  const [isOpenFilesExpanded, setIsOpenFilesExpanded] = useState(false);
-  const [isOpenFilesWide, setIsOpenFilesWide] = useState(false);
+  const [sidePanelExpanded, setSidePanelExpanded] = useState(false);
+  const [sidePanelWide, setSidePanelWide] = useState(false);
+  const [sidePanelTab, setSidePanelTab] = useState<'files' | 'network'>('files');
   const [openFilesSortConfig, setOpenFilesSortConfig] = useState<{key: 'fd' | 'type' | 'path', direction: 'asc' | 'desc'} | null>({key: 'fd', direction: 'asc'});
   const infoBarRef = useRef<HTMLDivElement>(null);
 
@@ -197,87 +198,147 @@ export function ProcessDetails() {
       <div ref={infoBarRef} className="w-full" />
 
       <div className="relative transition-all duration-300">
-        {/* Open Files - overlays on top of the event stream when expanded */}
+        {/* Side Panel - overlays on top of the event stream when expanded */}
         <div className="absolute left-0 top-0 bottom-0 z-20 flex items-start" style={{ paddingBottom: '24px' }}>
-          {!isOpenFilesExpanded ? (
-            <Button 
-              variant="outline" 
-              className="h-[500px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
-              onClick={() => setIsOpenFilesExpanded(true)}
-              title="Show Open Files"
-            >
-              <PanelLeftOpen size={18} className="text-zinc-500" />
-              <div className="flex items-center gap-2 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                <FileText size={14} className="transform rotate-90" /> OPEN FILES <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.openFiles?.length || 0}</Badge>
-              </div>
-            </Button>
+          {!sidePanelExpanded ? (
+            <div className="flex flex-col gap-2">
+              <Button 
+                variant="outline" 
+                className="h-[246px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
+                onClick={() => { setSidePanelTab('files'); setSidePanelExpanded(true); }}
+                title="Show Open Files"
+              >
+                <PanelLeftOpen size={18} className="text-zinc-500" />
+                <div className="flex items-center gap-2 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                  <FileText size={14} className="transform rotate-90" /> OPEN FILES <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.openFiles?.length || 0}</Badge>
+                </div>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-[246px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
+                onClick={() => { setSidePanelTab('network'); setSidePanelExpanded(true); }}
+                title="Show Network Connections"
+              >
+                <PanelLeftOpen size={18} className="text-zinc-500" />
+                <div className="flex items-center gap-2 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                  <Network size={14} className="transform rotate-90" /> NETWORK <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90">{process?.activeConnections?.length || 0}</Badge>
+                </div>
+              </Button>
+            </div>
           ) : (
-            <Card className={`${isOpenFilesWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
+            <Card className={`${sidePanelWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
               <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
-                <h2 className="font-semibold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
-                  <FileText size={16} className="text-blue-500" /> Open Files
-                  <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{process?.openFiles?.length || 0}</Badge>
-                </h2>
+                <div className="flex gap-4 items-center">
+                  <h2 
+                    className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'files' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    onClick={() => setSidePanelTab('files')}
+                  >
+                    <FileText size={16} className={sidePanelTab === 'files' ? "text-blue-500" : ""} /> Files
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{process?.openFiles?.length || 0}</Badge>
+                  </h2>
+                  <h2 
+                    className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'network' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    onClick={() => setSidePanelTab('network')}
+                  >
+                    <Network size={16} className={sidePanelTab === 'network' ? "text-green-500" : ""} /> Network
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{process?.activeConnections?.length || 0}</Badge>
+                  </h2>
+                </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => setIsOpenFilesWide(!isOpenFilesWide)} title={isOpenFilesWide ? "Collapse Width" : "Expand Table Width"}>
-                    {isOpenFilesWide ? <X size={14} /> : <Maximize2 size={14} />}
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => setSidePanelWide(!sidePanelWide)} title={sidePanelWide ? "Collapse Width" : "Expand Table Width"}>
+                    {sidePanelWide ? <X size={14} /> : <Maximize2 size={14} />}
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => { setIsOpenFilesExpanded(false); setIsOpenFilesWide(false); }} title="Close Panel">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => { setSidePanelExpanded(false); setSidePanelWide(false); }} title="Close Panel">
                     <PanelLeftOpen size={14} className="transform rotate-180" />
                   </Button>
                 </div>
               </div>
               <div className="flex-1 overflow-auto custom-scrollbar">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
-                    <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
-                      <TableHead className="w-[80px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('fd')}>
-                        <div className="flex items-center gap-1">FD {openFilesSortConfig?.key === 'fd' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
-                      </TableHead>
-                      <TableHead className="w-[100px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('type')}>
-                        <div className="flex items-center gap-1">Type {openFilesSortConfig?.key === 'type' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
-                      </TableHead>
-                      <TableHead className="text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('path')}>
-                        <div className="flex items-center gap-1">Path {openFilesSortConfig?.key === 'path' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedOpenFiles.length ? (
-                      sortedOpenFiles.map(f => (
-                        <TableRow key={f.fd} className="border-zinc-200 dark:border-zinc-800/50 border-b last:border-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-default transition-colors">
-                          <TableCell className="font-mono text-xs py-2 px-4">
-                            {f.fd}
-                            {f.fd in STDIO_NAMES && (
-                              <span className="ml-1.5 text-[9px] text-zinc-400 dark:text-zinc-500 font-sans">{STDIO_NAMES[f.fd]}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-2 px-4">
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 border-zinc-300 dark:border-zinc-700 whitespace-nowrap">
-                              {f.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${isOpenFilesWide ? 'max-w-[800px]' : 'max-w-[200px]'}`} title={getDisplayPath(f.fd, f.path)}>
-                            {getDisplayPath(f.fd, f.path)}
+                {sidePanelTab === 'files' ? (
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
+                      <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                        <TableHead className="w-[80px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('fd')}>
+                          <div className="flex items-center gap-1">FD {openFilesSortConfig?.key === 'fd' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                        <TableHead className="w-[100px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('type')}>
+                          <div className="flex items-center gap-1">Type {openFilesSortConfig?.key === 'type' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                        <TableHead className="text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('path')}>
+                          <div className="flex items-center gap-1">Path {openFilesSortConfig?.key === 'path' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedOpenFiles.length ? (
+                        sortedOpenFiles.map(f => (
+                          <TableRow key={f.fd} className="border-zinc-200 dark:border-zinc-800/50 border-b last:border-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-default transition-colors">
+                            <TableCell className="font-mono text-xs py-2 px-4">
+                              {f.fd}
+                              {f.fd in STDIO_NAMES && (
+                                <span className="ml-1.5 text-[9px] text-zinc-400 dark:text-zinc-500 font-sans">{STDIO_NAMES[f.fd]}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 px-4">
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 border-zinc-300 dark:border-zinc-700 whitespace-nowrap">
+                                {f.type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[800px]' : 'max-w-[200px]'}`} title={getDisplayPath(f.fd, f.path)}>
+                              {getDisplayPath(f.fd, f.path)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={3} className="text-center py-8 text-sm text-zinc-500 italic">
+                            No open files
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={3} className="text-center py-8 text-sm text-zinc-500 italic">
-                          No open files
-                        </TableCell>
+                      )}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
+                      <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                        <TableHead className="w-[80px] text-xs h-8 py-1 select-none">Dir</TableHead>
+                        <TableHead className="w-[120px] text-xs h-8 py-1 select-none">State</TableHead>
+                        <TableHead className="text-xs h-8 py-1 select-none">Local</TableHead>
+                        <TableHead className="text-xs h-8 py-1 select-none">Remote</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {process?.activeConnections?.length ? (
+                        process.activeConnections.map((c, i) => (
+                          <TableRow key={i} className="border-zinc-200 dark:border-zinc-800/50 border-b last:border-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-default transition-colors">
+                            <TableCell className="py-2 px-4">
+                              <Badge variant={c.direction === 'inbound' ? 'default' : 'secondary'} className="text-[9px] px-1 py-0">
+                                {c.direction}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-2 px-4 font-mono text-[10px]">{c.state}</TableCell>
+                            <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={c.localAddress}>{c.localAddress}</TableCell>
+                            <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={c.remoteAddress}>{c.remoteAddress}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={4} className="text-center py-8 text-sm text-zinc-500 italic">
+                            No active connections
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </Card>
           )}
         </div>
 
         {/* Event Stream - always takes full width, with left padding for the button */}
-        <div className={`${isOpenFilesExpanded && !isOpenFilesWide ? 'pl-[470px]' : 'pl-[52px]'} transition-all duration-300`}>
+        <div className={`${sidePanelExpanded && !sidePanelWide ? 'pl-[470px]' : 'pl-[52px]'} transition-all duration-300`}>
           <ProcessStream pid={parseInt(pid)} process={process || undefined} infoBarRef={infoBarRef} />
         </div>
       </div>

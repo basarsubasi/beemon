@@ -11,6 +11,14 @@ export interface Process {
   pidsLimit: string;
   namespaces?: string[];
   openFiles?: { fd: number; path: string; type: string }[];
+  activeConnections?: NetworkConnection[];
+}
+
+export interface NetworkConnection {
+  localAddress: string;
+  remoteAddress: string;
+  state: string;
+  direction: string;
 }
 
 export interface ListProcessesResponse {
@@ -58,6 +66,13 @@ export interface BeemonEvent {
     fd: number;
   };
   networkConnect?: {
+    saddr: number;
+    daddr: number;
+    sport: number;
+    dport: number;
+    family: number;
+  };
+  networkAccept?: {
     saddr: number;
     daddr: number;
     sport: number;

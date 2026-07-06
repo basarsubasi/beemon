@@ -357,6 +357,9 @@
         },
         "capset": {
           "$ref": "#/definitions/v1CapsetEvent"
+        },
+        "networkAccept": {
+          "$ref": "#/definitions/v1NetworkAcceptEvent"
         }
       }
     },
@@ -580,6 +583,31 @@
         }
       }
     },
+    "v1NetworkAcceptEvent": {
+      "type": "object",
+      "properties": {
+        "saddr": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "daddr": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sport": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "dport": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "family": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
     "v1NetworkConnectEvent": {
       "type": "object",
       "properties": {
@@ -602,6 +630,25 @@
         "family": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "v1NetworkConnection": {
+      "type": "object",
+      "properties": {
+        "localAddress": {
+          "type": "string"
+        },
+        "remoteAddress": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "description": "e.g. \"ESTABLISHED\", \"LISTEN\", etc."
+        },
+        "direction": {
+          "type": "string",
+          "title": "\"inbound\" or \"outbound\""
         }
       }
     },
@@ -701,6 +748,14 @@
             "$ref": "#/definitions/v1OpenFile"
           },
           "title": "Open Files"
+        },
+        "activeConnections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1NetworkConnection"
+          },
+          "title": "Active Network Connections"
         }
       }
     },

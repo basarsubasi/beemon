@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { BeemonEvent, WSMessage } from "../lib/types";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { Activity, PanelRightOpen, PanelLeftOpen } from "lucide-react";
+import { Activity, PanelRightOpen, PanelLeftOpen, Network, PieChart as PieChartIcon } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { StateBadge } from "./StateBadge";
 
@@ -18,8 +18,14 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
     pieData: [] as { name: string, value: number }[],
-    totalSyscalls: 0
+    totalSyscalls: 0,
+    networkPieData: [] as { name: string, value: number }[],
+    totalNetworkEvents: 0,
+    packetsSent: 0,
+    packetsReceived: 0
   });
+
+  const [chartView, setChartView] = useState<'syscall' | 'network'>('syscall');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isUserScrollingRef = useRef(false);
@@ -30,7 +36,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
   useEffect(() => {
     // Reset state on PID change
     setIsConnected(false);
-    setRenderState({ displayedEvents: [], pieData: [], totalSyscalls: 0 });
+    setRenderState({ displayedEvents: [], pieData: [], totalSyscalls: 0, networkPieData: [], totalNetworkEvents: 0, packetsSent: 0, packetsReceived: 0 });
     allEventsRef.current = [];
     globalCountsRef.current = {};
     setIsPaused(false);
@@ -70,7 +76,36 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
 
     const totalSyscalls = currentPieData.reduce((acc, entry) => acc + entry.value, 0);
 
-    setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls });
+    let packetsSent = 0;
+    let packetsReceived = 0;
+    let totalNetworkEvents = 0;
+    const networkCounts: Record<string, number> = {};
+
+    if (timeFilter === 'all') {
+      packetsSent = globalCountsRef.current['sendto'] || 0;
+      packetsReceived = globalCountsRef.current['recvfrom'] || 0;
+      ['sendto', 'recvfrom', 'connect', 'accept', 'bind'].forEach(t => {
+        if (globalCountsRef.current[t]) {
+          networkCounts[t] = globalCountsRef.current[t];
+          totalNetworkEvents += globalCountsRef.current[t];
+        }
+      });
+    } else {
+      validEvents.forEach(e => {
+        if (['sendto', 'recvfrom', 'connect', 'accept', 'bind'].includes(e._type || '')) {
+          networkCounts[e._type!] = (networkCounts[e._type!] || 0) + 1;
+          totalNetworkEvents++;
+          if (e._type === 'sendto') packetsSent++;
+          if (e._type === 'recvfrom') packetsReceived++;
+        }
+      });
+    }
+    
+    const networkPieData = Object.entries(networkCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls, networkPieData, totalNetworkEvents, packetsSent, packetsReceived });
   }, [timeFilter]);
 
   useEffect(() => {
@@ -385,14 +420,46 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
         {!isEventExpanded && (
           <Card className="w-full md:w-[300px] bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl p-4 flex flex-col h-[300px] md:h-[500px]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-zinc-900 dark:text-white font-semibold text-sm">Syscall Distribution</h3>
-              {renderState.totalSyscalls > 0 && (
-                <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
-                  Total: {renderState.totalSyscalls.toLocaleString()}
-                </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setChartView('syscall')}
+                  className={`p-1 rounded transition-colors flex items-center justify-center ${chartView === 'syscall' ? 'text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  title="Syscall Distribution"
+                >
+                  <PieChartIcon size={16} />
+                </button>
+                <button
+                  onClick={() => setChartView('network')}
+                  className={`p-1 rounded transition-colors flex items-center justify-center ${chartView === 'network' ? 'text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  title="Network Activity"
+                >
+                  <Network size={16} />
+                </button>
+              </div>
+              {chartView === 'syscall' ? (
+                renderState.totalSyscalls > 0 && (
+                  <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
+                    Total: {renderState.totalSyscalls.toLocaleString()}
+                  </span>
+                )
+              ) : (
+                <div className="flex flex-col items-end gap-1">
+                  {renderState.totalNetworkEvents > 0 && (
+                    <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
+                      Evts: {renderState.totalNetworkEvents.toLocaleString()}
+                    </span>
+                  )}
+                  {(renderState.packetsSent > 0 || renderState.packetsReceived > 0) && (
+                    <div className="flex gap-2 text-[10px] font-mono">
+                      <span className="text-purple-400">Tx: {renderState.packetsSent.toLocaleString()}</span>
+                      <span className="text-green-400">Rx: {renderState.packetsReceived.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-            {renderState.pieData.length > 0 ? (
+            {chartView === 'syscall' ? (
+              renderState.pieData.length > 0 ? (
               <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -426,6 +493,50 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
               <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
                 Waiting for syscalls...
               </div>
+            )
+            ) : (
+              renderState.networkPieData.length > 0 ? (
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={renderState.networkPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                        isAnimationActive={false}
+                      >
+                        {renderState.networkPieData.map((entry, index) => {
+                          const colors: Record<string, string> = {
+                            sendto: '#c084fc', // purple-400
+                            recvfrom: '#4ade80', // green-400
+                            connect: '#60a5fa', // blue-400
+                            accept: '#f472b6', // pink-400
+                            bind: '#fbbf24', // amber-400
+                          };
+                          return <Cell key={`cell-${index}`} fill={colors[entry.name] || '#ffffff'} />;
+                        })}
+                      </Pie>
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
+                        formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
+                  Waiting for network activity...
+                </div>
+              )
             )}
           </Card>
         )}

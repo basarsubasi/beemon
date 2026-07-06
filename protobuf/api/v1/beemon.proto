@@ -91,12 +91,22 @@ message Process {
 
   // Open Files
   repeated OpenFile open_files = 12;
+
+  // Active Network Connections
+  repeated NetworkConnection active_connections = 13;
 }
 
 message OpenFile {
   uint32 fd = 1;
   string path = 2;
   string type = 3; // e.g., "socket", "pipe", "regular", "directory", "char", "fifo", "other"
+}
+
+message NetworkConnection {
+  string local_address = 1;
+  string remote_address = 2;
+  string state = 3; // e.g. "ESTABLISHED", "LISTEN", etc.
+  string direction = 4; // "inbound" or "outbound"
 }
 
 message StreamEventsRequest {
@@ -138,6 +148,7 @@ message Event {
     PtraceEvent ptrace = 31;
     BpfEvent bpf = 32;
     CapsetEvent capset = 33;
+    NetworkAcceptEvent network_accept = 34;
   }
 }
 
@@ -184,6 +195,14 @@ message FileOpenEvent {
 }
 
 message NetworkConnectEvent {
+  uint32 saddr = 1;
+  uint32 daddr = 2;
+  uint32 sport = 3;
+  uint32 dport = 4;
+  uint32 family = 5;
+}
+
+message NetworkAcceptEvent {
   uint32 saddr = 1;
   uint32 daddr = 2;
   uint32 sport = 3;

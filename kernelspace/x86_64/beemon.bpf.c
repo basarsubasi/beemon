@@ -40,6 +40,7 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define EVENT_TYPE_PTRACE      27
 #define EVENT_TYPE_BPF         28
 #define EVENT_TYPE_CAPSET      29
+#define EVENT_TYPE_NET_ACCEPT  30
 
 struct event_t {
     u32 pid;
@@ -401,6 +402,38 @@ int BPF_KPROBE(tcp_v4_connect, struct sock *sk, struct sockaddr *uaddr) {
     bpf_probe_read_kernel(&e->net.saddr, sizeof(e->net.saddr), &sk->__sk_common.skc_rcv_saddr);
     bpf_probe_read_kernel(&e->net.daddr, sizeof(e->net.daddr), &usin->sin_addr.s_addr);
     bpf_probe_read_kernel(&e->net.sport, sizeof(e->net.sport), &sk->__sk_common.skc_num);
+    e->net.dport = bpf_ntohs(dport);
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("kretprobe/inet_csk_accept")
+int BPF_KRETPROBE(inet_csk_accept, struct sock *newsk) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    if (!newsk) return 0; // Accept failed or returned NULL
+
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+
+    e->pid = user_tid;
+    e->tgid = user_pid;
+    e->type = EVENT_TYPE_NET_ACCEPT;
+    e->ts = bpf_ktime_get_ns();
+    e->net.family = 2; // AF_INET (We only support IPv4 for now)
+
+    // The new socket is fully populated with local and remote addresses
+    bpf_probe_read_kernel(&e->net.saddr, sizeof(e->net.saddr), &newsk->__sk_common.skc_rcv_saddr);
+    bpf_probe_read_kernel(&e->net.daddr, sizeof(e->net.daddr), &newsk->__sk_common.skc_daddr);
+    bpf_probe_read_kernel(&e->net.sport, sizeof(e->net.sport), &newsk->__sk_common.skc_num);
+    
+    u16 dport = 0;
+    bpf_probe_read_kernel(&dport, sizeof(dport), &newsk->__sk_common.skc_dport);
     e->net.dport = bpf_ntohs(dport);
 
     bpf_ringbuf_submit(e, 0);
