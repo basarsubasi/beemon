@@ -186,7 +186,6 @@ export function ProcessStream({ pid, process }: { pid: number, process?: import(
         else if (code === 10) safeStr += "\\n";
         else if (code === 9) safeStr += "\\t";
         else if (code === 13) safeStr += "\\r";
-        else if (code === 0) { break; } // stop at null terminator
         else safeStr += ".";
       }
 
