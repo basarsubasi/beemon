@@ -21,7 +21,13 @@ export function Dashboard() {
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>('memory');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem("dashboardTab") || "processes");
   
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    localStorage.setItem("dashboardTab", val);
+  };
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -199,7 +205,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="processes" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-1">
           <TabsTrigger value="processes" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Processes</TabsTrigger>
           <TabsTrigger value="namespaces" className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500">Namespaces</TabsTrigger>
