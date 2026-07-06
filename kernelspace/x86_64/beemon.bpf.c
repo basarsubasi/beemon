@@ -169,9 +169,17 @@ struct {
     __type(value, u8);
 } target_pids SEC(".maps");
 
+#define TRACE_FLAG_METRICS 1
+#define TRACE_FLAG_EVENTS 2
+
 static __always_inline bool should_trace(u32 pid) {
     u8 *val = bpf_map_lookup_elem(&target_pids, &pid);
-    return val != NULL;
+    return val != NULL && (*val & TRACE_FLAG_METRICS);
+}
+
+static __always_inline bool should_trace_events(u32 pid) {
+    u8 *val = bpf_map_lookup_elem(&target_pids, &pid);
+    return val != NULL && (*val & TRACE_FLAG_EVENTS);
 }
 
 // -----------------------------------------------------------------------------
@@ -371,7 +379,8 @@ int trace_sched_process_fork(struct trace_event_raw_sched_process_fork *ctx) {
     
     if (should_trace(parent_pid)) {
         // Automatically add child to trace map
-        u8 val = 1;
+        u8 *parent_val = bpf_map_lookup_elem(&target_pids, &parent_pid);
+        u8 val = parent_val ? *parent_val : TRACE_FLAG_METRICS;
         bpf_map_update_elem(&target_pids, &child_pid, &val, BPF_ANY);
 
         struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
@@ -693,7 +702,7 @@ int trace_sys_enter_unshare(struct trace_event_raw_sys_enter *ctx) {
     u64 id = bpf_get_current_pid_tgid(); \
     u32 user_pid = id >> 32; \
     u32 user_tid = (u32)id; \
-    if (!should_trace(user_pid)) return 0; \
+    if (!should_trace_events(user_pid)) return 0; \
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0); \
     if (!e) return 0; \
     e->pid = user_tid; \
