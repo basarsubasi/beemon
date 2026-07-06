@@ -756,6 +756,23 @@
             "$ref": "#/definitions/v1NetworkConnection"
           },
           "title": "Active Network Connections"
+        },
+        "ioReadBytes": {
+          "type": "string",
+          "format": "uint64",
+          "title": "I/O Stats"
+        },
+        "ioWriteBytes": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "netRxBytes": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "netTxBytes": {
+          "type": "string",
+          "format": "uint64"
         }
       }
     },

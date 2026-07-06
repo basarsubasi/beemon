@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { BeemonEvent, WSMessage } from "../lib/types";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { Activity, PanelRightOpen, PanelLeftOpen, Network, PieChart as PieChartIcon } from "lucide-react";
+import { Activity, PanelLeftOpen, PanelRightOpen, PieChart as PieChartIcon, Network, FileText } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { StateBadge } from "./StateBadge";
 
@@ -22,10 +22,12 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
     networkPieData: [] as { name: string, value: number }[],
     totalNetworkEvents: 0,
     packetsSent: 0,
-    packetsReceived: 0
+    packetsReceived: 0,
+    fileIoPieData: [] as { name: string, value: number }[],
+    totalFileIoEvents: 0
   });
 
-  const [chartView, setChartView] = useState<'syscall' | 'network'>('syscall');
+  const [chartView, setChartView] = useState<'syscall' | 'network' | 'fileio'>('syscall');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isUserScrollingRef = useRef(false);
@@ -36,7 +38,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
   useEffect(() => {
     // Reset state on PID change
     setIsConnected(false);
-    setRenderState({ displayedEvents: [], pieData: [], totalSyscalls: 0, networkPieData: [], totalNetworkEvents: 0, packetsSent: 0, packetsReceived: 0 });
+    setRenderState({ displayedEvents: [], pieData: [], totalSyscalls: 0, networkPieData: [], totalNetworkEvents: 0, packetsSent: 0, packetsReceived: 0, fileIoPieData: [], totalFileIoEvents: 0 });
     allEventsRef.current = [];
     globalCountsRef.current = {};
     setIsPaused(false);
@@ -62,7 +64,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
 
     if (timeFilter === 'all') {
       currentPieData = Object.entries(globalCountsRef.current)
-        .map(([name, value]) => ({ name, value }))
+        .map(([name, value]) => ({ name, value: value as number }))
         .sort((a, b) => b.value - a.value);
     } else {
       const counts: Record<string, number> = {};
@@ -70,7 +72,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
         if (e._type) counts[e._type] = (counts[e._type] || 0) + 1;
       });
       currentPieData = Object.entries(counts)
-        .map(([name, value]) => ({ name, value }))
+        .map(([name, value]) => ({ name, value: value as number }))
         .sort((a, b) => b.value - a.value);
     }
 
@@ -80,6 +82,11 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
     let packetsReceived = 0;
     let totalNetworkEvents = 0;
     const networkCounts: Record<string, number> = {};
+    
+    let totalFileIoEvents = 0;
+    const fileIoCounts: Record<string, number> = {};
+
+    const FILE_IO_TYPES = ['open', 'read', 'write', 'close', 'unlinkat', 'rename'];
 
     if (timeFilter === 'all') {
       packetsSent = globalCountsRef.current['sendto'] || 0;
@@ -90,22 +97,37 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
           totalNetworkEvents += globalCountsRef.current[t];
         }
       });
+      FILE_IO_TYPES.forEach(t => {
+        if (globalCountsRef.current[t]) {
+          fileIoCounts[t] = globalCountsRef.current[t];
+          totalFileIoEvents += globalCountsRef.current[t];
+        }
+      });
     } else {
       validEvents.forEach(e => {
-        if (['sendto', 'recvfrom', 'connect', 'accept', 'bind'].includes(e._type || '')) {
-          networkCounts[e._type!] = (networkCounts[e._type!] || 0) + 1;
+        const type = e._type || '';
+        if (['sendto', 'recvfrom', 'connect', 'accept', 'bind'].includes(type)) {
+          networkCounts[type] = (networkCounts[type] || 0) + 1;
           totalNetworkEvents++;
-          if (e._type === 'sendto') packetsSent++;
-          if (e._type === 'recvfrom') packetsReceived++;
+          if (type === 'sendto') packetsSent++;
+          if (type === 'recvfrom') packetsReceived++;
+        }
+        if (FILE_IO_TYPES.includes(type)) {
+          fileIoCounts[type] = (fileIoCounts[type] || 0) + 1;
+          totalFileIoEvents++;
         }
       });
     }
     
     const networkPieData = Object.entries(networkCounts)
-      .map(([name, value]) => ({ name, value }))
+      .map(([name, value]) => ({ name, value: value as number }))
+      .sort((a, b) => b.value - a.value);
+      
+    const fileIoPieData = Object.entries(fileIoCounts)
+      .map(([name, value]) => ({ name, value: value as number }))
       .sort((a, b) => b.value - a.value);
 
-    setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls, networkPieData, totalNetworkEvents, packetsSent, packetsReceived });
+    setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls, networkPieData, totalNetworkEvents, packetsSent, packetsReceived, fileIoPieData, totalFileIoEvents });
   }, [timeFilter]);
 
   useEffect(() => {
@@ -374,6 +396,9 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
         </div>
         <span className="flex-shrink-0">CPU: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "…"}</span></span>
         <span className="flex-shrink-0">MEM: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "…"}</span></span>
+        <span className="flex-shrink-0">FILE: <span className="text-blue-500 mr-1">R {process ? formatBytes(process.ioReadBytes || '0') : '0'}</span><span className="text-orange-500">W {process ? formatBytes(process.ioWriteBytes || '0') : '0'}</span></span>
+        <span className="flex-shrink-0">NET: <span className="text-green-500 mr-1">Rx {process ? formatBytes(process.netRxBytes || '0') : '0'}</span><span className="text-purple-500">Tx {process ? formatBytes(process.netTxBytes || '0') : '0'}</span></span>
+        <span className="flex-shrink-0 text-zinc-400">|</span>
         <span className="flex-shrink-0">MEM LIM: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
         <span className="flex-shrink-0">CPU LIM: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>
       </div>
@@ -435,6 +460,13 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
                 >
                   <Network size={16} />
                 </button>
+                <button
+                  onClick={() => setChartView('fileio')}
+                  className={`p-1 rounded transition-colors flex items-center justify-center ${chartView === 'fileio' ? 'text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  title="File I/O Activity"
+                >
+                  <FileText size={16} />
+                </button>
               </div>
               {chartView === 'syscall' ? (
                 renderState.totalSyscalls > 0 && (
@@ -442,7 +474,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
                     Total: {renderState.totalSyscalls.toLocaleString()}
                   </span>
                 )
-              ) : (
+              ) : chartView === 'network' ? (
                 <div className="flex flex-col items-end gap-1">
                   {renderState.totalNetworkEvents > 0 && (
                     <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
@@ -454,6 +486,14 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
                       <span className="text-purple-400">Tx: {renderState.packetsSent.toLocaleString()}</span>
                       <span className="text-green-400">Rx: {renderState.packetsReceived.toLocaleString()}</span>
                     </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-end gap-1">
+                  {renderState.totalFileIoEvents > 0 && (
+                    <span className="text-xs text-zinc-500 font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md shadow-sm">
+                      Events: {renderState.totalFileIoEvents.toLocaleString()}
+                    </span>
                   )}
                 </div>
               )}
@@ -494,7 +534,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
                 Waiting for syscalls...
               </div>
             )
-            ) : (
+            ) : chartView === 'network' ? (
               renderState.networkPieData.length > 0 ? (
                 <div className="flex-1 min-h-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -535,6 +575,50 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
               ) : (
                 <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
                   Waiting for network activity...
+                </div>
+              )
+            ) : (
+              renderState.fileIoPieData.length > 0 ? (
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={renderState.fileIoPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                        isAnimationActive={false}
+                      >
+                        {renderState.fileIoPieData.map((entry, index) => {
+                          const colors: Record<string, string> = {
+                            open: '#60a5fa', // blue-400
+                            read: '#9ca3af', // gray-400
+                            write: '#4ade80', // green-400
+                            close: '#6b7280', // gray-500
+                            unlinkat: '#f87171', // red-400
+                            rename: '#c084fc', // purple-400
+                          };
+                          return <Cell key={`cell-${index}`} fill={colors[entry.name] || '#ffffff'} />;
+                        })}
+                      </Pie>
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff', fontSize: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
+                        formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-zinc-600 flex-1 flex items-center justify-center italic text-sm text-center">
+                  Waiting for file I/O activity...
                 </div>
               )
             )}

@@ -12,6 +12,10 @@ export interface Process {
   namespaces?: string[];
   openFiles?: { fd: number; path: string; type: string }[];
   activeConnections?: NetworkConnection[];
+  ioReadBytes?: string;
+  ioWriteBytes?: string;
+  netRxBytes?: string;
+  netTxBytes?: string;
 }
 
 export interface NetworkConnection {

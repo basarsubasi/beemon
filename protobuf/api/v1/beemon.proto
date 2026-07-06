@@ -94,6 +94,12 @@ message Process {
 
   // Active Network Connections
   repeated NetworkConnection active_connections = 13;
+
+  // I/O Stats
+  uint64 io_read_bytes = 14;
+  uint64 io_write_bytes = 15;
+  uint64 net_rx_bytes = 16;
+  uint64 net_tx_bytes = 17;
 }
 
 message OpenFile {

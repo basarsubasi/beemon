@@ -411,8 +411,13 @@ type Process struct {
 	OpenFiles []*OpenFile `protobuf:"bytes,12,rep,name=open_files,json=openFiles,proto3" json:"open_files,omitempty"`
 	// Active Network Connections
 	ActiveConnections []*NetworkConnection `protobuf:"bytes,13,rep,name=active_connections,json=activeConnections,proto3" json:"active_connections,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// I/O Stats
+	IoReadBytes   uint64 `protobuf:"varint,14,opt,name=io_read_bytes,json=ioReadBytes,proto3" json:"io_read_bytes,omitempty"`
+	IoWriteBytes  uint64 `protobuf:"varint,15,opt,name=io_write_bytes,json=ioWriteBytes,proto3" json:"io_write_bytes,omitempty"`
+	NetRxBytes    uint64 `protobuf:"varint,16,opt,name=net_rx_bytes,json=netRxBytes,proto3" json:"net_rx_bytes,omitempty"`
+	NetTxBytes    uint64 `protobuf:"varint,17,opt,name=net_tx_bytes,json=netTxBytes,proto3" json:"net_tx_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Process) Reset() {
@@ -534,6 +539,34 @@ func (x *Process) GetActiveConnections() []*NetworkConnection {
 		return x.ActiveConnections
 	}
 	return nil
+}
+
+func (x *Process) GetIoReadBytes() uint64 {
+	if x != nil {
+		return x.IoReadBytes
+	}
+	return 0
+}
+
+func (x *Process) GetIoWriteBytes() uint64 {
+	if x != nil {
+		return x.IoWriteBytes
+	}
+	return 0
+}
+
+func (x *Process) GetNetRxBytes() uint64 {
+	if x != nil {
+		return x.NetRxBytes
+	}
+	return 0
+}
+
+func (x *Process) GetNetTxBytes() uint64 {
+	if x != nil {
+		return x.NetTxBytes
+	}
+	return 0
 }
 
 type OpenFile struct {
@@ -2994,7 +3027,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x15ListProcessesResponse\x120\n" +
 	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\x125\n" +
 	"\x17host_memory_total_bytes\x18\x02 \x01(\x04R\x14hostMemoryTotalBytes\x12'\n" +
-	"\x0fhost_namespaces\x18\x03 \x03(\tR\x0ehostNamespaces\"\xf0\x03\n" +
+	"\x0fhost_namespaces\x18\x03 \x03(\tR\x0ehostNamespaces\"\xfe\x04\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +
@@ -3014,7 +3047,13 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"namespaces\x122\n" +
 	"\n" +
 	"open_files\x18\f \x03(\v2\x13.beemon.v1.OpenFileR\topenFiles\x12K\n" +
-	"\x12active_connections\x18\r \x03(\v2\x1c.beemon.v1.NetworkConnectionR\x11activeConnections\"B\n" +
+	"\x12active_connections\x18\r \x03(\v2\x1c.beemon.v1.NetworkConnectionR\x11activeConnections\x12\"\n" +
+	"\rio_read_bytes\x18\x0e \x01(\x04R\vioReadBytes\x12$\n" +
+	"\x0eio_write_bytes\x18\x0f \x01(\x04R\fioWriteBytes\x12 \n" +
+	"\fnet_rx_bytes\x18\x10 \x01(\x04R\n" +
+	"netRxBytes\x12 \n" +
+	"\fnet_tx_bytes\x18\x11 \x01(\x04R\n" +
+	"netTxBytes\"B\n" +
 	"\bOpenFile\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +
