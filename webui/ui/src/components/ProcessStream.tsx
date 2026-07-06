@@ -62,7 +62,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
           });
         }
       } catch (err) {}
-    }, 1000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [pid, chartView]);
 

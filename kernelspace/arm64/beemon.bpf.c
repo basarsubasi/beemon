@@ -200,7 +200,7 @@ struct io_stat {
 struct io_stat _io_stat_force_btf __attribute__((unused));
 
 struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(type, BPF_MAP_TYPE_LRU_PERCPU_HASH);
     __uint(max_entries, MAX_ENTRIES);
     __type(key, u32);
     __type(value, struct io_stat);
@@ -252,11 +252,12 @@ struct {
 static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx, struct msghdr *msg, u16 protocol) {
     if (pid == 0 || !sk) return;
 
-    // First update the aggregate global map for all processes
+    // Per-CPU LRU hash: agg_stat points to this CPU's bucket, so CPU-local
+    // increments are race-free without atomics.
     struct io_stat *agg_stat = bpf_map_lookup_elem(&process_io_stats, &pid);
     if (agg_stat) {
-        if (rx) __sync_fetch_and_add(&agg_stat->net_rx_bytes, rx);
-        if (tx) __sync_fetch_and_add(&agg_stat->net_tx_bytes, tx);
+        if (rx) agg_stat->net_rx_bytes += rx;
+        if (tx) agg_stat->net_tx_bytes += tx;
     } else {
         struct io_stat new_agg = {};
         new_agg.net_rx_bytes = rx;
@@ -320,10 +321,11 @@ static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx,
 
 static __always_inline void add_file_io(u32 pid, u64 read_bytes, u64 write_bytes) {
     if (pid == 0) return;
+    // Per-CPU LRU hash: stat points to this CPU's bucket; direct writes are race-free.
     struct io_stat *stat = bpf_map_lookup_elem(&process_io_stats, &pid);
     if (stat) {
-        if (read_bytes) __sync_fetch_and_add(&stat->file_read_bytes, read_bytes);
-        if (write_bytes) __sync_fetch_and_add(&stat->file_write_bytes, write_bytes);
+        if (read_bytes) stat->file_read_bytes += read_bytes;
+        if (write_bytes) stat->file_write_bytes += write_bytes;
     } else {
         struct io_stat new_stat = {};
         new_stat.file_read_bytes = read_bytes;

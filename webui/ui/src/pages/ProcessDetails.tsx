@@ -118,7 +118,7 @@ export function ProcessDetails() {
     };
     
     fetchProcesses();
-    const interval = setInterval(fetchProcesses, 2000);
+    const interval = setInterval(fetchProcesses, 5000);
     return () => clearInterval(interval);
   }, [pid]);
 
