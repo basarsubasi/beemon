@@ -29,6 +29,7 @@ export interface ListProcessesResponse {
   processes: Process[];
   hostMemoryTotalBytes: string;
   hostNamespaces: string[];
+  hostCpuPerCorePercent?: number[];
 }
 
 export interface GetProcessMetadataResponse {

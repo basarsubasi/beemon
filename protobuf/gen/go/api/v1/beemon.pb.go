@@ -332,12 +332,13 @@ func (x *ListProcessesRequest) GetFilterName() string {
 }
 
 type ListProcessesResponse struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Processes            []*Process             `protobuf:"bytes,1,rep,name=processes,proto3" json:"processes,omitempty"`
-	HostMemoryTotalBytes uint64                 `protobuf:"varint,2,opt,name=host_memory_total_bytes,json=hostMemoryTotalBytes,proto3" json:"host_memory_total_bytes,omitempty"`
-	HostNamespaces       []string               `protobuf:"bytes,3,rep,name=host_namespaces,json=hostNamespaces,proto3" json:"host_namespaces,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Processes             []*Process             `protobuf:"bytes,1,rep,name=processes,proto3" json:"processes,omitempty"`
+	HostMemoryTotalBytes  uint64                 `protobuf:"varint,2,opt,name=host_memory_total_bytes,json=hostMemoryTotalBytes,proto3" json:"host_memory_total_bytes,omitempty"`
+	HostNamespaces        []string               `protobuf:"bytes,3,rep,name=host_namespaces,json=hostNamespaces,proto3" json:"host_namespaces,omitempty"`
+	HostCpuPerCorePercent []float32              `protobuf:"fixed32,4,rep,packed,name=host_cpu_per_core_percent,json=hostCpuPerCorePercent,proto3" json:"host_cpu_per_core_percent,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ListProcessesResponse) Reset() {
@@ -387,6 +388,13 @@ func (x *ListProcessesResponse) GetHostMemoryTotalBytes() uint64 {
 func (x *ListProcessesResponse) GetHostNamespaces() []string {
 	if x != nil {
 		return x.HostNamespaces
+	}
+	return nil
+}
+
+func (x *ListProcessesResponse) GetHostCpuPerCorePercent() []float32 {
+	if x != nil {
+		return x.HostCpuPerCorePercent
 	}
 	return nil
 }
@@ -3227,11 +3235,12 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x0fhost_namespaces\x18\x04 \x03(\tR\x0ehostNamespaces\"7\n" +
 	"\x14ListProcessesRequest\x12\x1f\n" +
 	"\vfilter_name\x18\x01 \x01(\tR\n" +
-	"filterName\"\xa9\x01\n" +
+	"filterName\"\xe3\x01\n" +
 	"\x15ListProcessesResponse\x120\n" +
 	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\x125\n" +
 	"\x17host_memory_total_bytes\x18\x02 \x01(\x04R\x14hostMemoryTotalBytes\x12'\n" +
-	"\x0fhost_namespaces\x18\x03 \x03(\tR\x0ehostNamespaces\"\xfe\x04\n" +
+	"\x0fhost_namespaces\x18\x03 \x03(\tR\x0ehostNamespaces\x128\n" +
+	"\x19host_cpu_per_core_percent\x18\x04 \x03(\x02R\x15hostCpuPerCorePercent\"\xfe\x04\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +

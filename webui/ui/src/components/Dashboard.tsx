@@ -17,6 +17,7 @@ type SortDirection = 'asc' | 'desc';
 export function Dashboard() {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [hostMem, setHostMem] = useState<string>("0");
+  const [hostCpuPerCore, setHostCpuPerCore] = useState<number[]>([]);
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>('memory');
@@ -39,6 +40,9 @@ export function Dashboard() {
         setProcesses(data.processes || []);
         if (data.hostMemoryTotalBytes) {
           setHostMem(data.hostMemoryTotalBytes);
+        }
+        if (data.hostCpuPerCorePercent) {
+          setHostCpuPerCore(data.hostCpuPerCorePercent);
         }
         if (data.hostNamespaces) {
           setHostNamespaces(data.hostNamespaces);
@@ -219,12 +223,26 @@ export function Dashboard() {
             </div>
           </Card>
           <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
-            <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full">
+            <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full shrink-0">
               <Cpu className="text-green-600 dark:text-green-400 h-6 w-6" />
             </div>
-            <div className="text-center">
-              <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
-              <p className="text-xl font-mono text-zinc-900 dark:text-white">{totalCpu.toFixed(1)}%</p>
+            <div className="flex-1">
+              <div className="flex justify-between items-baseline mb-2">
+                <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
+                <p className="text-xl font-mono text-zinc-900 dark:text-white">{totalCpu.toFixed(1)}%</p>
+              </div>
+              
+              {hostCpuPerCore.length > 0 && (
+                <div className="grid gap-1 mt-2">
+                  {hostCpuPerCore.map((pct, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px]">
+                      <span className="w-8 font-mono text-zinc-500">core{i}</span>
+                      <Progress value={pct} className="h-1.5 flex-1" />
+                      <span className="w-8 font-mono text-right text-zinc-500">{pct.toFixed(0)}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </Card>
         </div>

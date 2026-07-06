@@ -564,6 +564,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "hostCpuPerCorePercent": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "float"
+          }
         }
       }
     },

@@ -74,6 +74,7 @@ message ListProcessesResponse {
   repeated Process processes = 1;
   uint64 host_memory_total_bytes = 2;
   repeated string host_namespaces = 3;
+  repeated float host_cpu_per_core_percent = 4;
 }
 
 message Process {
