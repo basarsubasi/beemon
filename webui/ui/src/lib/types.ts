@@ -137,6 +137,13 @@ export interface BeemonEvent {
   ptrace?: { request: string; targetPid: number };
   bpf?: { cmd: number };
   capset?: { targetPid: number };
+  signal?: { targetPid: number; sig: number };
+  fileMeta?: { pathname: string; fd: number };
+  ioctl?: { fd: number; cmd: string | number };
+  fcntl?: { fd: number; cmd: string | number };
+  lseek?: { fd: number; offset: string | number };
+  socket?: { family: number; type: number; protocol: number };
+  socketOpt?: { fd: number; level: number; optname: number; optval?: string; optlen?: number };
 }
 
 export interface WSPing {

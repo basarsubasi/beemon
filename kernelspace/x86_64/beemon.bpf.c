@@ -218,7 +218,7 @@ static __always_inline bool should_trace(u32 pid) {
     u64 id = bpf_get_current_pid_tgid(); \
     u32 user_pid = id >> 32; \
     u32 user_tid = (u32)id; \
-    if (!should_trace(user_pid)) return 0; \
+    if (!should_trace_events(user_pid)) return 0; \
     struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0); \
     if (!e) return 0; \
     e->pid = user_tid; \
@@ -975,19 +975,10 @@ e->signal.target_pid = (u32)ctx->args[0];
     return 0;
 }
 
-struct trace_event_raw_signal_deliver {
-    u64 pad;
-    int sig;
-    int errno_;
-    int code;
-    unsigned long sa_handler;
-    unsigned long sa_flags;
-};
-
 SEC("tracepoint/signal/signal_deliver")
 int trace_signal_deliver(struct trace_event_raw_signal_deliver *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SIGNAL)
-e->signal.target_pid = user_pid;
+    RESERVE_EVENT(EVENT_TYPE_SIGNAL);
+    e->signal.target_pid = user_pid;
     e->signal.target_tid = user_tid;
     e->signal.sig = ctx->sig;
     bpf_ringbuf_submit(e, 0);

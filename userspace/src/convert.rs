@@ -11,7 +11,8 @@ use crate::pb::pb::{
     MmapEvent, MprotectEvent, MunmapEvent, NetworkAcceptEvent, NetworkConnectEvent,
     PivotRootEvent, PollEvent, ProcessEvent, PtraceEvent, RecvfromEvent, RenameEvent,
     SelectEvent, SendtoEvent, SetnsEvent, SyscallEvent, UnlinkatEvent, UnshareEvent,
-    Wait4Event,
+    Wait4Event, SignalEvent, FileMetaEvent, IoctlEvent, FcntlEvent, LseekEvent,
+    SocketEvent, SocketOptEvent,
 };
 
 use crate::bpf::types::{self as bpf, cstr, EventT};
@@ -161,7 +162,7 @@ pub fn convert(e: &EventT) -> Event {
             sig: e.signal.sig,
         }),
         bpf::EVENT_TYPE_FILE_META => Oneof::FileMeta(FileMetaEvent {
-            pathname: parse_c_string(&e.file_meta.pathname),
+            pathname: cstr(&e.file_meta.pathname).to_string(),
             fd: e.file_meta.fd as i32,
             mode: e.file_meta.mode,
         }),
@@ -180,7 +181,7 @@ pub fn convert(e: &EventT) -> Event {
         }),
         bpf::EVENT_TYPE_SOCKET => Oneof::Socket(SocketEvent {
             family: e.socket.family,
-            type_: e.socket.type_,
+            r#type: e.socket.type_,
             protocol: e.socket.protocol,
         }),
         bpf::EVENT_TYPE_SOCKOPT => Oneof::SocketOpt(SocketOptEvent {

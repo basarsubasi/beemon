@@ -44,6 +44,13 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define EVENT_TYPE_BPF         28
 #define EVENT_TYPE_CAPSET      29
 #define EVENT_TYPE_NET_ACCEPT  30
+#define EVENT_TYPE_SIGNAL      31
+#define EVENT_TYPE_FILE_META   32
+#define EVENT_TYPE_IOCTL       33
+#define EVENT_TYPE_FCNTL       34
+#define EVENT_TYPE_LSEEK       35
+#define EVENT_TYPE_SOCKET      36
+#define EVENT_TYPE_SOCKOPT     37
 
 struct event_t {
     u32 pid;
@@ -155,6 +162,35 @@ struct event_t {
     struct {
         u32 target_pid;
     } capset;
+    struct {
+        u32 target_pid;
+        u32 target_tid;
+        int sig;
+    } signal;
+    struct {
+        char pathname[256];
+        u32 fd;
+        int mode;
+    } file_meta;
+    struct {
+        int fd;
+        u64 cmd;
+    } ioctl_fcntl;
+    struct {
+        int fd;
+        u64 offset;
+        int whence;
+    } lseek;
+    struct {
+        int family;
+        int type;
+        int protocol;
+    } socket;
+    struct {
+        int fd;
+        int level;
+        int optname;
+    } sockopt;
 };
 
 // Force BTF generation for event_t so bpf2go can generate the Go struct
@@ -186,6 +222,19 @@ static __always_inline bool should_trace_events(u32 pid) {
     return val != NULL && (*val & TRACE_FLAG_EVENTS);
 }
 
+#define RESERVE_EVENT(event_type) \
+    u64 id = bpf_get_current_pid_tgid(); \
+    u32 user_pid = id >> 32; \
+    u32 user_tid = (u32)id; \
+    if (!should_trace_events(user_pid)) return 0; \
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0); \
+    if (!e) return 0; \
+    e->pid = user_tid; \
+    e->tgid = user_pid; \
+    e->type = (event_type); \
+    e->ts = bpf_ktime_get_ns();
+
+
 // -----------------------------------------------------------------------------
 // SIGNALS
 // -----------------------------------------------------------------------------
@@ -210,19 +259,10 @@ e->signal.target_pid = (u32)ctx->args[0];
     return 0;
 }
 
-struct trace_event_raw_signal_deliver {
-    u64 pad;
-    int sig;
-    int errno_;
-    int code;
-    unsigned long sa_handler;
-    unsigned long sa_flags;
-};
-
 SEC("tracepoint/signal/signal_deliver")
 int trace_signal_deliver(struct trace_event_raw_signal_deliver *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SIGNAL)
-e->signal.target_pid = user_pid;
+    RESERVE_EVENT(EVENT_TYPE_SIGNAL);
+    e->signal.target_pid = user_pid;
     e->signal.target_tid = user_tid;
     e->signal.sig = ctx->sig;
     bpf_ringbuf_submit(e, 0);
