@@ -4,15 +4,28 @@
 
 #![allow(clippy::too_many_arguments)]
 
-mod bpf;
-mod config;
-mod convert;
-mod grpc;
-mod pb;
-mod rates;
-mod ringbuf;
-mod snapshot;
-mod stream;
+use beemon_daemon::{
+    bpf::loader::BpfHandle,
+    config::Config,
+    grpc::BeemonServiceImpl,
+    pb::pb::beemon_service_server::BeemonServiceServer,
+    rates::{spawn as spawn_rates, BpfStateMaps},
+    ringbuf,
+    snapshot::{cgroup_tree_cache::CgroupTreeCache, namespace_tree_cache::NamespaceTreeCache, proc_cache::ProcCache, CacheInvalidators},
+};
+
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use anyhow::{Context, Result};
+use tokio::sync::RwLock;
+use tonic::transport::Server;
+use tracing_subscriber::EnvFilter;
+
+use beemon_daemon::rates::RateSnapshot;
+use beemon_daemon::snapshot::scanner;
+use beemon_daemon::snapshot::SnapshotCache;
+use beemon_daemon::stream::StreamRegistry;
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -68,10 +81,10 @@ async fn async_main(cfg: Config) -> Result<()> {
         .context("taking target_pids/io_stats/net_flows maps")?;
 
     // --- 3. Build shared state ---------------------------------------
-    let snapshot_cache: Arc<RwLock<snapshot::SnapshotCache>> =
-        Arc::new(RwLock::new(snapshot::SnapshotCache::default()));
-    let rates_snapshot: Arc<RwLock<crate::rates::RateSnapshot>> =
-        Arc::new(RwLock::new(crate::rates::RateSnapshot::default()));
+    let snapshot_cache: Arc<RwLock<SnapshotCache>> =
+        Arc::new(RwLock::new(SnapshotCache::default()));
+    let rates_snapshot: Arc<RwLock<RateSnapshot>> =
+        Arc::new(RwLock::new(RateSnapshot::default()));
 
     let proc_cache = Arc::new(Mutex::new(ProcCache::new(Duration::from_secs(10))));
     let cgroup_tree = Arc::new(Mutex::new(CgroupTreeCache::new(Duration::from_secs(10))));
@@ -102,7 +115,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         proc_cache: proc_cache.clone(),
         namespace_tree: namespace_tree.clone(),
     };
-    crate::ringbuf::spawn(events_ringbuf, registry.clone(), invalidators);
+    ringbuf::spawn(events_ringbuf, registry.clone(), invalidators);
 
     // --- 5. gRPC server ----------------------------------------------
     let bind_addr: std::net::SocketAddr = cfg.bind_addr().parse()?;

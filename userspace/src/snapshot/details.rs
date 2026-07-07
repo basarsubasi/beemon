@@ -11,6 +11,7 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::os::unix::fs::FileTypeExt;
 
 use procfs::net::{tcp, tcp6, udp, udp6};
 use tracing::warn;

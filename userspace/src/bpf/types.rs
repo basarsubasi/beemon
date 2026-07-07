@@ -380,3 +380,168 @@ pub unsafe fn event_from_bytes(buf: &[u8]) -> &EventT {
     );
     &*(buf.as_ptr() as *const EventT)
 }
+
+// ------------------------------------------------------------------
+// Tests
+// ------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- struct size guards ----------------------------------------
+
+    #[test]
+    fn io_stat_size_is_32() {
+        assert_eq!(std::mem::size_of::<IoStat>(), 32);
+    }
+
+    #[test]
+    fn net_flow_key_size_is_20() {
+        assert_eq!(std::mem::size_of::<NetFlowKey>(), 20);
+    }
+
+    #[test]
+    fn net_flow_stat_size_is_288() {
+        assert_eq!(std::mem::size_of::<NetFlowStat>(), 288);
+    }
+
+    /// EventT size is large (~2700 bytes); we just assert it's in a sane
+    /// range so accidental layout drift (e.g., dropping a payload struct)
+    /// is caught.
+    #[test]
+    fn event_t_size_is_within_expected_range() {
+        let s = std::mem::size_of::<EventT>();
+        assert!(
+            (2400..=3200).contains(&s),
+            "EventT is {s} bytes; expected ~2700-2900. Inspect the C source if this drifts."
+        );
+    }
+
+    /// Sanity: EventT layout starts with the header fields (pid, tgid, type,
+    /// ts) at byte offsets 0/4/8/16 — these are the values the ringbuf
+    /// reader dispatches on.
+    #[test]
+    fn event_t_header_field_offsets() {
+        assert_eq!(std::mem::offset_of!(EventT, pid), 0);
+        assert_eq!(std::mem::offset_of!(EventT, tgid), 4);
+        assert_eq!(std::mem::offset_of!(EventT, r#type), 8);
+        // ts is u64; aligned to 8 bytes → offset 16 (4 bytes of padding after
+        // the three u32s).
+        assert_eq!(std::mem::offset_of!(EventT, ts), 16);
+    }
+
+    // ---- cstr edge cases --------------------------------------------
+
+    #[test]
+    fn cstr_null_terminated() {
+        let buf: &[u8; 8] = b"hello\0wo";
+        assert_eq!(cstr(buf), "hello");
+    }
+
+    #[test]
+    fn cstr_no_null_returns_full_slice() {
+        let buf: &[u8; 5] = b"hello";
+        assert_eq!(cstr(buf), "hello");
+    }
+
+    #[test]
+    fn cstr_empty() {
+        let buf: &[u8; 1] = b"\0";
+        assert_eq!(cstr(buf), "");
+    }
+
+    #[test]
+    fn cstr_first_byte_null() {
+        let buf: &[u8; 4] = b"\0abc";
+        assert_eq!(cstr(buf), "");
+    }
+
+    // ---- event_from_bytes safety guards ----------------------------
+
+    #[test]
+    #[should_panic(expected = "ringbuf sample too small")]
+    fn event_from_bytes_empty_buffer_panics() {
+        let _ = unsafe { event_from_bytes(&[]) };
+    }
+
+    #[test]
+    #[should_panic(expected = "ringbuf sample too small")]
+    fn event_from_bytes_short_buffer_panics() {
+        let buf = vec![0u8; 16]; // way smaller than EventT
+        let _ = unsafe { event_from_bytes(&buf) };
+    }
+
+    #[test]
+    fn event_from_bytes_full_buffer_succeeds() {
+        let buf = vec![0u8; std::mem::size_of::<EventT>()];
+        let ev = unsafe { event_from_bytes(&buf) };
+        assert_eq!(ev.pid, 0);
+        assert_eq!(ev.tgid, 0);
+        assert_eq!(ev.r#type, 0);
+    }
+
+    // ---- NetFlowKey / NetFlowStat equality + hash --------------------
+
+    #[test]
+    fn net_flow_key_eq_and_hash() {
+        use std::collections::HashSet;
+        let a = NetFlowKey {
+            pid: 100,
+            saddr: 0x0a000001,
+            daddr: 0x0a000002,
+            sport: 5000,
+            dport: 443,
+            family: 2,
+            protocol: 6,
+        };
+        let b = a;
+        let mut set = HashSet::new();
+        set.insert(a);
+        assert!(set.contains(&b));
+    }
+
+    // ---- Event type IDs are sequential starting at 1 -----------------
+
+    #[test]
+    fn event_type_ids_sequential_1_through_30() {
+        assert_eq!(EVENT_TYPE_SYSCALL, 1);
+        assert_eq!(EVENT_TYPE_FILE_OPEN, 2);
+        assert_eq!(EVENT_TYPE_NET_CONN, 3);
+        assert_eq!(EVENT_TYPE_PROCESS, 4);
+        assert_eq!(EVENT_TYPE_FILE_READ, 5);
+        assert_eq!(EVENT_TYPE_FILE_WRITE, 6);
+        assert_eq!(EVENT_TYPE_FILE_CLOSE, 7);
+        assert_eq!(EVENT_TYPE_CHROOT, 8);
+        assert_eq!(EVENT_TYPE_PIVOT_ROOT, 9);
+        assert_eq!(EVENT_TYPE_SETNS, 10);
+        assert_eq!(EVENT_TYPE_UNSHARE, 11);
+        assert_eq!(EVENT_TYPE_WAIT4, 12);
+        assert_eq!(EVENT_TYPE_MMAP, 13);
+        assert_eq!(EVENT_TYPE_MUNMAP, 14);
+        assert_eq!(EVENT_TYPE_MPROTECT, 15);
+        assert_eq!(EVENT_TYPE_BRK, 16);
+        assert_eq!(EVENT_TYPE_ACCEPT, 17);
+        assert_eq!(EVENT_TYPE_BIND, 18);
+        assert_eq!(EVENT_TYPE_SENDTO, 19);
+        assert_eq!(EVENT_TYPE_RECVFROM, 20);
+        assert_eq!(EVENT_TYPE_UNLINKAT, 21);
+        assert_eq!(EVENT_TYPE_RENAME, 22);
+        assert_eq!(EVENT_TYPE_FUTEX, 23);
+        assert_eq!(EVENT_TYPE_EPOLL_WAIT, 24);
+        assert_eq!(EVENT_TYPE_SELECT, 25);
+        assert_eq!(EVENT_TYPE_POLL, 26);
+        assert_eq!(EVENT_TYPE_PTRACE, 27);
+        assert_eq!(EVENT_TYPE_BPF, 28);
+        assert_eq!(EVENT_TYPE_CAPSET, 29);
+        assert_eq!(EVENT_TYPE_NET_ACCEPT, 30);
+    }
+
+    #[test]
+    fn trace_flag_all_is_metrics_or_events() {
+        assert_eq!(TRACE_FLAG_ALL, TRACE_FLAG_METRICS | TRACE_FLAG_EVENTS);
+        assert_eq!(TRACE_FLAG_METRICS, 1);
+        assert_eq!(TRACE_FLAG_EVENTS, 2);
+        assert_eq!(TRACE_FLAG_ALL, 3);
+    }
+}

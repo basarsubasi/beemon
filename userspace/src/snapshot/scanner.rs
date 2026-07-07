@@ -60,25 +60,18 @@ pub fn spawn(
 
             let rates_snap = rates.read().await.clone();
 
-            // The whole scan is synchronous (blocking IO + BPF map reads);
-            // so we run it on a blocking thread so the tokio runtime isn't
-            // stalled.
-            let cache_clone = {
-                let pc = proc_cache.clone();
-                let cg = cgroup_tree.clone();
-                let ns = namespace_tree.clone();
-                tokio::task::spawn_blocking(move || {
-                    scan_once(&mut prev_cpu, &mut prev_host_cpu, &host_namespaces, host_mem_total, &rates_snap, &pc, &cg, &ns)
-                })
-                .await
-            };
+            let snap = scan_once(
+                &mut prev_cpu,
+                &mut prev_host_cpu,
+                &host_namespaces,
+                host_mem_total,
+                &rates_snap,
+                &proc_cache,
+                &cgroup_tree,
+                &namespace_tree,
+            );
 
-            match cache_clone {
-                Ok(snap) => {
-                    *cache.write().await = snap;
-                }
-                Err(e) => warn!(error = %e, "scan_once join failed"),
-            }
+            *cache.write().await = snap;
         }
     });
 }

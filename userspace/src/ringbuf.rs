@@ -38,7 +38,7 @@ async fn run(
     // Aya's RingBuf is non-blocking; we wrap it with `AsyncFd` (which owns
     // the RingBuf), wait for readability, then drain all currently-available
     // items until `next()` returns `None`, then sleep again. Edge-triggered.
-    let async_fd = AsyncFd::new(ringbuf)?;
+    let mut async_fd = AsyncFd::new(ringbuf)?;
 
     loop {
         // Drain currently-available samples. `get_mut` borrows `async_fd`
@@ -47,7 +47,10 @@ async fn run(
         loop {
             let item = async_fd.get_mut().next();
             match item {
-                Some(buf) => handle_sample(&buf, &registry, &invalidators),
+                Some(buf) => {
+                    let bytes: &[u8] = &buf;
+                    handle_sample(bytes, &registry, &invalidators);
+                }
                 None => break,
             }
         }

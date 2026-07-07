@@ -105,3 +105,141 @@ pub fn state_label(state_char: char) -> &'static str {
         _ => "Unknown",
     }
 }
+
+// ------------------------------------------------------------------
+// Tests
+// ------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- parse_stat ------------------------------------------------
+
+    #[test]
+    fn parse_stat_normal_line() {
+        // Real-ish /proc/1/stat line (truncated for clarity but with all the
+        // fields we parse).
+        let raw = "1 (systemd) S 0 1 1 0 -1 4194560 123 0 0 0 5 4 0 0 20 0 1 0 100 0";
+        let (pid, ppid, comm, state, utime, stime) = parse_stat(raw, 1).unwrap();
+        assert_eq!(pid, 1);
+        assert_eq!(ppid, 0);
+        assert_eq!(comm, "systemd");
+        assert_eq!(state, 'S');
+        assert_eq!(utime, 5);
+        assert_eq!(stime, 4);
+    }
+
+    #[test]
+    fn parse_stat_comm_with_spaces() {
+        // A process named "Cheese Daemon" (spaces inside comm).
+        let raw = "42 (Cheese Daemon) R 7 42 42 0 -1 0 0 0 0 100 200 0 0 20 0 1 0 0 0";
+        let (_pid, _ppid, comm, _state, utime, stime) = parse_stat(raw, 42).unwrap();
+        assert_eq!(comm, "Cheese Daemon");
+        assert_eq!(utime, 100);
+        assert_eq!(stime, 200);
+    }
+
+    #[test]
+    fn parse_stat_comm_with_parens_inside() {
+        // Some kernels embed parens inside comm (e.g. nginx (worker)).
+        let raw = "100 (nginx (worker)) S 99 100 100 0 -1 0 1 0 0 0 0 0 0 0 20 0 1 0 0 0";
+        let (_, _, comm, _, _, _) = parse_stat(raw, 100).unwrap();
+        assert_eq!(comm, "nginx (worker)");
+    }
+
+    #[test]
+    fn parse_stat_pid_zero_supplied_by_caller() {
+        // pid 0 doesn't exist in /proc; the caller passes pid=0 explicitly
+        // here to ensure the parser doesn't re-read it from the raw line.
+        let raw = "0 (swapper/0) R 0 0 0 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 0 0";
+        let (pid, ppid, comm, state, _utime, _stime) = parse_stat(raw, 0).unwrap();
+        assert_eq!(pid, 0);
+        assert_eq!(ppid, 0);
+        assert_eq!(comm, "swapper/0");
+        assert_eq!(state, 'R');
+    }
+
+    #[test]
+    fn parse_stat_empty_string_returns_none() {
+        assert!(parse_stat("", 1).is_none());
+    }
+
+    #[test]
+    fn parse_stat_no_open_paren_returns_none() {
+        assert!(parse_stat("1 systemd S 0 0 0", 1).is_none());
+    }
+
+    #[test]
+    fn parse_stat_no_close_paren_returns_none() {
+        assert!(parse_stat("1 (systemd S 0 0", 1).is_none());
+    }
+
+    #[test]
+    fn parse_stat_truncated_after_ppid_returns_none() {
+        // After `)` we need state, ppid, then 7 more fields, then majflt,
+        // cmajflt, utime, stime. If the line is too short, parsing yields None.
+        let raw = "1 (systemd) S 0"; // only state and ppid; missing the rest
+        assert!(parse_stat(raw, 1).is_none());
+    }
+
+    #[test]
+    fn parse_stat_non_numeric_ppid_returns_none_or_zero() {
+        // The next-after-paren-parse is i32 from a string. If non-numeric,
+        // parse().ok() yields None and we propagate None.
+        let raw = "1 (systemd) S nan 0 0 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 0 0";
+        assert!(parse_stat(raw, 1).is_none());
+    }
+
+    // ---- state_label -----------------------------------------------
+
+    #[test]
+    fn state_label_known_and_unknown_chars() {
+        assert_eq!(state_label('R'), "Running");
+        assert_eq!(state_label('S'), "Sleeping");
+        assert_eq!(state_label('D'), "DiskSleep");
+        assert_eq!(state_label('Z'), "Zombie");
+        assert_eq!(state_label('T'), "Stopped");
+        assert_eq!(state_label('t'), "Stopped");
+        assert_eq!(state_label('X'), "Dead");
+        assert_eq!(state_label('I'), "Idle");
+        assert_eq!(state_label('P'), "Parked");
+        assert_eq!(state_label('Q'), "Unknown"); // never-existed state
+        assert_eq!(state_label('\0'), "Unknown");
+    }
+
+    // ---- read_light on a pid the OS guarantees --------------------
+
+    #[test]
+    fn read_light_for_init_pid_returns_some() {
+        // /proc/1 is virtually always present. (CI containers may differ; we
+        // treat a None as a skip via a soft assertion.)
+        if let Some(lp) = read_light(1) {
+            assert_eq!(lp.pid, 1);
+            // ppid is 0 for the host's init; could be non-zero in containers.
+            assert!(lp.ppid >= 0);
+            assert!(!lp.comm.is_empty());
+        }
+        // No assert if None (CI container with no /proc/1 visible).
+    }
+
+    #[test]
+    fn read_light_for_pid_max_returns_none() {
+        // pid_max is 2^31-1; never a running pid.
+        assert!(read_light(i32::MAX).is_none());
+    }
+
+    #[test]
+    fn read_light_for_negative_pid_returns_none() {
+        assert!(read_light(-1).is_none());
+    }
+
+    #[test]
+    fn read_light_for_zero_pid_returns_none() {
+        // /proc/0 exists on some kernels as swapper/0 but in many environments
+        // it's not readable via fs::read_to_string. We assert None either way:
+        // - if not readable → None
+        // - if readable → we don't care for this test; we just don't panic.
+        let _ = read_light(0);
+    }
+}

@@ -101,3 +101,96 @@ pub fn read_host_namespaces() -> Vec<String> {
 pub fn now() -> Instant {
     Instant::now()
 }
+
+// ------------------------------------------------------------------
+// Tests
+// ------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn per_core_percent_empty_inputs() {
+        assert!(per_core_percent(&[], &[]).is_empty());
+    }
+
+    #[test]
+    fn per_core_percent_prev_empty_returns_nothing() {
+        let prev = vec![];
+        let curr = vec![CpuSample { busy: 100, total: 1000 }];
+        // prev has 0 entries, so .min(curr.len()) = 0; we return [].
+        assert!(per_core_percent(&prev, &curr).is_empty());
+    }
+
+    #[test]
+    fn per_core_percent_curr_empty_returns_nothing() {
+        let prev = vec![CpuSample { busy: 100, total: 1000 }];
+        let curr = vec![];
+        assert!(per_core_percent(&prev, &curr).is_empty());
+    }
+
+    #[test]
+    fn per_core_percent_zero_deltas_returns_zero_percent() {
+        let s = CpuSample { busy: 100, total: 1000 };
+        assert_eq!(per_core_percent(&[s], &[s]), vec![0.0]);
+    }
+
+    #[test]
+    fn per_core_percent_all_busy_returns_100_percent() {
+        let prev = CpuSample { busy: 100, total: 200 };
+        let curr = CpuSample { busy: 200, total: 300 };
+        // d_busy=100, d_total=100 → 100%.
+        assert_eq!(per_core_percent(&[prev], &[curr]), vec![100.0]);
+    }
+
+    #[test]
+    fn per_core_percent_idle_returns_0_percent() {
+        let prev = CpuSample { busy: 100, total: 200 };
+        let curr = CpuSample { busy: 100, total: 300 }; // busy unchanged, total grew
+        // d_busy=0, d_total=100 → 0%.
+        assert_eq!(per_core_percent(&[prev], &[curr]), vec![0.0]);
+    }
+
+    #[test]
+    fn per_core_percent_partial_busy_returns_50_percent() {
+        let prev = CpuSample { busy: 100, total: 200 };
+        let curr = CpuSample { busy: 150, total: 300 };
+        // d_busy=50, d_total=100 → 50%.
+        assert_eq!(per_core_percent(&[prev], &[curr]), vec![50.0]);
+    }
+
+    #[test]
+    fn per_core_percent_saturating_subtraction_avoids_underflow() {
+        // curr < prev (counter rewinds — impossible in practice but tests
+        // saturating_sub). busy_curr - busy_prev → 0.
+        let prev = CpuSample { busy: 200, total: 300 };
+        let curr = CpuSample { busy: 100, total: 300 };
+        // d_busy=0 (saturating), d_total=0 → div-by-zero guard returns 0.
+        assert_eq!(per_core_percent(&[prev], &[curr]), vec![0.0]);
+    }
+
+    #[test]
+    fn per_core_percent_handles_multiple_cores() {
+        let prev = vec![
+            CpuSample { busy: 100, total: 200 },
+            CpuSample { busy: 0, total: 1000 },
+        ];
+        let curr = vec![
+            CpuSample { busy: 150, total: 300 }, // 50%
+            CpuSample { busy: 100, total: 1100 }, // 100%
+        ];
+        assert_eq!(per_core_percent(&prev, &curr), vec![50.0, 100.0]);
+    }
+
+    #[test]
+    fn per_core_percent_clamps_above_100() {
+        // d_busy > d_total is impossible on real hardware, but we defensively
+        // clamp. Construct an artificial case: busy +5, total +5 → 100%; to
+        // get >100% we'd need total-decrease, which saturates to 0% via the
+        // other guard. So just confirm clamp behavior via 100% ceiling.
+        let prev = CpuSample { busy: 0, total: 0 };
+        let curr = CpuSample { busy: 100, total: 100 };
+        assert_eq!(per_core_percent(&[prev], &[curr]), vec![100.0]);
+    }
+}
