@@ -1,0 +1,46 @@
+# Bespoke Rust userspace daemon for beemon.
+# Built and pinned via the workspace rust-toolchain.toml (nightly).
+
+[package]
+name = "beemon-daemon"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.78"
+description = "Beemon eBPF userspace daemon: loads the BPF programs and exposes the BeemonService gRPC API."
+license = "Apache-2.0"
+publish = false
+
+[[bin]]
+name = "beemon-daemon"
+path = "src/main.rs"
+
+[dependencies]
+aya = { version = "0.14", default-features = false }
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "net", "signal", "fs", "sync", "time", "io-util"] }
+tokio-stream = "0.1"
+tonic = { version = "0.14", default-features = false, features = ["codegen", "server", "transport"] }
+prost = "0.14"
+procfs = "0.18"
+nix = { version = "0.31", default-features = false, features = ["fs", "process", "resource", "user"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+anyhow = "1"
+thiserror = "2"
+http = "1"
+libc = "0.2"
+
+[build-dependencies]
+tonic-prost-build = { version = "0.14", default-features = false, features = ["transport"] }
+prost-build = "0.14"
+anyhow = "1"
+
+[dev-dependencies]
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "sync", "time", "test-util"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+overflow-checks = true
