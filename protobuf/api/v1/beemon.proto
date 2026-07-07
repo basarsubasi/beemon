@@ -75,6 +75,13 @@ message ListProcessesResponse {
   uint64 host_memory_total_bytes = 2;
   repeated string host_namespaces = 3;
   repeated float host_cpu_per_core_percent = 4;
+  // Host-wide per-second I/O totals, summed from the eBPF process_io_stats map.
+  // Same source as per-process io_*_bytes fields, but aggregated across all PIDs
+  // in the snapshot to give a single dashboard gauge. 0 means the BPF map is cold.
+  uint64 host_io_read_bytes_per_sec  = 5;
+  uint64 host_io_write_bytes_per_sec = 6;
+  uint64 host_net_rx_bytes_per_sec   = 7;
+  uint64 host_net_tx_bytes_per_sec   = 8;
 }
 
 message Process {

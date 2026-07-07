@@ -337,8 +337,15 @@ type ListProcessesResponse struct {
 	HostMemoryTotalBytes  uint64                 `protobuf:"varint,2,opt,name=host_memory_total_bytes,json=hostMemoryTotalBytes,proto3" json:"host_memory_total_bytes,omitempty"`
 	HostNamespaces        []string               `protobuf:"bytes,3,rep,name=host_namespaces,json=hostNamespaces,proto3" json:"host_namespaces,omitempty"`
 	HostCpuPerCorePercent []float32              `protobuf:"fixed32,4,rep,packed,name=host_cpu_per_core_percent,json=hostCpuPerCorePercent,proto3" json:"host_cpu_per_core_percent,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Host-wide per-second I/O totals, summed from the eBPF process_io_stats map.
+	// Same source as per-process io_*_bytes fields, but aggregated across all PIDs
+	// in the snapshot to give a single dashboard gauge. 0 means the BPF map is cold.
+	HostIoReadBytesPerSec  uint64 `protobuf:"varint,5,opt,name=host_io_read_bytes_per_sec,json=hostIoReadBytesPerSec,proto3" json:"host_io_read_bytes_per_sec,omitempty"`
+	HostIoWriteBytesPerSec uint64 `protobuf:"varint,6,opt,name=host_io_write_bytes_per_sec,json=hostIoWriteBytesPerSec,proto3" json:"host_io_write_bytes_per_sec,omitempty"`
+	HostNetRxBytesPerSec   uint64 `protobuf:"varint,7,opt,name=host_net_rx_bytes_per_sec,json=hostNetRxBytesPerSec,proto3" json:"host_net_rx_bytes_per_sec,omitempty"`
+	HostNetTxBytesPerSec   uint64 `protobuf:"varint,8,opt,name=host_net_tx_bytes_per_sec,json=hostNetTxBytesPerSec,proto3" json:"host_net_tx_bytes_per_sec,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListProcessesResponse) Reset() {
@@ -397,6 +404,34 @@ func (x *ListProcessesResponse) GetHostCpuPerCorePercent() []float32 {
 		return x.HostCpuPerCorePercent
 	}
 	return nil
+}
+
+func (x *ListProcessesResponse) GetHostIoReadBytesPerSec() uint64 {
+	if x != nil {
+		return x.HostIoReadBytesPerSec
+	}
+	return 0
+}
+
+func (x *ListProcessesResponse) GetHostIoWriteBytesPerSec() uint64 {
+	if x != nil {
+		return x.HostIoWriteBytesPerSec
+	}
+	return 0
+}
+
+func (x *ListProcessesResponse) GetHostNetRxBytesPerSec() uint64 {
+	if x != nil {
+		return x.HostNetRxBytesPerSec
+	}
+	return 0
+}
+
+func (x *ListProcessesResponse) GetHostNetTxBytesPerSec() uint64 {
+	if x != nil {
+		return x.HostNetTxBytesPerSec
+	}
+	return 0
 }
 
 type Process struct {
@@ -3235,12 +3270,16 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x0fhost_namespaces\x18\x04 \x03(\tR\x0ehostNamespaces\"7\n" +
 	"\x14ListProcessesRequest\x12\x1f\n" +
 	"\vfilter_name\x18\x01 \x01(\tR\n" +
-	"filterName\"\xe3\x01\n" +
+	"filterName\"\xcd\x03\n" +
 	"\x15ListProcessesResponse\x120\n" +
 	"\tprocesses\x18\x01 \x03(\v2\x12.beemon.v1.ProcessR\tprocesses\x125\n" +
 	"\x17host_memory_total_bytes\x18\x02 \x01(\x04R\x14hostMemoryTotalBytes\x12'\n" +
 	"\x0fhost_namespaces\x18\x03 \x03(\tR\x0ehostNamespaces\x128\n" +
-	"\x19host_cpu_per_core_percent\x18\x04 \x03(\x02R\x15hostCpuPerCorePercent\"\xfe\x04\n" +
+	"\x19host_cpu_per_core_percent\x18\x04 \x03(\x02R\x15hostCpuPerCorePercent\x129\n" +
+	"\x1ahost_io_read_bytes_per_sec\x18\x05 \x01(\x04R\x15hostIoReadBytesPerSec\x12;\n" +
+	"\x1bhost_io_write_bytes_per_sec\x18\x06 \x01(\x04R\x16hostIoWriteBytesPerSec\x127\n" +
+	"\x19host_net_rx_bytes_per_sec\x18\a \x01(\x04R\x14hostNetRxBytesPerSec\x127\n" +
+	"\x19host_net_tx_bytes_per_sec\x18\b \x01(\x04R\x14hostNetTxBytesPerSec\"\xfe\x04\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +

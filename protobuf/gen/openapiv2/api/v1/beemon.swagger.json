@@ -571,6 +571,23 @@
             "type": "number",
             "format": "float"
           }
+        },
+        "hostIoReadBytesPerSec": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Host-wide per-second I/O totals, summed from the eBPF process_io_stats map.\nSame source as per-process io_*_bytes fields, but aggregated across all PIDs\nin the snapshot to give a single dashboard gauge. 0 means the BPF map is cold."
+        },
+        "hostIoWriteBytesPerSec": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "hostNetRxBytesPerSec": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "hostNetTxBytesPerSec": {
+          "type": "string",
+          "format": "uint64"
         }
       }
     },

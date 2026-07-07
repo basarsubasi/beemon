@@ -30,6 +30,11 @@ export interface ListProcessesResponse {
   hostMemoryTotalBytes: string;
   hostNamespaces: string[];
   hostCpuPerCorePercent?: number[];
+  // Host-wide per-second I/O totals summed from BPF process_io_stats.
+  hostIoReadBytesPerSec?: string;
+  hostIoWriteBytesPerSec?: string;
+  hostNetRxBytesPerSec?: string;
+  hostNetTxBytesPerSec?: string;
 }
 
 export interface GetProcessMetadataResponse {

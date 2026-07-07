@@ -9,7 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Progress } from "./ui/progress";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers, HardDrive } from "lucide-react";
 
 type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit' | 'file_read' | 'file_write' | 'net_rx' | 'net_tx';
 type SortDirection = 'asc' | 'desc';
@@ -18,6 +18,7 @@ export function Dashboard() {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [hostMem, setHostMem] = useState<string>("0");
   const [hostCpuPerCore, setHostCpuPerCore] = useState<number[]>([]);
+  const [hostIo, setHostIo] = useState({ read: "0", write: "0", netRx: "0", netTx: "0" });
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>('memory');
@@ -43,6 +44,29 @@ export function Dashboard() {
         }
         if (data.hostCpuPerCorePercent) {
           setHostCpuPerCore(data.hostCpuPerCorePercent);
+        }
+        // Host-level I/O totals come straight from the cached BPF sum. Cold
+        // start (BPF map not yet populated) -> proto emits "0" -> we fall
+        // back to a client-side per-process sum so the gauge is never blank
+        // during the first second.
+        const hasHostIo = data.hostIoReadBytesPerSec !== undefined ||
+          data.hostIoWriteBytesPerSec !== undefined ||
+          data.hostNetRxBytesPerSec !== undefined ||
+          data.hostNetTxBytesPerSec !== undefined;
+        if (hasHostIo) {
+          setHostIo({
+            read: data.hostIoReadBytesPerSec ?? "0",
+            write: data.hostIoWriteBytesPerSec ?? "0",
+            netRx: data.hostNetRxBytesPerSec ?? "0",
+            netTx: data.hostNetTxBytesPerSec ?? "0",
+          });
+        } else {
+          setHostIo({
+            read: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioReadBytes || "0") || 0), 0).toString(),
+            write: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioWriteBytes || "0") || 0), 0).toString(),
+            netRx: (data.processes || []).reduce((a, p) => a + (parseInt(p.netRxBytes || "0") || 0), 0).toString(),
+            netTx: (data.processes || []).reduce((a, p) => a + (parseInt(p.netTxBytes || "0") || 0), 0).toString(),
+          });
         }
         if (data.hostNamespaces) {
           setHostNamespaces(data.hostNamespaces);
@@ -243,6 +267,20 @@ export function Dashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          </Card>
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
+            <div className="p-3 bg-purple-50 dark:bg-zinc-900 rounded-full shrink-0">
+              <HardDrive className="text-purple-600 dark:text-purple-400 h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Total I/O</p>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono">
+                <span className="text-blue-500 dark:text-blue-400">R: {formatBytes(hostIo.read)}/s</span>
+                <span className="text-orange-500 dark:text-orange-400">W: {formatBytes(hostIo.write)}/s</span>
+                <span className="text-green-500 dark:text-green-400">Rx: {formatBytes(hostIo.netRx)}/s</span>
+                <span className="text-purple-600 dark:text-purple-400">Tx: {formatBytes(hostIo.netTx)}/s</span>
+              </div>
             </div>
           </Card>
         </div>
