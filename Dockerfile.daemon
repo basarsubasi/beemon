@@ -1,12 +1,28 @@
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM rust:alpine AS builder
+
+RUN apk add --no-cache musl-dev clang lld protoc protobuf-dev linux-headers
 
 WORKDIR /app
+COPY kernelspace/ ./kernelspace/
 COPY protobuf/ ./protobuf/
 COPY userspace/ ./userspace/
 
 WORKDIR /app/userspace
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /app/beemon-daemon .
+
+# We map the Docker TARGETARCH to the Rust musl target, add it via rustup, 
+# and use lld as the linker for cross-compilation since we are in Alpine 
+# and Building a static musl binary.
+RUN case "$TARGETARCH" in \
+      "amd64") RUST_TARGET="x86_64-unknown-linux-musl" ;; \
+      "arm64") RUST_TARGET="aarch64-unknown-linux-musl" ;; \
+      *) echo "Unsupported architecture: $TARGETARCH"; exit 1 ;; \
+    esac && \
+    rustup target add $RUST_TARGET && \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=lld \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=lld \
+    cargo build --release --target $RUST_TARGET && \
+    cp target/$RUST_TARGET/release/beemon-daemon /app/beemon-daemon
 
 FROM alpine:latest
 RUN apk add --no-cache procps
