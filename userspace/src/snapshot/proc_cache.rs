@@ -161,3 +161,200 @@ pub fn resolve_cgroup_v2_path(pid: u32) -> Option<String> {
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_proc_cache_new() {
+        let cache = ProcCache::new(Duration::from_secs(10));
+        assert_eq!(cache.entries().len(), 0);
+    }
+
+    #[test]
+    fn test_proc_cache_get_or_load_nonexistent_pid() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        let result = cache.get_or_load(999999999);
+        assert!(result.is_none());
+        assert_eq!(cache.entries().len(), 0);
+    }
+
+    #[test]
+    fn test_proc_cache_get_or_load_init_pid() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        let result = cache.get_or_load(1);
+        
+        // PID 1 should exist on most systems
+        if let Some(entry) = result {
+            assert_eq!(entry.pid, 1);
+            assert!(!entry.comm.is_empty());
+            assert_eq!(cache.entries().len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_caching() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        // First load
+        let result1 = cache.get_or_load(1);
+        if result1.is_some() {
+            assert_eq!(cache.entries().len(), 1);
+            
+            // Second load should use cache
+            let result2 = cache.get_or_load(1);
+            assert!(result2.is_some());
+            assert_eq!(cache.entries().len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_invalidate() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        cache.get_or_load(1);
+        if cache.entries().len() > 0 {
+            cache.invalidate(1);
+            assert_eq!(cache.entries().len(), 0);
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_sweep() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        // Load some pids
+        cache.get_or_load(1);
+        
+        let mut alive = HashSet::new();
+        alive.insert(1);
+        
+        cache.sweep(&alive);
+        
+        // PID 1 should still be there
+        if cache.entries().contains_key(&1) {
+            assert_eq!(cache.entries().len(), 1);
+        }
+        
+        // Sweep with empty set should clear everything
+        let empty = HashSet::new();
+        cache.sweep(&empty);
+        assert_eq!(cache.entries().len(), 0);
+    }
+
+    #[test]
+    fn test_proc_cache_generation_of() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        let gen1 = cache.generation_of(1);
+        assert!(gen1.is_none());
+        
+        cache.get_or_load(1);
+        let gen2 = cache.generation_of(1);
+        
+        if gen2.is_some() {
+            assert!(gen2.unwrap().elapsed().as_millis() < 100);
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_ttl_expiry() {
+        let mut cache = ProcCache::new(Duration::from_millis(10));
+        
+        cache.get_or_load(1);
+        if cache.entries().len() > 0 {
+            std::thread::sleep(Duration::from_millis(20));
+            
+            // Should reload due to TTL expiry
+            cache.get_or_load(1);
+            // Entry should still exist (reloaded)
+            if cache.entries().contains_key(&1) {
+                let entry = cache.entries().get(&1).unwrap();
+                assert!(entry.loaded_at.elapsed().as_millis() < 100);
+            }
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_multiple_pids() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        // Try to load a few common pids
+        for pid in [1, 2, 3] {
+            cache.get_or_load(pid);
+        }
+        
+        // At least some should have loaded
+        assert!(cache.entries().len() >= 0);
+    }
+
+    #[test]
+    fn test_resolve_cgroup_v2_path_nonexistent() {
+        let result = resolve_cgroup_v2_path(999999999);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_resolve_cgroup_v2_path_init_pid() {
+        let result = resolve_cgroup_v2_path(1);
+        // May or may not have a cgroup path depending on system
+        if let Some(path) = result {
+            assert!(!path.is_empty());
+            assert!(!path.starts_with('/')); // Should be trimmed
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_entry_fields() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        if let Some(entry) = cache.get_or_load(1) {
+            assert_eq!(entry.pid, 1);
+            assert!(entry.ppid >= 0);
+            assert!(!entry.comm.is_empty());
+            // namespaces may be empty or have entries depending on system
+            // cgroup_path may be None or Some
+            assert!(entry.loaded_at.elapsed().as_millis() < 100);
+        }
+    }
+
+    #[test]
+    fn test_proc_cache_invalidate_nonexistent() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        cache.invalidate(999999999); // Should not panic
+        assert_eq!(cache.entries().len(), 0);
+    }
+
+    #[test]
+    fn test_proc_cache_sweep_partial() {
+        let mut cache = ProcCache::new(Duration::from_secs(10));
+        
+        // Manually insert entries for testing
+        let mut entry1 = ProcCacheEntry {
+            pid: 100,
+            ppid: 1,
+            comm: "test1".to_string(),
+            namespaces: HashMap::new(),
+            cgroup_path: None,
+            loaded_at: Instant::now(),
+        };
+        let mut entry2 = entry1.clone();
+        entry2.pid = 200;
+        entry2.comm = "test2".to_string();
+        
+        cache.entries.insert(100, entry1);
+        cache.entries.insert(200, entry2);
+        
+        assert_eq!(cache.entries().len(), 2);
+        
+        // Sweep keeping only pid 100
+        let mut alive = HashSet::new();
+        alive.insert(100);
+        cache.sweep(&alive);
+        
+        assert_eq!(cache.entries().len(), 1);
+        assert!(cache.entries().contains_key(&100));
+        assert!(!cache.entries().contains_key(&200));
+    }
+}

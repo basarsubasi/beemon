@@ -133,7 +133,9 @@ mod tests {
     #[test]
     fn parse_stat_comm_with_spaces() {
         // A process named "Cheese Daemon" (spaces inside comm).
-        let raw = "42 (Cheese Daemon) R 7 42 42 0 -1 0 0 0 0 100 200 0 0 20 0 1 0 0 0";
+        // Fields after comm: state, ppid, pgrp, session, tty_nr, tpgid, flags,
+        // minflt, cminflt, majflt, cmajflt, utime, stime, ...
+        let raw = "42 (Cheese Daemon) R 7 42 42 0 -1 0 0 0 0 0 100 200 0 0 20 0 1 0 0 0";
         let (_pid, _ppid, comm, _state, utime, stime) = parse_stat(raw, 42).unwrap();
         assert_eq!(comm, "Cheese Daemon");
         assert_eq!(utime, 100);

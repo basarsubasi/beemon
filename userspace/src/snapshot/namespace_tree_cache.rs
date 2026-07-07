@@ -87,3 +87,165 @@ impl NamespaceTreeCache {
         self.tree.len()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::snapshot::proc_cache::ProcCacheEntry;
+    use std::time::Instant;
+
+    fn make_entry(pid: u32, namespaces: HashMap<String, u64>) -> ProcCacheEntry {
+        ProcCacheEntry {
+            pid,
+            ppid: 1,
+            comm: format!("test_{}", pid),
+            namespaces,
+            cgroup_path: None,
+            loaded_at: Instant::now(),
+        }
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_new() {
+        let cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        assert!(cache.is_stale());
+        assert_eq!(cache.num_entries(), 0);
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_rebuild_empty() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let proc_cache = HashMap::new();
+        
+        cache.rebuild_from(&proc_cache);
+        
+        assert!(!cache.is_stale());
+        assert_eq!(cache.num_entries(), 0);
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_rebuild_with_data() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let mut proc_cache = HashMap::new();
+        
+        let mut ns1 = HashMap::new();
+        ns1.insert("mnt".to_string(), 4026531840);
+        ns1.insert("net".to_string(), 4026531992);
+        
+        let mut ns2 = HashMap::new();
+        ns2.insert("mnt".to_string(), 4026531840); // Same mnt as pid 1
+        ns2.insert("net".to_string(), 4026531993); // Different net
+        
+        proc_cache.insert(1, make_entry(1, ns1));
+        proc_cache.insert(2, make_entry(2, ns2));
+        
+        cache.rebuild_from(&proc_cache);
+        
+        assert!(!cache.is_stale());
+        assert_eq!(cache.num_entries(), 3); // 2 mnt entries + 1 net entry (but 2 different inodes)
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_find_any_pid() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let mut proc_cache = HashMap::new();
+        
+        let mut ns = HashMap::new();
+        ns.insert("mnt".to_string(), 4026531840);
+        
+        proc_cache.insert(100, make_entry(100, ns.clone()));
+        proc_cache.insert(200, make_entry(200, ns));
+        
+        cache.rebuild_from(&proc_cache);
+        
+        let pid = cache.find_any_pid("mnt", 4026531840);
+        assert!(pid.is_some());
+        assert!(pid == Some(100) || pid == Some(200));
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_find_any_pid_not_found() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let proc_cache = HashMap::new();
+        
+        cache.rebuild_from(&proc_cache);
+        
+        let pid = cache.find_any_pid("mnt", 9999999);
+        assert!(pid.is_none());
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_pids_in() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let mut proc_cache = HashMap::new();
+        
+        let mut ns = HashMap::new();
+        ns.insert("mnt".to_string(), 4026531840);
+        
+        proc_cache.insert(300, make_entry(300, ns.clone()));
+        proc_cache.insert(100, make_entry(100, ns.clone()));
+        proc_cache.insert(200, make_entry(200, ns));
+        
+        cache.rebuild_from(&proc_cache);
+        
+        let pids = cache.pids_in("mnt", 4026531840);
+        assert_eq!(pids, vec![100, 200, 300]); // Sorted
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_pids_in_empty() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let proc_cache = HashMap::new();
+        
+        cache.rebuild_from(&proc_cache);
+        
+        let pids = cache.pids_in("mnt", 9999999);
+        assert!(pids.is_empty());
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_invalidate() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let proc_cache = HashMap::new();
+        
+        cache.rebuild_from(&proc_cache);
+        assert!(!cache.is_stale());
+        
+        cache.invalidate();
+        assert!(cache.is_stale());
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_ttl_expiry() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_millis(10));
+        let proc_cache = HashMap::new();
+        
+        cache.rebuild_from(&proc_cache);
+        assert!(!cache.is_stale());
+        
+        std::thread::sleep(Duration::from_millis(20));
+        assert!(cache.is_stale());
+    }
+
+    #[test]
+    fn test_namespace_tree_cache_multiple_namespaces_per_pid() {
+        let mut cache = NamespaceTreeCache::new(Duration::from_secs(10));
+        let mut proc_cache = HashMap::new();
+        
+        let mut ns = HashMap::new();
+        ns.insert("mnt".to_string(), 4026531840);
+        ns.insert("net".to_string(), 4026531992);
+        ns.insert("uts".to_string(), 4026531838);
+        ns.insert("ipc".to_string(), 4026531839);
+        
+        proc_cache.insert(1, make_entry(1, ns));
+        
+        cache.rebuild_from(&proc_cache);
+        
+        assert_eq!(cache.num_entries(), 4);
+        assert_eq!(cache.pids_in("mnt", 4026531840), vec![1]);
+        assert_eq!(cache.pids_in("net", 4026531992), vec![1]);
+        assert_eq!(cache.pids_in("uts", 4026531838), vec![1]);
+        assert_eq!(cache.pids_in("ipc", 4026531839), vec![1]);
+    }
+}

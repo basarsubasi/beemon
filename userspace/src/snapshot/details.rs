@@ -281,3 +281,192 @@ pub fn resolve_children(parent_pid: u32, processes: &HashMap<u32, Process>) -> V
     children.sort_by_key(|p| p.pid);
     children
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::snapshot::namespace_tree_cache::NamespaceTreeCache;
+    use std::time::Duration;
+
+    fn make_process(pid: u32, ppid: u32) -> Process {
+        Process {
+            pid,
+            ppid,
+            name: format!("process_{}", pid),
+            state: "S".to_string(),
+            memory_usage_bytes: 1024,
+            cpu_usage_percent: 0.0,
+            memory_limit_bytes: 0,
+            cpu_quota_us: 0,
+            cpu_period_us: 0,
+            pids_limit: 0,
+            namespaces: vec![],
+            open_files: vec![],
+            active_connections: vec![],
+            io_read_bytes: 0,
+            io_write_bytes: 0,
+            net_rx_bytes: 0,
+            net_tx_bytes: 0,
+        }
+    }
+
+    #[test]
+    fn test_resolve_children_empty() {
+        let processes = HashMap::new();
+        let children = resolve_children(1, &processes);
+        assert!(children.is_empty());
+    }
+
+    #[test]
+    fn test_resolve_children_no_children() {
+        let mut processes = HashMap::new();
+        processes.insert(1, make_process(1, 0));
+        processes.insert(2, make_process(2, 0));
+        processes.insert(3, make_process(3, 0));
+        
+        let children = resolve_children(1, &processes);
+        assert!(children.is_empty());
+    }
+
+    #[test]
+    fn test_resolve_children_with_children() {
+        let mut processes = HashMap::new();
+        processes.insert(1, make_process(1, 0));
+        processes.insert(2, make_process(2, 1));
+        processes.insert(3, make_process(3, 1));
+        processes.insert(4, make_process(4, 2));
+        
+        let children = resolve_children(1, &processes);
+        assert_eq!(children.len(), 2);
+        assert_eq!(children[0].pid, 2);
+        assert_eq!(children[1].pid, 3);
+    }
+
+    #[test]
+    fn test_resolve_children_sorted() {
+        let mut processes = HashMap::new();
+        processes.insert(1, make_process(1, 0));
+        processes.insert(100, make_process(100, 1));
+        processes.insert(50, make_process(50, 1));
+        processes.insert(200, make_process(200, 1));
+        
+        let children = resolve_children(1, &processes);
+        assert_eq!(children.len(), 3);
+        assert_eq!(children[0].pid, 50);
+        assert_eq!(children[1].pid, 100);
+        assert_eq!(children[2].pid, 200);
+    }
+
+    #[test]
+    fn test_resolve_children_multiple_parents() {
+        let mut processes = HashMap::new();
+        processes.insert(1, make_process(1, 0));
+        processes.insert(2, make_process(2, 1));
+        processes.insert(3, make_process(3, 2));
+        processes.insert(4, make_process(4, 2));
+        processes.insert(5, make_process(5, 3));
+        
+        let children_of_1 = resolve_children(1, &processes);
+        assert_eq!(children_of_1.len(), 1);
+        assert_eq!(children_of_1[0].pid, 2);
+        
+        let children_of_2 = resolve_children(2, &processes);
+        assert_eq!(children_of_2.len(), 2);
+        assert_eq!(children_of_2[0].pid, 3);
+        assert_eq!(children_of_2[1].pid, 4);
+        
+        let children_of_3 = resolve_children(3, &processes);
+        assert_eq!(children_of_3.len(), 1);
+        assert_eq!(children_of_3[0].pid, 5);
+    }
+
+    #[test]
+    fn test_read_namespace_details_with_reference_pid() {
+        let ns_tree = NamespaceTreeCache::new(Duration::from_secs(10));
+        
+        let result = read_namespace_details("mnt", "4026531840", 1, &ns_tree);
+        
+        assert_eq!(result.ns_type, "mnt");
+        assert_eq!(result.ns_inode, "4026531840");
+        // mount_info, net_links, etc. may be empty or have content depending on system
+    }
+
+    #[test]
+    fn test_read_namespace_details_zero_pid_not_found() {
+        let ns_tree = NamespaceTreeCache::new(Duration::from_secs(10));
+        
+        let result = read_namespace_details("mnt", "9999999", 0, &ns_tree);
+        
+        assert_eq!(result.ns_type, "mnt");
+        assert_eq!(result.ns_inode, "9999999");
+        assert!(result.mount_info.is_empty());
+        assert!(result.net_links.is_empty());
+        assert!(result.net_routes.is_empty());
+        assert!(result.uts_info.is_empty());
+        assert!(result.user_maps.is_empty());
+    }
+
+    #[test]
+    fn test_read_namespace_details_invalid_inode() {
+        let ns_tree = NamespaceTreeCache::new(Duration::from_secs(10));
+        
+        let result = read_namespace_details("mnt", "not_a_number", 0, &ns_tree);
+        
+        assert_eq!(result.ns_type, "mnt");
+        assert_eq!(result.ns_inode, "not_a_number");
+        assert!(result.mount_info.is_empty());
+    }
+
+    #[test]
+    fn test_read_file_string_nonexistent() {
+        let result = read_file_string("/nonexistent/path/to/file");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_read_file_string_existing() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+        
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, "test content").unwrap();
+        
+        let result = read_file_string(tmp.path().to_str().unwrap());
+        assert_eq!(result, "test content\n");
+    }
+
+    #[test]
+    fn test_read_uts_nonexistent_pid() {
+        let result = read_uts(999999999);
+        assert!(result.contains("hostname="));
+        assert!(result.contains("domainname="));
+    }
+
+    #[test]
+    fn test_read_user_maps_nonexistent_pid() {
+        let result = read_user_maps(999999999);
+        assert!(result.contains("uid_map:"));
+        assert!(result.contains("gid_map:"));
+    }
+
+    #[test]
+    fn test_enrich_nonexistent_pid() {
+        let mut process = make_process(999999999, 0);
+        enrich(&mut process);
+        
+        assert!(process.open_files.is_empty());
+        assert!(process.active_connections.is_empty());
+    }
+
+    #[test]
+    fn test_read_open_files_pub_nonexistent_pid() {
+        let files = read_open_files_pub(999999999);
+        assert!(files.is_empty());
+    }
+
+    #[test]
+    fn test_read_active_connections_pub_nonexistent_pid() {
+        let connections = read_active_connections_pub(999999999);
+        assert!(connections.is_empty());
+    }
+}

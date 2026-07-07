@@ -156,3 +156,275 @@ fn compute_rates(
 
     (cumulative, host_rates)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bpf::types::IoStat;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn test_host_io_rates_default() {
+        let rates = HostIoRates::default();
+        assert_eq!(rates.io_read_bytes_per_sec, 0);
+        assert_eq!(rates.io_write_bytes_per_sec, 0);
+        assert_eq!(rates.net_rx_bytes_per_sec, 0);
+        assert_eq!(rates.net_tx_bytes_per_sec, 0);
+    }
+
+    #[test]
+    fn test_rate_snapshot_default() {
+        let snap = RateSnapshot::default();
+        assert!(snap.cumulative_io.is_empty());
+        assert!(snap.flows.is_empty());
+        assert_eq!(snap.host_rates.io_read_bytes_per_sec, 0);
+    }
+
+    #[test]
+    fn test_compute_rates_first_sample() {
+        let prev_io = HashMap::new();
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let now = Instant::now();
+        let (cumulative, rates) = compute_rates(&prev_io, &new_io, None, now);
+
+        // First sample should have zero rates
+        assert_eq!(rates.io_read_bytes_per_sec, 0);
+        assert_eq!(rates.io_write_bytes_per_sec, 0);
+        assert_eq!(rates.net_rx_bytes_per_sec, 0);
+        assert_eq!(rates.net_tx_bytes_per_sec, 0);
+
+        // But cumulative should have the values
+        assert_eq!(cumulative.len(), 1);
+        let stat = cumulative.get(&1234).unwrap();
+        assert_eq!(stat.file_read_bytes, 1000);
+        assert_eq!(stat.file_write_bytes, 500);
+    }
+
+    #[test]
+    fn test_compute_rates_with_delta() {
+        let mut prev_io = HashMap::new();
+        prev_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 2000,  // +1000
+            file_write_bytes: 1500, // +1000
+            net_rx_bytes: 4000,     // +2000
+            net_tx_bytes: 3000,     // +2000
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_secs(1); // 1 second elapsed
+
+        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // Rates should be delta / elapsed_time
+        assert_eq!(rates.io_read_bytes_per_sec, 1000);
+        assert_eq!(rates.io_write_bytes_per_sec, 1000);
+        assert_eq!(rates.net_rx_bytes_per_sec, 2000);
+        assert_eq!(rates.net_tx_bytes_per_sec, 2000);
+
+        // Cumulative should have new values
+        let stat = cumulative.get(&1234).unwrap();
+        assert_eq!(stat.file_read_bytes, 2000);
+    }
+
+    #[test]
+    fn test_compute_rates_multiple_pids() {
+        let mut prev_io = HashMap::new();
+        prev_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+        prev_io.insert(5678, IoStat {
+            file_read_bytes: 2000,
+            file_write_bytes: 1000,
+            net_rx_bytes: 4000,
+            net_tx_bytes: 2000,
+        });
+
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 2000,  // +1000
+            file_write_bytes: 1500, // +1000
+            net_rx_bytes: 4000,     // +2000
+            net_tx_bytes: 3000,     // +2000
+        });
+        new_io.insert(5678, IoStat {
+            file_read_bytes: 3000,  // +1000
+            file_write_bytes: 2000, // +1000
+            net_rx_bytes: 6000,     // +2000
+            net_tx_bytes: 4000,     // +2000
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_secs(1);
+
+        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // Host rates should sum deltas from all PIDs
+        assert_eq!(rates.io_read_bytes_per_sec, 2000);  // 1000 + 1000
+        assert_eq!(rates.io_write_bytes_per_sec, 2000); // 1000 + 1000
+        assert_eq!(rates.net_rx_bytes_per_sec, 4000);   // 2000 + 2000
+        assert_eq!(rates.net_tx_bytes_per_sec, 4000);   // 2000 + 2000
+
+        // Both PIDs should be in cumulative
+        assert_eq!(cumulative.len(), 2);
+    }
+
+    #[test]
+    fn test_compute_rates_new_pid() {
+        let prev_io = HashMap::new();
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_secs(1);
+
+        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // New PID's entire cumulative is treated as delta
+        assert_eq!(rates.io_read_bytes_per_sec, 1000);
+        assert_eq!(rates.io_write_bytes_per_sec, 500);
+        assert_eq!(rates.net_rx_bytes_per_sec, 2000);
+        assert_eq!(rates.net_tx_bytes_per_sec, 1000);
+
+        assert_eq!(cumulative.len(), 1);
+    }
+
+    #[test]
+    fn test_compute_rates_pid_disappeared() {
+        let mut prev_io = HashMap::new();
+        prev_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let new_io = HashMap::new(); // PID 1234 disappeared
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_secs(1);
+
+        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // No new data, so rates should be zero
+        assert_eq!(rates.io_read_bytes_per_sec, 0);
+        assert_eq!(rates.io_write_bytes_per_sec, 0);
+        assert_eq!(rates.net_rx_bytes_per_sec, 0);
+        assert_eq!(rates.net_tx_bytes_per_sec, 0);
+
+        // Cumulative should be empty
+        assert!(cumulative.is_empty());
+    }
+
+    #[test]
+    fn test_compute_rates_saturating_subtraction() {
+        // Test that we handle counter wraparound or LRU eviction correctly
+        let mut prev_io = HashMap::new();
+        prev_io.insert(1234, IoStat {
+            file_read_bytes: 5000,
+            file_write_bytes: 3000,
+            net_rx_bytes: 8000,
+            net_tx_bytes: 4000,
+        });
+
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 1000,  // Less than prev (counter reset)
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_secs(1);
+
+        let (_cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // Saturating subtraction should give 0, not underflow
+        assert_eq!(rates.io_read_bytes_per_sec, 0);
+        assert_eq!(rates.io_write_bytes_per_sec, 0);
+        assert_eq!(rates.net_rx_bytes_per_sec, 0);
+        assert_eq!(rates.net_tx_bytes_per_sec, 0);
+    }
+
+    #[test]
+    fn test_compute_rates_fractional_elapsed() {
+        let mut prev_io = HashMap::new();
+        prev_io.insert(1234, IoStat {
+            file_read_bytes: 0,
+            file_write_bytes: 0,
+            net_rx_bytes: 0,
+            net_tx_bytes: 0,
+        });
+
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_millis(500); // 0.5 seconds
+
+        let (_cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // Rates should be doubled (same delta in half the time)
+        assert_eq!(rates.io_read_bytes_per_sec, 2000);
+        assert_eq!(rates.io_write_bytes_per_sec, 1000);
+        assert_eq!(rates.net_rx_bytes_per_sec, 4000);
+        assert_eq!(rates.net_tx_bytes_per_sec, 2000);
+    }
+
+    #[test]
+    fn test_compute_rates_very_small_elapsed() {
+        let mut prev_io = HashMap::new();
+        prev_io.insert(1234, IoStat {
+            file_read_bytes: 0,
+            file_write_bytes: 0,
+            net_rx_bytes: 0,
+            net_tx_bytes: 0,
+        });
+
+        let mut new_io = HashMap::new();
+        new_io.insert(1234, IoStat {
+            file_read_bytes: 1000,
+            file_write_bytes: 500,
+            net_rx_bytes: 2000,
+            net_tx_bytes: 1000,
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_micros(1); // Very small elapsed
+
+        let (_cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        // Should not panic or produce infinity; the max(0.0001) guard kicks in
+        // With elapsed clamped to 0.0001s, rates would be huge but finite
+        assert!(rates.io_read_bytes_per_sec > 0);
+        assert!(rates.io_write_bytes_per_sec > 0);
+    }
+}

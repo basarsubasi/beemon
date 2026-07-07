@@ -152,6 +152,7 @@ dependencies = [
  "procfs",
  "prost",
  "prost-build",
+ "tempfile",
  "thiserror",
  "tokio",
  "tokio-stream",

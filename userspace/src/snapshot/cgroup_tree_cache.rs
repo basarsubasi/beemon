@@ -102,3 +102,130 @@ fn read_cgroup_limits(cgroup_path: &str) -> CgroupLimits {
 pub fn no_limits() -> CgroupLimits {
     CgroupLimits::default()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cgroup_limits_default() {
+        let limits = CgroupLimits::default();
+        assert_eq!(limits.memory_limit_bytes, 0);
+        assert_eq!(limits.cpu_quota_us, 0);
+        assert_eq!(limits.cpu_period_us, 0);
+        assert_eq!(limits.pids_limit, 0);
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_new() {
+        let cache = CgroupTreeCache::new(Duration::from_secs(10));
+        assert_eq!(cache.len(), 0);
+        assert_eq!(cache.total_paths_seen, 0);
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_get_or_load_none_path() {
+        let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
+        let result = cache.get_or_load(&None);
+        assert!(result.is_none());
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_get_or_load_nonexistent_path() {
+        let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
+        let path = Some("nonexistent/cgroup/path".to_string());
+        let result = cache.get_or_load(&path);
+        
+        // Should return Some with zero values (file doesn't exist)
+        assert!(result.is_some());
+        let limits = result.unwrap();
+        assert_eq!(limits.memory_limit_bytes, 0);
+        assert_eq!(limits.cpu_quota_us, 0);
+        assert_eq!(limits.cpu_period_us, 0);
+        assert_eq!(limits.pids_limit, 0);
+        
+        // Should be cached now
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.total_paths_seen, 1);
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_caching() {
+        let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
+        let path = Some("test/path".to_string());
+        
+        // First call
+        let result1 = cache.get_or_load(&path);
+        assert!(result1.is_some());
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.total_paths_seen, 1);
+        
+        // Second call should use cache
+        let result2 = cache.get_or_load(&path);
+        assert!(result2.is_some());
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.total_paths_seen, 1); // Still 1, not reloaded
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_invalidate() {
+        let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
+        let path = Some("test/path".to_string());
+        
+        // Load into cache
+        cache.get_or_load(&path);
+        assert_eq!(cache.len(), 1);
+        
+        // Invalidate
+        cache.invalidate("test/path");
+        assert_eq!(cache.len(), 0);
+        
+        // Next load should reload
+        cache.get_or_load(&path);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.total_paths_seen, 2); // Reloaded
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_multiple_paths() {
+        let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
+        
+        let path1 = Some("path1".to_string());
+        let path2 = Some("path2".to_string());
+        let path3 = Some("path3".to_string());
+        
+        cache.get_or_load(&path1);
+        cache.get_or_load(&path2);
+        cache.get_or_load(&path3);
+        
+        assert_eq!(cache.len(), 3);
+        assert_eq!(cache.total_paths_seen, 3);
+    }
+
+    #[test]
+    fn test_cgroup_tree_cache_ttl_expiry() {
+        let mut cache = CgroupTreeCache::new(Duration::from_millis(10));
+        let path = Some("test/path".to_string());
+        
+        // First load
+        cache.get_or_load(&path);
+        assert_eq!(cache.total_paths_seen, 1);
+        
+        // Wait for TTL to expire
+        std::thread::sleep(Duration::from_millis(20));
+        
+        // Should reload, but total_paths_seen stays at 1 (only counts new paths, not reloads)
+        cache.get_or_load(&path);
+        assert_eq!(cache.total_paths_seen, 1);
+    }
+
+    #[test]
+    fn test_no_limits() {
+        let limits = no_limits();
+        assert_eq!(limits.memory_limit_bytes, 0);
+        assert_eq!(limits.cpu_quota_us, 0);
+        assert_eq!(limits.cpu_period_us, 0);
+        assert_eq!(limits.pids_limit, 0);
+    }
+}

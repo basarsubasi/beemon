@@ -4,55 +4,34 @@
 
 #![allow(clippy::too_many_arguments)]
 
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use anyhow::{Context, Result};
+use tokio::sync::RwLock;
+use tonic::transport::Server;
+use tracing_subscriber::EnvFilter;
+
 use beemon_daemon::{
     bpf::loader::BpfHandle,
     config::Config,
     grpc::BeemonServiceImpl,
     pb::pb::beemon_service_server::BeemonServiceServer,
-    rates::{spawn as spawn_rates, BpfStateMaps},
+    rates::{spawn as spawn_rates, BpfStateMaps, RateSnapshot},
     ringbuf,
-    snapshot::{cgroup_tree_cache::CgroupTreeCache, namespace_tree_cache::NamespaceTreeCache, proc_cache::ProcCache, CacheInvalidators},
+    snapshot::{
+        cgroup_tree_cache::CgroupTreeCache, namespace_tree_cache::NamespaceTreeCache,
+        proc_cache::ProcCache, scanner, CacheInvalidators, SnapshotCache,
+    },
+    stream::StreamRegistry,
 };
-
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
-use anyhow::{Context, Result};
-use tokio::sync::RwLock;
-use tonic::transport::Server;
-use tracing_subscriber::EnvFilter;
-
-use beemon_daemon::rates::RateSnapshot;
-use beemon_daemon::snapshot::scanner;
-use beemon_daemon::snapshot::SnapshotCache;
-use beemon_daemon::stream::StreamRegistry;
-
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
-use anyhow::{Context, Result};
-use tokio::sync::RwLock;
-use tonic::transport::Server;
-use tracing_subscriber::EnvFilter;
-
-use crate::bpf::loader::BpfHandle;
-use crate::config::Config;
-use crate::grpc::BeemonServiceImpl;
-use crate::pb::pb::beemon_service_server::BeemonServiceServer;
-use crate::rates::{spawn as spawn_rates, BpfStateMaps};
-use crate::snapshot::cgroup_tree_cache::CgroupTreeCache;
-use crate::snapshot::namespace_tree_cache::NamespaceTreeCache;
-use crate::snapshot::proc_cache::ProcCache;
-use crate::snapshot::scanner;
-use crate::snapshot::CacheInvalidators;
-use crate::stream::StreamRegistry;
 
 fn main() -> Result<()> {
     let cfg = Config::from_env();
 
     // tracing_subscriber: honor BEEMON_LOG_LEVEL / RUST_LOG.
-    let directive = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&cfg.log_directive));
+    let directive =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&cfg.log_directive));
     tracing_subscriber::fmt()
         .with_env_filter(directive)
         .with_target(false)
@@ -81,10 +60,8 @@ async fn async_main(cfg: Config) -> Result<()> {
         .context("taking target_pids/io_stats/net_flows maps")?;
 
     // --- 3. Build shared state ---------------------------------------
-    let snapshot_cache: Arc<RwLock<SnapshotCache>> =
-        Arc::new(RwLock::new(SnapshotCache::default()));
-    let rates_snapshot: Arc<RwLock<RateSnapshot>> =
-        Arc::new(RwLock::new(RateSnapshot::default()));
+    let snapshot_cache: Arc<RwLock<SnapshotCache>> = Arc::new(RwLock::new(SnapshotCache::default()));
+    let rates_snapshot: Arc<RwLock<RateSnapshot>> = Arc::new(RwLock::new(RateSnapshot::default()));
 
     let proc_cache = Arc::new(Mutex::new(ProcCache::new(Duration::from_secs(10))));
     let cgroup_tree = Arc::new(Mutex::new(CgroupTreeCache::new(Duration::from_secs(10))));

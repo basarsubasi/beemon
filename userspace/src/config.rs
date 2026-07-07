@@ -58,3 +58,87 @@ impl Config {
         format!("{}:{}", self.grpc_addr, self.grpc_port)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let cfg = Config::default();
+        assert_eq!(cfg.grpc_addr, "0.0.0.0");
+        assert_eq!(cfg.grpc_port, 50051);
+        assert_eq!(cfg.rates_poll_secs, 5);
+        assert_eq!(cfg.event_limit, 150);
+        assert_eq!(cfg.log_directive, "warn");
+    }
+
+    #[test]
+    fn test_bind_addr() {
+        let cfg = Config::default();
+        assert_eq!(cfg.bind_addr(), "0.0.0.0:50051");
+    }
+
+    #[test]
+    fn test_from_env_all_vars() {
+        std::env::set_var("BEEMON_GRPC_ADDR", "127.0.0.1");
+        std::env::set_var("BEEMON_GRPC_PORT", "9000");
+        std::env::set_var("BEEMON_RATES_POLL_SECS", "10");
+        std::env::set_var("BEEMON_EVENT_LIMIT", "200");
+        std::env::set_var("BEEMON_LOG_LEVEL", "debug");
+
+        let cfg = Config::from_env();
+        assert_eq!(cfg.grpc_addr, "127.0.0.1");
+        assert_eq!(cfg.grpc_port, 9000);
+        assert_eq!(cfg.rates_poll_secs, 10);
+        assert_eq!(cfg.event_limit, 200);
+        assert_eq!(cfg.log_directive, "debug");
+
+        // Cleanup
+        std::env::remove_var("BEEMON_GRPC_ADDR");
+        std::env::remove_var("BEEMON_GRPC_PORT");
+        std::env::remove_var("BEEMON_RATES_POLL_SECS");
+        std::env::remove_var("BEEMON_EVENT_LIMIT");
+        std::env::remove_var("BEEMON_LOG_LEVEL");
+    }
+
+    #[test]
+    fn test_from_env_partial() {
+        // Clear all vars first
+        std::env::remove_var("BEEMON_GRPC_ADDR");
+        std::env::remove_var("BEEMON_GRPC_PORT");
+        std::env::remove_var("BEEMON_RATES_POLL_SECS");
+        std::env::remove_var("BEEMON_EVENT_LIMIT");
+        std::env::remove_var("BEEMON_LOG_LEVEL");
+
+        // Set only some
+        std::env::set_var("BEEMON_GRPC_PORT", "8080");
+        std::env::set_var("BEEMON_LOG_LEVEL", "warn");
+
+        let cfg = Config::from_env();
+        assert_eq!(cfg.grpc_addr, "0.0.0.0"); // default
+        assert_eq!(cfg.grpc_port, 8080); // from env
+        assert_eq!(cfg.rates_poll_secs, 5); // default
+        assert_eq!(cfg.event_limit, 150); // default
+        assert_eq!(cfg.log_directive, "warn"); // from env
+
+        // Cleanup
+        std::env::remove_var("BEEMON_GRPC_PORT");
+        std::env::remove_var("BEEMON_LOG_LEVEL");
+    }
+
+    #[test]
+    fn test_from_env_invalid_values() {
+        std::env::set_var("BEEMON_GRPC_PORT", "not_a_number");
+        std::env::set_var("BEEMON_RATES_POLL_SECS", "invalid");
+
+        let cfg = Config::from_env();
+        // Should fall back to defaults for invalid values
+        assert_eq!(cfg.grpc_port, 50051);
+        assert_eq!(cfg.rates_poll_secs, 5);
+
+        // Cleanup
+        std::env::remove_var("BEEMON_GRPC_PORT");
+        std::env::remove_var("BEEMON_RATES_POLL_SECS");
+    }
+}

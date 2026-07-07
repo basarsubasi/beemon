@@ -70,6 +70,10 @@ impl Drop for SubscriptionGuard {
     }
 }
 
+// Note: Unit tests for StreamRegistry require a real BPF map (OwnedTargetPids)
+// which cannot be easily mocked. Stream registry behavior is tested via
+// integration tests in tests/bpf_integration.rs that load actual BPF programs.
+
 impl StreamRegistry {
     pub fn new(target_pids: OwnedTargetPids) -> Self {
         Self {

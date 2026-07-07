@@ -37,6 +37,7 @@ anyhow = "1"
 
 [dev-dependencies]
 tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "sync", "time", "test-util"] }
+tempfile = "3"
 
 [profile.release]
 opt-level = "z"

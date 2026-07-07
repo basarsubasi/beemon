@@ -127,3 +127,202 @@ pub fn net_flows_all(map: &OwnedNetFlows) -> Result<Vec<(NetFlowKey, NetFlowStat
     }
     Ok(out)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bpf::types::{IoStat, NetFlowKey, NetFlowStat};
+
+    #[test]
+    fn test_io_stat_default() {
+        let stat = IoStat::default();
+        assert_eq!(stat.file_read_bytes, 0);
+        assert_eq!(stat.file_write_bytes, 0);
+        assert_eq!(stat.net_rx_bytes, 0);
+        assert_eq!(stat.net_tx_bytes, 0);
+    }
+
+    #[test]
+    fn test_net_flow_key_equality() {
+        let key1 = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f, // 127.0.0.1
+            daddr: 0x08080808, // 8.8.8.8
+            sport: 12345,
+            dport: 80,
+            family: 2, // AF_INET
+            protocol: 6, // TCP
+        };
+
+        let key2 = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 80,
+            family: 2,
+            protocol: 6,
+        };
+
+        assert_eq!(key1, key2);
+    }
+
+    #[test]
+    fn test_net_flow_key_inequality() {
+        let key1 = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 80,
+            family: 2,
+            protocol: 6,
+        };
+
+        let key2 = NetFlowKey {
+            pid: 5678, // Different PID
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 80,
+            family: 2,
+            protocol: 6,
+        };
+
+        assert_ne!(key1, key2);
+    }
+
+    #[test]
+    fn test_net_flow_stat_default() {
+        let stat = NetFlowStat {
+            rx_bytes: 0,
+            tx_bytes: 0,
+            rx_packets: 0,
+            tx_packets: 0,
+            dns_query: [0u8; 256],
+        };
+        assert_eq!(stat.rx_bytes, 0);
+        assert_eq!(stat.tx_bytes, 0);
+        assert_eq!(stat.rx_packets, 0);
+        assert_eq!(stat.tx_packets, 0);
+    }
+
+    #[test]
+    fn test_net_flow_stat_accumulation() {
+        let stat1 = NetFlowStat {
+            rx_bytes: 1000,
+            tx_bytes: 500,
+            rx_packets: 10,
+            tx_packets: 5,
+            dns_query: [0u8; 256],
+        };
+
+        let stat2 = NetFlowStat {
+            rx_bytes: 2000,
+            tx_bytes: 1500,
+            rx_packets: 20,
+            tx_packets: 15,
+            dns_query: [0u8; 256],
+        };
+
+        // Simulate accumulation
+        let total = NetFlowStat {
+            rx_bytes: stat1.rx_bytes + stat2.rx_bytes,
+            tx_bytes: stat1.tx_bytes + stat2.tx_bytes,
+            rx_packets: stat1.rx_packets + stat2.rx_packets,
+            tx_packets: stat1.tx_packets + stat2.tx_packets,
+            dns_query: [0u8; 256],
+        };
+
+        assert_eq!(total.rx_bytes, 3000);
+        assert_eq!(total.tx_bytes, 2000);
+        assert_eq!(total.rx_packets, 30);
+        assert_eq!(total.tx_packets, 20);
+    }
+
+    #[test]
+    fn test_io_stat_accumulation() {
+        let stat1 = IoStat {
+            file_read_bytes: 1024,
+            file_write_bytes: 512,
+            net_rx_bytes: 2048,
+            net_tx_bytes: 1024,
+        };
+
+        let stat2 = IoStat {
+            file_read_bytes: 2048,
+            file_write_bytes: 1024,
+            net_rx_bytes: 4096,
+            net_tx_bytes: 2048,
+        };
+
+        let total = IoStat {
+            file_read_bytes: stat1.file_read_bytes + stat2.file_read_bytes,
+            file_write_bytes: stat1.file_write_bytes + stat2.file_write_bytes,
+            net_rx_bytes: stat1.net_rx_bytes + stat2.net_rx_bytes,
+            net_tx_bytes: stat1.net_tx_bytes + stat2.net_tx_bytes,
+        };
+
+        assert_eq!(total.file_read_bytes, 3072);
+        assert_eq!(total.file_write_bytes, 1536);
+        assert_eq!(total.net_rx_bytes, 6144);
+        assert_eq!(total.net_tx_bytes, 3072);
+    }
+
+    #[test]
+    fn test_net_flow_key_hash() {
+        use std::collections::HashSet;
+
+        let key1 = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 80,
+            family: 2,
+            protocol: 6,
+        };
+
+        let key2 = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 80,
+            family: 2,
+            protocol: 6,
+        };
+
+        let mut set = HashSet::new();
+        set.insert(key1);
+        set.insert(key2);
+
+        // Should only have one entry since key1 == key2
+        assert_eq!(set.len(), 1);
+    }
+
+    #[test]
+    fn test_net_flow_key_different_protocols() {
+        let tcp_key = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 80,
+            family: 2,
+            protocol: 6, // TCP
+        };
+
+        let udp_key = NetFlowKey {
+            pid: 1234,
+            saddr: 0x0100007f,
+            daddr: 0x08080808,
+            sport: 12345,
+            dport: 53,
+            family: 2,
+            protocol: 17, // UDP
+        };
+
+        assert_ne!(tcp_key, udp_key);
+    }
+}
