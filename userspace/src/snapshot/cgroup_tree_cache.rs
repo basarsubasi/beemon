@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::cgroup::{read_cpu_max, read_u64_max};
+use super::cgroup::{read_cpu_max, read_u64_max, read_u64_max_v1};
 
 /// Limits for one cgroup. Memory/CPU/PID values; `0` conventionally means
 /// "no limit" (proto convention).
@@ -83,44 +83,111 @@ impl CgroupTreeCache {
     }
 }
 
-fn find_cgroup_dir(base: &Path, cgroup_path: &str, pid: u32) -> PathBuf {
-    // 1. Direct from /proc/(pid)/cgroup
-    let p1 = base.join(cgroup_path);
-    if p1.exists() && (p1.join("memory.max").exists() || p1.join("cpu.max").exists()) {
-        return p1;
-    }
-    
-    // 2. Docker systemd slice mapping: docker/ID -> system.slice/docker-ID.scope
+/// Check if a directory looks like a cgroup v2 leaf (has v2 resource files).
+fn has_v2_limits(dir: &Path) -> bool {
+    dir.join("memory.max").exists() || dir.join("cpu.max").exists() || dir.join("pids.max").exists()
+}
+
+/// Check if a directory looks like a cgroup v1 leaf (has v1 resource files).
+fn has_v1_limits(dir: &Path) -> bool {
+    dir.join("memory.limit_in_bytes").exists()
+        || dir.join("cpu.cfs_quota_us").exists()
+        || dir.join("pids.max").exists()
+}
+
+/// Translate between cgroup path representations commonly used by container
+/// runtimes under systemd. Docker uses `docker/<id>`, systemd models it as
+/// `system.slice/docker-<id>.scope`. Containerd uses
+/// `system.slice/containerd-<id>.scope` or `kubepods-*`. This helper
+/// generates alternative path forms to try when the raw path doesn't resolve.
+fn runtime_cgroup_alternatives(cgroup_path: &str) -> Vec<String> {
+    let mut alts = Vec::new();
+    // docker/<id> <-> system.slice/docker-<id>.scope
     if let Some(id) = cgroup_path.strip_prefix("docker/") {
-        let p2 = base.join(format!("system.slice/docker-{}.scope", id));
-        if p2.exists() {
-            return p2;
-        }
-    } else if let Some(id) = cgroup_path.strip_prefix("system.slice/docker-") {
-        if let Some(end) = id.strip_suffix(".scope") {
-            let p2 = base.join(format!("docker/{}", end));
-            if p2.exists() {
-                return p2;
-            }
+        alts.push(format!("system.slice/docker-{}.scope", id));
+    }
+    if let Some(rest) = cgroup_path.strip_prefix("system.slice/docker-") {
+        if let Some(id) = rest.strip_suffix(".scope") {
+            alts.push(format!("docker/{}", id));
         }
     }
-    
-    // 3. /sys/fs/cgroup/(pid)
-    let p3 = base.join(pid.to_string());
-    if p3.exists() {
-        return p3;
+    // containerd: system.slice/containerd-<id>.scope
+    // Nothing to reverse-map; the direct path is already the systemd form.
+    // k8s: kubepods/... — already a direct path, no remapping needed.
+    alts
+}
+
+fn find_cgroup_dir(base: &Path, cgroup_path: &str, pid: u32) -> PathBuf {
+    // Collect candidate paths to try, in priority order.
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    // 1. Direct path from /proc/<pid>/cgroup
+    candidates.push(base.join(cgroup_path));
+
+    // 2. Runtime-specific alternative paths (Docker systemd remapping, etc.)
+    for alt in runtime_cgroup_alternatives(cgroup_path) {
+        candidates.push(base.join(alt));
     }
-    
-    // Fallback to the direct path, even if it doesn't exist, to let read_u64_max handle defaults.
-    p1
+
+    // 3. If the path contains a leading segment like "system.slice/" or
+    //    "user.slice/", try stripping it (some systems report the full
+    //    systemd path but the cgroup is mounted at a different mountpoint).
+    {
+        let stripped: String = cgroup_path.split('/').skip(1).collect::<Vec<_>>().join("/");
+        if !stripped.is_empty() && stripped != cgroup_path {
+            candidates.push(base.join(stripped));
+        }
+    }
+
+    // 4. /sys/fs/cgroup/<pid> (used by some cgroup v1 layouts)
+    candidates.push(base.join(pid.to_string()));
+
+    // Try each candidate: prefer directories that have actual resource files.
+    for dir in &candidates {
+        if dir.exists() && (has_v2_limits(dir) || has_v1_limits(dir)) {
+            return dir.clone();
+        }
+    }
+
+    // Fallback: return the first candidate even if it doesn't exist, so
+    // read_u64_max/read_cpu_max handle the missing-file case gracefully.
+    candidates.into_iter().next().unwrap_or_else(|| base.join(cgroup_path))
 }
 
 fn read_cgroup_limits(cgroup_path: &str, pid: u32) -> CgroupLimits {
     let base = PathBuf::from("/sys/fs/cgroup");
     let cgroup_dir = find_cgroup_dir(&base, cgroup_path, pid);
-    let memory_limit_bytes = read_u64_max(&cgroup_dir.join("memory.max"));
-    let (cpu_quota_us, cpu_period_us) = read_cpu_max(&cgroup_dir.join("cpu.max"));
-    let pids_limit = read_u64_max(&cgroup_dir.join("pids.max"));
+
+    // Try cgroup v2 files first, then fall back to cgroup v1 files.
+    let memory_limit_bytes = {
+        let v2 = read_u64_max(&cgroup_dir.join("memory.max"));
+        if v2 != 0 || !cgroup_dir.join("memory.limit_in_bytes").exists() {
+            v2
+        } else {
+            read_u64_max_v1(&cgroup_dir.join("memory.limit_in_bytes"))
+        }
+    };
+
+    let (cpu_quota_us, cpu_period_us) = {
+        let (v2_quota, v2_period) = read_cpu_max(&cgroup_dir.join("cpu.max"));
+        if v2_quota != 0 || v2_period != 0 || !cgroup_dir.join("cpu.cfs_quota_us").exists() {
+            (v2_quota, v2_period)
+        } else {
+            let quota = read_u64_max_v1(&cgroup_dir.join("cpu.cfs_quota_us"));
+            let period = read_u64_max_v1(&cgroup_dir.join("cpu.cfs_period_us"));
+            (quota, period)
+        }
+    };
+
+    let pids_limit = {
+        let v2 = read_u64_max(&cgroup_dir.join("pids.max"));
+        if v2 != 0 || !cgroup_dir.join("pids.max").exists() {
+            v2
+        } else {
+            read_u64_max_v1(&cgroup_dir.join("pids.limit"))
+        }
+    };
+
     CgroupLimits {
         memory_limit_bytes,
         cpu_quota_us,
@@ -266,33 +333,42 @@ mod tests {
     fn test_find_cgroup_dir() {
         use std::fs;
         use tempfile::tempdir;
-        
+
         let dir = tempdir().unwrap();
         let base_path = dir.path().join("sys/fs/cgroup");
         fs::create_dir_all(&base_path).unwrap();
-        
-        // 1. Test direct path mapping
+
+        // 1. Direct path with v2 resource files
         let p1 = base_path.join("some/direct/path");
         fs::create_dir_all(&p1).unwrap();
         fs::File::create(p1.join("memory.max")).unwrap();
         assert_eq!(find_cgroup_dir(&base_path, "some/direct/path", 123), p1);
 
-        // 2. Test docker/ mapping -> system.slice/docker-*.scope
+        // 2. docker/<id> -> system.slice/docker-<id>.scope (with resource files)
         let p2 = base_path.join("system.slice/docker-abcdef.scope");
         fs::create_dir_all(&p2).unwrap();
+        fs::File::create(p2.join("memory.max")).unwrap();
         assert_eq!(find_cgroup_dir(&base_path, "docker/abcdef", 123), p2);
 
-        // 3. Test system.slice/docker-*.scope -> docker/*
+        // 3. system.slice/docker-<id>.scope -> docker/<id> (with resource files)
         let p3 = base_path.join("docker/12345");
         fs::create_dir_all(&p3).unwrap();
+        fs::File::create(p3.join("cpu.max")).unwrap();
         assert_eq!(find_cgroup_dir(&base_path, "system.slice/docker-12345.scope", 123), p3);
 
-        // 4. Test fallback to pid
+        // 4. Fallback to /sys/fs/cgroup/<pid> (with resource files)
         let p4 = base_path.join("999");
         fs::create_dir_all(&p4).unwrap();
+        fs::File::create(p4.join("memory.max")).unwrap();
         assert_eq!(find_cgroup_dir(&base_path, "missing/path", 999), p4);
 
-        // 5. Test ultimate fallback (path doesn't exist)
+        // 5. Ultimate fallback: no candidate has resource files -> first candidate
         assert_eq!(find_cgroup_dir(&base_path, "not/found", 404), base_path.join("not/found"));
+
+        // 6. cgroup v1 fallback: directory with memory.limit_in_bytes but no v2 files
+        let p6 = base_path.join("v1/path");
+        fs::create_dir_all(&p6).unwrap();
+        fs::File::create(p6.join("memory.limit_in_bytes")).unwrap();
+        assert_eq!(find_cgroup_dir(&base_path, "v1/path", 777), p6);
     }
 }

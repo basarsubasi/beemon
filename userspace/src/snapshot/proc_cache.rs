@@ -144,24 +144,42 @@ fn read_ns_inodes(pid: u32) -> HashMap<String, u64> {
     out
 }
 
-/// Resolve cgroup v2 path for `pid` from `/proc/<pid>/cgroup`. Returns None
-/// on any failure or if the process isn't in a v2 (unified) hierarchy. The
-/// path is returned without a leading slash so it composes cleanly under
+/// Resolve cgroup path for `pid` from `/proc/<pid>/cgroup`. Supports both
+/// cgroup v2 (unified hierarchy, id 0) and cgroup v1 (per-controller trees).
+/// Returns the path without a leading slash so it composes cleanly under
 /// `/sys/fs/cgroup/`.
+///
+/// Strategy:
+///   1. Prefer cgroup v2 (hierarchy id 0, empty controllers) if present.
+///   2. Fall back to cgroup v1 memory controller path (most useful for limits).
+///   3. Fall back to the first available non-empty path.
 pub fn resolve_cgroup_v2_path(pid: u32) -> Option<String> {
     let raw = fs::read_to_string(format!("/proc/{pid}/cgroup")).ok()?;
+    let mut v2_path: Option<String> = None;
+    let mut v1_memory: Option<String> = None;
+    let mut v1_first: Option<String> = None;
+
     for line in raw.lines() {
         // Format: `<hierarchy_id>:<controllers>:<path>`
-        // cgroup v2 (unified) uses hierarchy id 0 and empty controllers.
         let mut parts = line.splitn(3, ':');
-        let h = parts.next()?;
-        let _c = parts.next();
+        let h_id = parts.next()?;
+        let controllers = parts.next().unwrap_or("");
         let path = parts.next()?;
-        if h == "0" && !path.is_empty() {
-            return Some(path.trim_start_matches('/').to_string());
+        if path.is_empty() {
+            continue;
+        }
+        let trimmed = path.trim_start_matches('/').to_string();
+
+        if h_id == "0" && controllers.is_empty() {
+            v2_path = Some(trimmed);
+        } else if controllers.split(',').any(|c| c == "memory") {
+            v1_memory = Some(trimmed);
+        } else if v1_first.is_none() {
+            v1_first = Some(trimmed);
         }
     }
-    None
+
+    v2_path.or(v1_memory).or(v1_first)
 }
 
 #[cfg(test)]

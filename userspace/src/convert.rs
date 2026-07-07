@@ -225,7 +225,7 @@ mod tests {
     fn make_event(pid: u32, ty: u32, ts: u64) -> bpf::EventT {
         let mut e = bpf::EventT {
             pid,
-            tgid: 0,
+            tgid: pid,
             r#type: ty,
             ts,
             ..bpf::EventT::default_via_zeroed()
@@ -233,6 +233,7 @@ mod tests {
         // Explicitly set header — default_via_zeroed already does this, but
         // we set here too so the helper is robust to impl changes.
         e.pid = pid;
+        e.tgid = pid;
         e.r#type = ty;
         e.ts = ts;
         e

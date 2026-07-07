@@ -18,6 +18,25 @@ pub fn read_u64_max(path: &PathBuf) -> u64 {
     s.parse().unwrap_or(0)
 }
 
+/// Cgroup v1 limit reader. v1 files like `memory.limit_in_bytes` use
+/// `9223372036854771712` (or similar huge value) instead of `max` to indicate
+/// "no limit". We treat any value >= 2^62 as "no limit" → 0.
+pub fn read_u64_max_v1(path: &PathBuf) -> u64 {
+    let s = match fs::read_to_string(path) {
+        Ok(s) => s.trim().to_string(),
+        Err(_) => return 0,
+    };
+    if s == "max" {
+        return 0;
+    }
+    let val: u64 = s.parse().unwrap_or(0);
+    // v1 uses a huge value (typically 2^63 - 1 or similar) to mean "no limit"
+    if val >= (1u64 << 62) {
+        return 0;
+    }
+    val
+}
+
 /// `cpu.max` contains `<quota> <period>`. Quota is `max` (no limit) or an
 /// integer; period is always an integer (microseconds).
 pub fn read_cpu_max(path: &PathBuf) -> (u64, u64) {
@@ -69,20 +88,52 @@ mod tests {
         assert_eq!(read_u64_max(&path), 0);
     }
 
-    #[test]
-    fn test_read_u64_max_invalid_content() {
-        let mut tmp = NamedTempFile::new().unwrap();
-        writeln!(tmp, "not_a_number").unwrap();
-        let path = tmp.path().to_path_buf();
-        assert_eq!(read_u64_max(&path), 0);
-    }
-
-    #[test]
+#[test]
     fn test_read_u64_max_zero() {
         let mut tmp = NamedTempFile::new().unwrap();
         writeln!(tmp, "0").unwrap();
         let path = tmp.path().to_path_buf();
         assert_eq!(read_u64_max(&path), 0);
+    }
+
+    #[test]
+    fn test_read_u64_max_v1_with_number() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, "536870912").unwrap();
+        assert_eq!(read_u64_max_v1(&tmp.path().to_path_buf()), 536870912);
+    }
+
+    #[test]
+    fn test_read_u64_max_v1_with_max_literal() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, "max").unwrap();
+        assert_eq!(read_u64_max_v1(&tmp.path().to_path_buf()), 0);
+    }
+
+    #[test]
+    fn test_read_u64_max_v1_with_huge_value_means_no_limit() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, "9223372036854771712").unwrap(); // typical v1 "no limit" sentinel
+        assert_eq!(read_u64_max_v1(&tmp.path().to_path_buf()), 0);
+    }
+
+    #[test]
+    fn test_read_u64_max_v1_nonexistent_file() {
+        assert_eq!(read_u64_max_v1(&PathBuf::from("/nonexistent")), 0);
+    }
+
+    #[test]
+    fn test_read_u64_max_v1_invalid_content() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, "not_a_number").unwrap();
+        assert_eq!(read_u64_max_v1(&tmp.path().to_path_buf()), 0);
+    }
+
+    #[test]
+    fn test_read_u64_max_v1_zero() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, "0").unwrap();
+        assert_eq!(read_u64_max_v1(&tmp.path().to_path_buf()), 0);
     }
 
     #[test]
