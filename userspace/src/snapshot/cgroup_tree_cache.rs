@@ -97,13 +97,19 @@ fn has_v1_limits(base: &Path, rel: &str) -> bool {
 }
 
 /// Translate between cgroup path representations commonly used by container
-/// runtimes under systemd. Docker uses `docker/<id>`, systemd models it as
-/// `system.slice/docker-<id>.scope`. Containerd uses
-/// `system.slice/containerd-<id>.scope` or `kubepods-*`. This helper
-/// generates alternative path forms to try when the raw path doesn't resolve.
+/// runtimes under systemd. This helper generates alternative path forms to try
+/// when the raw path doesn't resolve.
+///
+/// Common patterns:
+/// - Docker systemd: `system.slice/docker-<id>.scope`
+/// - Docker cgroupfs: `docker/<id>`
+/// - Podman systemd: `machine.slice/libpod-<id>.scope` or `user.slice/.../libpod-<id>.scope`
+/// - K8s containerd: `kubepods.slice/.../cri-containerd-<id>.scope` or `kubepods/.../cri-containerd-<id>`
+/// - K8s CRI-O: `kubepods.slice/.../crio-<id>.scope` or `kubepods/.../crio-<id>`
 fn runtime_cgroup_alternatives(cgroup_path: &str) -> Vec<String> {
     let mut alts = Vec::new();
-    // docker/<id> <-> system.slice/docker-<id>.scope
+
+    // Docker: docker/<id> <-> system.slice/docker-<id>.scope
     if let Some(id) = cgroup_path.strip_prefix("docker/") {
         alts.push(format!("system.slice/docker-{}.scope", id));
     }
@@ -112,9 +118,60 @@ fn runtime_cgroup_alternatives(cgroup_path: &str) -> Vec<String> {
             alts.push(format!("docker/{}", id));
         }
     }
-    // containerd: system.slice/containerd-<id>.scope
-    // Nothing to reverse-map; the direct path is already the systemd form.
-    // k8s: kubepods/... — already a direct path, no remapping needed.
+
+    // Podman: libpod-<id>.scope patterns
+    // machine.slice/libpod-<id>.scope <-> libpod/<id>
+    if let Some(rest) = cgroup_path.strip_prefix("machine.slice/libpod-") {
+        if let Some(id) = rest.strip_suffix(".scope") {
+            alts.push(format!("libpod/{}", id));
+        }
+    }
+    if let Some(id) = cgroup_path.strip_prefix("libpod/") {
+        alts.push(format!("machine.slice/libpod-{}.scope", id));
+    }
+
+    // Podman rootless: user.slice/user-<uid>.slice/user@<uid>.service/.../libpod-<id>.scope
+    // Extract libpod ID and try simpler paths
+    if cgroup_path.contains("libpod-") {
+        if let Some(start) = cgroup_path.find("libpod-") {
+            let after = &cgroup_path[start + 7..]; // skip "libpod-"
+            if let Some(end) = after.find(".scope") {
+                let id = &after[..end];
+                alts.push(format!("libpod/{}", id));
+                alts.push(format!("machine.slice/libpod-{}.scope", id));
+            }
+        }
+    }
+
+    // Kubernetes containerd: cri-containerd-<id>.scope patterns
+    if cgroup_path.contains("cri-containerd-") {
+        if let Some(start) = cgroup_path.find("cri-containerd-") {
+            let after = &cgroup_path[start + 15..]; // skip "cri-containerd-"
+            if let Some(end) = after.find(".scope") {
+                let id = &after[..end];
+                alts.push(format!("kubepods/cri-containerd-{}", id));
+                alts.push(format!("system.slice/cri-containerd-{}.scope", id));
+            } else {
+                // No .scope suffix, try adding it
+                alts.push(format!("kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod.slice/cri-containerd-{}.scope", after));
+            }
+        }
+    }
+
+    // Kubernetes CRI-O: crio-<id>.scope patterns
+    if cgroup_path.contains("crio-") {
+        if let Some(start) = cgroup_path.find("crio-") {
+            let after = &cgroup_path[start + 5..]; // skip "crio-"
+            if let Some(end) = after.find(".scope") {
+                let id = &after[..end];
+                alts.push(format!("kubepods/crio-{}", id));
+                alts.push(format!("system.slice/crio-{}.scope", id));
+            } else {
+                alts.push(format!("kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod.slice/crio-{}.scope", after));
+            }
+        }
+    }
+
     alts
 }
 
@@ -125,7 +182,7 @@ fn find_cgroup_rel_path(base: &Path, cgroup_path: &str, pid: u32) -> String {
     // 1. Direct path from /proc/<pid>/cgroup
     candidates.push(cgroup_path.to_string());
 
-    // 2. Runtime-specific alternative paths (Docker systemd remapping, etc.)
+    // 2. Runtime-specific alternative paths (Docker, Podman, K8s, etc.)
     for alt in runtime_cgroup_alternatives(cgroup_path) {
         candidates.push(alt);
     }
@@ -147,6 +204,37 @@ fn find_cgroup_rel_path(base: &Path, cgroup_path: &str, pid: u32) -> String {
     for rel in &candidates {
         if has_v2_limits(base, rel) || has_v1_limits(base, rel) {
             return rel.clone();
+        }
+    }
+
+    // 5. Walk up the cgroup tree to find ancestor cgroups with limits.
+    //    This is important for container runtimes where the leaf cgroup
+    //    might not have limits, but an ancestor (e.g., the pod or container scope) does.
+    let mut current = cgroup_path.to_string();
+    while !current.is_empty() {
+        if has_v2_limits(base, &current) || has_v1_limits(base, &current) {
+            return current;
+        }
+        // Move to parent cgroup
+        if let Some(pos) = current.rfind('/') {
+            current = current[..pos].to_string();
+        } else {
+            break;
+        }
+    }
+
+    // Also try walking up for each alternative path
+    for alt in runtime_cgroup_alternatives(cgroup_path) {
+        let mut current = alt;
+        while !current.is_empty() {
+            if has_v2_limits(base, &current) || has_v1_limits(base, &current) {
+                return current;
+            }
+            if let Some(pos) = current.rfind('/') {
+                current = current[..pos].to_string();
+            } else {
+                break;
+            }
         }
     }
 
