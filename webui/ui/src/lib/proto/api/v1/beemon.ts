@@ -6,7 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Observable } from "rxjs";
 
 export const protobufPackage = "beemon.v1";
 
@@ -4655,14 +4654,6 @@ export const SocketOptEvent: MessageFns<SocketOptEvent> = {
     return message;
   },
 };
-
-export interface BeemonService {
-  ListProcesses(request: ListProcessesRequest): Promise<ListProcessesResponse>;
-  GetProcessMetadata(request: GetProcessMetadataRequest): Promise<GetProcessMetadataResponse>;
-  StreamEvents(request: StreamEventsRequest): Observable<EventBatch>;
-  GetNamespaceDetails(request: GetNamespaceDetailsRequest): Promise<GetNamespaceDetailsResponse>;
-  GetNetworkFlows(request: GetNetworkFlowsRequest): Promise<GetNetworkFlowsResponse>;
-}
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

@@ -4087,7 +4087,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x12GetProcessMetadata\x12$.beemon.v1.GetProcessMetadataRequest\x1a%.beemon.v1.GetProcessMetadataResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/processes/{pid}/metadata\x12o\n" +
 	"\fStreamEvents\x12\x1e.beemon.v1.StreamEventsRequest\x1a\x15.beemon.v1.EventBatch\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/processes/{pid}/events0\x01\x12\x95\x01\n" +
 	"\x13GetNamespaceDetails\x12%.beemon.v1.GetNamespaceDetailsRequest\x1a&.beemon.v1.GetNamespaceDetailsResponse\"/\x82\xd3\xe4\x93\x02)\x12'/api/v1/namespaces/{ns_type}/{ns_inode}\x12\x87\x01\n" +
-	"\x0fGetNetworkFlows\x12!.beemon.v1.GetNetworkFlowsRequest\x1a\".beemon.v1.GetNetworkFlowsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/processes/{pid}/network_flowsB?Z=github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1b\x06proto3"
+	"\x0fGetNetworkFlows\x12!.beemon.v1.GetNetworkFlowsRequest\x1a\".beemon.v1.GetNetworkFlowsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/processes/{pid}/network_flowsB@Z>github.com/basarsubasi/beemon/webui/bff/gen/go/api/v1;beemonv1b\x06proto3"
 
 var (
 	file_api_v1_beemon_proto_rawDescOnce sync.Once

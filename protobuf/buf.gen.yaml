@@ -17,5 +17,6 @@ plugins:
       - outputEncodeMethods=true
       - outputJsonMethods=false
       - outputClientImpl=false
+      - outputServices=false
       - useOptionals=messages
       - env=browser
