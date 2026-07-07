@@ -132,6 +132,7 @@ impl StreamRegistry {
                 }
             }
         } else {
+            tracing::trace!(pid = event.pid, "forward: no subscriber for pid, dropping event");
             Ok(())
         }
     }

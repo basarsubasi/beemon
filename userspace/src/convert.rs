@@ -20,7 +20,7 @@ use crate::bpf::types::{self as bpf, cstr, EventT};
 /// Build a `pb::Event` from a raw BPF ring-buffer sample.
 pub fn convert(e: &EventT) -> Event {
     let timestamp_ns = e.ts;
-    let pid = e.pid;
+    let pid = e.tgid;
     let oneof = match e.r#type {
         bpf::EVENT_TYPE_SYSCALL => Oneof::Syscall(SyscallEvent {
             syscall_id: e.syscall.syscall_id,
