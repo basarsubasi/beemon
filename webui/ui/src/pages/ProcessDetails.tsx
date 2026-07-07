@@ -3,8 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
 import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown, Network } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
-import type { Process, GetProcessMetadataResponse } from "../lib/types";
-import { EventBatch } from "../lib/proto/api/v1/beemon";
+import type { Process, GetProcessMetadataResponse, BeemonEvent } from "../lib/types";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -142,12 +141,7 @@ export function ProcessDetails() {
             const next = { ...prev };
             flowsData.flows?.forEach(f => {
               const key = `${f.localAddress}:${f.localPort}-${f.remoteAddress}:${f.remotePort}-${f.protocol}`;
-              const prevFlow = prev[key];
-              if (!prevFlow || prevFlow.flow.txBytes !== f.txBytes || prevFlow.flow.rxBytes !== f.rxBytes) {
-                next[key] = { flow: f, lastSeenTs: now };
-              } else {
-                next[key] = { flow: f, lastSeenTs: prevFlow.lastSeenTs };
-              }
+              next[key] = { flow: f, lastSeenTs: now };
             });
             return next;
           });
@@ -162,51 +156,36 @@ export function ProcessDetails() {
     
     const metaInterval = setInterval(fetchMetadata, 5000);
     const flowsInterval = setInterval(fetchFlows, 500);
-    
-    // Connect to Event stream
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/api/v1/processes/${pid}/stream/ws`;
-    const ws = new WebSocket(wsUrl);
-    ws.binaryType = "arraybuffer";
-    ws.onmessage = (event) => {
-        try {
-            if (typeof event.data === "string") return;
-            const buffer = new Uint8Array(event.data);
-            const batch = EventBatch.decode(buffer);
-            if (!batch.events) return;
-            for (const raw of batch.events) {
-                const ev = raw as any;
-                if (ev.fileOpen && ev.fileOpen.fd !== undefined) {
-                    const fd = ev.fileOpen.fd;
-                    setOpenFilesState(prev => ({
-                        ...prev,
-                        [fd]: {
-                            fd: fd,
-                            path: ev.fileOpen.filename,
-                            type: 'regular',
-                            isClosed: false
-                        }
-                    }));
-                } else if (ev.fileClose) {
-                    const fd = ev.fileClose.fd;
-                    setOpenFilesState(prev => {
-                        if (!prev[fd]) return prev;
-                        return {
-                            ...prev,
-                            [fd]: { ...prev[fd], isClosed: true }
-                        };
-                    });
-                }
-            }
-        } catch (e) {}
-    };
 
     return () => {
         clearInterval(metaInterval);
         clearInterval(flowsInterval);
-        ws.close();
     };
   }, [pid]);
+
+  const handleStreamEvent = (ev: BeemonEvent) => {
+    if (ev.fileOpen && ev.fileOpen.fd !== undefined) {
+      const fd = ev.fileOpen.fd;
+      setOpenFilesState(prev => ({
+        ...prev,
+        [fd]: {
+          fd: fd,
+          path: ev.fileOpen!.filename,
+          type: 'regular',
+          isClosed: false
+        }
+      }));
+    } else if (ev.fileClose) {
+      const fd = ev.fileClose.fd;
+      setOpenFilesState(prev => {
+        if (!prev[fd]) return prev;
+        return {
+          ...prev,
+          [fd]: { ...prev[fd], isClosed: true }
+        };
+      });
+    }
+  };
 
   if (!pid) return <div>No PID provided</div>;
 
@@ -465,8 +444,8 @@ export function ProcessDetails() {
                                 <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={`${f.remoteAddress}:${f.remotePort}`}>
                                   {networkSubTab === 'dns' ? <span className="text-yellow-600 dark:text-yellow-500 font-bold">{f.dnsQuery}</span> : `${f.remoteAddress}:${f.remotePort}`}
                                 </TableCell>
-                                <TableCell className="py-2 px-4 font-mono text-[10px] text-green-500 text-right">{f.rxBytes !== "0" ? `${(parseInt(f.rxBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
-                                <TableCell className="py-2 px-4 font-mono text-[10px] text-purple-500 text-right">{f.txBytes !== "0" ? `${(parseInt(f.txBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
+                                <TableCell className="py-2 px-4 font-mono text-[10px] text-green-500 text-right">{f.rxBytes && f.rxBytes !== "0" ? `${(parseInt(f.rxBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
+                                <TableCell className="py-2 px-4 font-mono text-[10px] text-purple-500 text-right">{f.txBytes && f.txBytes !== "0" ? `${(parseInt(f.txBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
                               </TableRow>
                             ))
                           ) : (
@@ -488,7 +467,7 @@ export function ProcessDetails() {
 
         {/* Event Stream - always takes full width, with left padding for the button */}
         <div className={`${sidePanelExpanded && !sidePanelWide ? 'pl-[470px]' : 'pl-[52px]'} transition-all duration-300`}>
-          <ProcessStream pid={parseInt(pid)} process={process || undefined} infoBarRef={infoBarRef} />
+          <ProcessStream pid={parseInt(pid)} process={process || undefined} infoBarRef={infoBarRef} onEvent={handleStreamEvent} />
         </div>
       </div>
     </div>

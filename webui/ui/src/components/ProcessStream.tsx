@@ -34,7 +34,7 @@ const formatIoBytes = (bytesStr: string | undefined | number) => {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 };
 
-export function ProcessStream({ pid, process, infoBarRef }: { pid: number, process?: import("../lib/types").Process, infoBarRef?: React.RefObject<HTMLDivElement | null> }) {
+export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: number, process?: import("../lib/types").Process, infoBarRef?: React.RefObject<HTMLDivElement | null>, onEvent?: (ev: BeemonEvent) => void }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
@@ -231,6 +231,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
             globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
 
             allEventsRef.current.push(data);
+            onEvent?.(data);
           }
           // Optimize: Mutate array in-place and only trim when it gets 10% larger
           // This avoids creating 150 new 5000-element arrays per second which causes heavy GC pressure and WS drops.
