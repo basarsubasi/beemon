@@ -154,11 +154,12 @@ export function ProcessDetails() {
             <Box size={18} className="text-purple-500"/> Namespaces
           </h2>
           <div className="flex flex-wrap gap-2">
-            {process?.namespaces?.map(ns => {
+            {[...(process?.namespaces || [])].sort().map(ns => {
                 const inodeMatch = ns.match(/\[(\d+)\]/);
                 const type = ns.split(":")[0];
                 const inode = inodeMatch ? inodeMatch[1] : '';
-                const isHost = hostNamespaces.includes(ns);
+                const actualNs = ns.replace('_for_children', '');
+                const isHost = hostNamespaces.includes(ns) || hostNamespaces.includes(actualNs);
                 
                 return (
                   <Badge 

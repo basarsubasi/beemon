@@ -22,7 +22,7 @@ tonic = { version = "0.14", default-features = false, features = ["codegen", "se
 tonic-prost = "0.14"
 prost = "0.14"
 procfs = "0.18"
-nix = { version = "0.31", default-features = false, features = ["fs", "process", "resource", "user"] }
+nix = { version = "0.31", default-features = false, features = ["fs", "process", "resource", "user", "net", "sched", "hostname"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 anyhow = "1"

@@ -172,7 +172,8 @@ export function Dashboard() {
       p.namespaces?.forEach(ns => {
         if (ns.startsWith('cgroup:')) return; // exclude cgroups from general namespaces tab
         if (!nsMap.has(ns)) {
-          const isHost = hostNamespaces.includes(ns);
+          const actualNs = ns.replace('_for_children', '');
+          const isHost = hostNamespaces.includes(ns) || hostNamespaces.includes(actualNs);
           const inodeMatch = ns.match(/\[(\d+)\]/);
           nsMap.set(ns, {
             type: ns.split(":")[0],

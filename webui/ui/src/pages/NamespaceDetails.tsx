@@ -182,9 +182,9 @@ function renderNetLinks(netLinks?: string) {
   lines.forEach(line => {
     if (/^\d+:/.test(line)) {
       if (currentIf) interfaces.push(currentIf);
-      const match = line.match(/^\d+:\s+([^:]+):\s+<([^>]+)>\s+(.*)/);
+      const match = line.match(/^\d+:\s+([^:]+):\s+<([^>]+)>(?:\s+(.*))?/);
       if (match) {
-        currentIf = { name: match[1], flags: match[2], details: match[3], ips: [] };
+        currentIf = { name: match[1], flags: match[2], details: match[3] || '', ips: [] };
       } else {
         currentIf = { name: line.split(':')[1]?.trim() || 'unknown', flags: '', details: '', ips: [] };
       }
@@ -294,7 +294,8 @@ export function NamespaceDetails() {
     return `${mb.toFixed(1)} MB`;
   };
 
-  const isHost = hostNamespaces.includes(`${type}:[${inode}]`);
+  const actualType = type === 'pid_for_children' ? 'pid' : type === 'time_for_children' ? 'time' : type;
+  const isHost = hostNamespaces.includes(`${actualType}:[${inode}]`) || hostNamespaces.includes(`${type}:[${inode}]`);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6 flex flex-col h-screen">
