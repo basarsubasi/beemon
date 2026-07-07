@@ -62,6 +62,7 @@ export interface BeemonEvent {
   fileOpen?: {
     filename: string;
     flags: number;
+    fd: number;
   };
   fileRead?: {
     fd: number;

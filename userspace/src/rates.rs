@@ -48,9 +48,9 @@ pub struct BpfStateMaps {
 }
 
 /// Spawn the 5s rates poller task.
-pub fn spawn(maps: Arc<BpfStateMaps>, snapshot: Arc<RwLock<RateSnapshot>>, period_secs: u64) {
+pub fn spawn(maps: Arc<BpfStateMaps>, snapshot: Arc<RwLock<RateSnapshot>>, period_millis: u64) {
     tokio::spawn(async move {
-        let mut ticker = interval(Duration::from_secs(period_secs.max(1)));
+        let mut ticker = interval(Duration::from_millis(period_millis.max(500)));
         // Previous cumulative counters per pid (summed across CPUs) for
         // computing per-pid delta/sec and the host aggregate rate.
         let mut prev_io: HashMap<u32, IoStat> = HashMap::new();

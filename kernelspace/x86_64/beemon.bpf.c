@@ -54,6 +54,7 @@ struct event_t {
     struct {
         char filename[256];
         int flags;
+        int fd;
     } file;
     struct {
         u32 saddr;
@@ -248,6 +249,18 @@ struct {
     __type(key, u32); // tid
     __type(value, struct msghdr *);
 } udp_recv_msg SEC(".maps");
+
+struct open_args_t {
+    char filename[256];
+    int flags;
+};
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES);
+    __type(key, u32); // tid
+    __type(value, struct open_args_t);
+} open_args SEC(".maps");
 
 static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx, struct msghdr *msg, u16 protocol) {
     if (pid == 0 || !sk) return;
@@ -522,19 +535,91 @@ int trace_sys_enter_openat(struct trace_event_raw_sys_enter *ctx) {
 
     if (!should_trace(user_pid)) return 0;
 
-    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
-    if (!e) return 0;
-
-    e->pid = user_tid;
-    e->tgid = user_pid;
-    e->type = EVENT_TYPE_FILE_OPEN;
-    e->ts = bpf_ktime_get_ns();
-    e->file.flags = (int)ctx->args[2];
+    struct open_args_t args = {};
+    args.flags = (int)ctx->args[2];
     
     const char *filename = (const char *)ctx->args[1];
-    bpf_probe_read_user_str(&e->file.filename, sizeof(e->file.filename), filename);
+    bpf_probe_read_user_str(&args.filename, sizeof(args.filename), filename);
 
-    bpf_ringbuf_submit(e, 0);
+    bpf_map_update_elem(&open_args, &user_tid, &args, BPF_ANY);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_exit_openat")
+int trace_sys_exit_openat(struct trace_event_raw_sys_exit *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct open_args_t *args = bpf_map_lookup_elem(&open_args, &user_tid);
+    if (!args) return 0;
+
+    int ret = (int)ctx->ret;
+    if (ret >= 0) {
+        struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+        if (e) {
+            e->pid = user_tid;
+            e->tgid = user_pid;
+            e->type = EVENT_TYPE_FILE_OPEN;
+            e->ts = bpf_ktime_get_ns();
+            e->file.flags = args->flags;
+            e->file.fd = ret;
+            __builtin_memcpy(e->file.filename, args->filename, sizeof(e->file.filename));
+            bpf_ringbuf_submit(e, 0);
+        }
+    }
+
+    bpf_map_delete_elem(&open_args, &user_tid);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_open")
+int trace_sys_enter_open(struct trace_event_raw_sys_enter *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct open_args_t args = {};
+    args.flags = (int)ctx->args[1];
+    
+    const char *filename = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&args.filename, sizeof(args.filename), filename);
+
+    bpf_map_update_elem(&open_args, &user_tid, &args, BPF_ANY);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_exit_open")
+int trace_sys_exit_open(struct trace_event_raw_sys_exit *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    u32 user_pid = id >> 32;
+    u32 user_tid = (u32)id;
+
+    if (!should_trace(user_pid)) return 0;
+
+    struct open_args_t *args = bpf_map_lookup_elem(&open_args, &user_tid);
+    if (!args) return 0;
+
+    int ret = (int)ctx->ret;
+    if (ret >= 0) {
+        struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+        if (e) {
+            e->pid = user_tid;
+            e->tgid = user_pid;
+            e->type = EVENT_TYPE_FILE_OPEN;
+            e->ts = bpf_ktime_get_ns();
+            e->file.flags = args->flags;
+            e->file.fd = ret;
+            __builtin_memcpy(e->file.filename, args->filename, sizeof(e->file.filename));
+            bpf_ringbuf_submit(e, 0);
+        }
+    }
+
+    bpf_map_delete_elem(&open_args, &user_tid);
     return 0;
 }
 

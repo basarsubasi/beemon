@@ -84,9 +84,9 @@ async fn async_main(cfg: Config) -> Result<()> {
         proc_cache.clone(),
         cgroup_tree.clone(),
         namespace_tree.clone(),
-        2, // 1s scanner cadence
+        1, // 1s scanner cadence
     );
-    spawn_rates(state_maps.clone(), rates_snapshot.clone(), cfg.rates_poll_secs);
+    spawn_rates(state_maps.clone(), rates_snapshot.clone(), cfg.rates_poll_millis);
 
     let invalidators = CacheInvalidators {
         proc_cache: proc_cache.clone(),

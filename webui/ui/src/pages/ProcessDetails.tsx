@@ -24,18 +24,19 @@ export function ProcessDetails() {
   const [children, setChildren] = useState<Process[]>([]);
   const [parentProcess, setParentProcess] = useState<Process | null>(null);
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
-  const [networkFlows, setNetworkFlows] = useState<import("../lib/types").NetworkFlow[]>([]);
   const [sidePanelExpanded, setSidePanelExpanded] = useState(false);
   const [sidePanelWide, setSidePanelWide] = useState(false);
   const [sidePanelTab, setSidePanelTab] = useState<'files' | 'network'>('files');
+  const [networkFlowStates, setNetworkFlowStates] = useState<Record<string, { flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>>({});
+  const [openFilesState, setOpenFilesState] = useState<Record<number, { fd: number; path: string; type: string; isClosed: boolean }>>({});
+
   const [networkSubTab, setNetworkSubTab] = useState<'connections' | 'dns'>('connections');
   const [openFilesSortConfig, setOpenFilesSortConfig] = useState<{key: 'fd' | 'type' | 'path', direction: 'asc' | 'desc'} | null>({key: 'fd', direction: 'asc'});
   const [networkSortConfig, setNetworkSortConfig] = useState<{key: 'rxBytes' | 'txBytes' | 'rxPackets' | 'txPackets', direction: 'asc' | 'desc'} | null>({key: 'rxBytes', direction: 'desc'});
   const infoBarRef = useRef<HTMLDivElement>(null);
 
   const sortedOpenFiles = useMemo(() => {
-    if (!process?.openFiles) return [];
-    let sortableItems = [...process.openFiles];
+    let sortableItems = Object.values(openFilesState);
     if (openFilesSortConfig !== null) {
       sortableItems.sort((a, b) => {
         if (a[openFilesSortConfig.key] < b[openFilesSortConfig.key]) {
@@ -48,10 +49,16 @@ export function ProcessDetails() {
       });
     }
     return sortableItems;
-  }, [process?.openFiles, openFilesSortConfig]);
+  }, [openFilesState, openFilesSortConfig]);
+
 
   const sortedNetworkFlows = useMemo(() => {
-    let sortableItems = networkFlows.filter(f => networkSubTab === 'dns' ? !!f.dnsQuery : !f.dnsQuery);
+    const flows = (Object.values(networkFlowStates) as Array<{ flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>).map(s => {
+      // Annotate visually if it hasn't been seen in the last 2 seconds
+      const isClosed = (Date.now() - s.lastSeenTs) > 2000;
+      return { ...s.flow, isClosed };
+    });
+    let sortableItems = flows.filter(f => networkSubTab === 'dns' ? !!f.dnsQuery : !f.dnsQuery);
     if (networkSortConfig !== null) {
       sortableItems.sort((a, b) => {
         const valA = parseInt(a[networkSortConfig.key as keyof typeof a] as string) || 0;
@@ -62,7 +69,8 @@ export function ProcessDetails() {
       });
     }
     return sortableItems;
-  }, [networkFlows, networkSortConfig, networkSubTab]);
+  }, [networkFlowStates, networkSortConfig, networkSubTab]);
+
 
   const requestSort = (key: 'fd' | 'type' | 'path') => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -93,33 +101,106 @@ export function ProcessDetails() {
   useEffect(() => {
     if (!pid) return;
     
-    const fetchProcesses = async () => {
+    const fetchMetadata = async () => {
       try {
-        const [metaRes, flowsRes] = await Promise.all([
-          fetch(`/api/v1/processes/${pid}/metadata`),
-          fetch(`/api/v1/processes/${pid}/network_flows`)
-        ]);
-        
+        const metaRes = await fetch(`/api/v1/processes/${pid}/metadata`);
         const data = (await metaRes.json()) as GetProcessMetadataResponse;
         if (data.process) {
           setHostNamespaces(data.hostNamespaces || []);
           setProcess(data.process);
           setChildren(data.children || []);
           setParentProcess(data.parent || null);
-        }
-
-        if (flowsRes.ok) {
-          const flowsData = await flowsRes.json() as import("../lib/types").GetNetworkFlowsResponse;
-          setNetworkFlows(flowsData.flows || []);
+          
+          // Initialize openFilesState only on first fetch or missing files
+          setOpenFilesState(prev => {
+            const next = { ...prev };
+            let changed = false;
+            data.process!.openFiles?.forEach(f => {
+              if (!next[f.fd]) {
+                next[f.fd] = { fd: f.fd, path: f.path, type: f.type, isClosed: false };
+                changed = true;
+              }
+            });
+            return changed ? next : prev;
+          });
         }
       } catch (err) {
-        console.error("Failed to fetch process:", err);
+        console.error("Failed to fetch process metadata:", err);
+      }
+    };
+
+    const fetchFlows = async () => {
+      try {
+        const flowsRes = await fetch(`/api/v1/processes/${pid}/network_flows`);
+        if (flowsRes.ok) {
+          const flowsData = await flowsRes.json() as import("../lib/types").GetNetworkFlowsResponse;
+          const now = Date.now();
+          setNetworkFlowStates(prev => {
+            const next = { ...prev };
+            flowsData.flows?.forEach(f => {
+              const key = `${f.localAddress}:${f.localPort}-${f.remoteAddress}:${f.remotePort}-${f.protocol}`;
+              next[key] = { flow: f, lastSeenTs: now };
+            });
+            
+            // Clean up old flows (>5 seconds)
+            Object.keys(next).forEach(key => {
+              if (now - next[key].lastSeenTs > 5000) {
+                delete next[key];
+              }
+            });
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch network flows:", err);
       }
     };
     
-    fetchProcesses();
-    const interval = setInterval(fetchProcesses, 5000);
-    return () => clearInterval(interval);
+    fetchMetadata();
+    fetchFlows();
+    
+    const metaInterval = setInterval(fetchMetadata, 5000);
+    const flowsInterval = setInterval(fetchFlows, 500);
+    
+    // Connect to Event stream
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/processes/${pid}/stream/ws`;
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data) as any;
+            if (msg.type === "ping") return;
+            const beemonEvent = msg as import("../lib/types").BeemonEvent;
+            
+            if (beemonEvent.fileOpen && beemonEvent.fileOpen.fd !== undefined) {
+                const fd = beemonEvent.fileOpen.fd;
+                setOpenFilesState(prev => ({
+                    ...prev,
+                    [fd]: {
+                        fd: fd,
+                        path: beemonEvent.fileOpen!.filename,
+                        type: 'regular',
+                        isClosed: false
+                    }
+                }));
+            } else if (beemonEvent.fileClose) {
+                const fd = beemonEvent.fileClose.fd;
+                setOpenFilesState(prev => {
+                    if (!prev[fd]) return prev;
+                    return {
+                        ...prev,
+                        [fd]: { ...prev[fd], isClosed: true }
+                    };
+                });
+            }
+        } catch (e) {}
+    };
+
+    return () => {
+        clearInterval(metaInterval);
+        clearInterval(flowsInterval);
+        ws.close();
+    };
   }, [pid]);
 
   if (!pid) return <div>No PID provided</div>;
@@ -246,8 +327,8 @@ export function ProcessDetails() {
               <div className="flex items-center gap-3 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
                 PROCESS I/O
                 <div className="flex items-center gap-1 mt-2">
-                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-green-100/50 text-green-700 dark:bg-green-900/30 dark:text-green-400">{networkFlows.length}</Badge>
-                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-blue-100/50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{process?.openFiles?.length || 0}</Badge>
+                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-green-100/50 text-green-700 dark:bg-green-900/30 dark:text-green-400">{Object.keys(networkFlowStates).length}</Badge>
+                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-blue-100/50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{Object.keys(openFilesState).length}</Badge>
                 </div>
               </div>
             </Button>
@@ -260,14 +341,14 @@ export function ProcessDetails() {
                     onClick={() => setSidePanelTab('files')}
                   >
                     <FileText size={16} className={sidePanelTab === 'files' ? "text-blue-500" : ""} /> Files
-                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{process?.openFiles?.length || 0}</Badge>
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{Object.keys(openFilesState).length}</Badge>
                   </h2>
                   <h2 
                     className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'network' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                     onClick={() => setSidePanelTab('network')}
                   >
                     <Network size={16} className={sidePanelTab === 'network' ? "text-green-500" : ""} /> Network
-                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{networkFlows.length}</Badge>
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{Object.keys(networkFlowStates).length}</Badge>
                   </h2>
                 </div>
                 <div className="flex items-center gap-1">
@@ -311,7 +392,14 @@ export function ProcessDetails() {
                               </Badge>
                             </TableCell>
                             <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[800px]' : 'max-w-[200px]'}`} title={getDisplayPath(f.fd, f.path)}>
-                              {getDisplayPath(f.fd, f.path)}
+                              <div className="flex items-center gap-2">
+                                <span className={`truncate block max-w-xs md:max-w-md ${f.isClosed ? 'text-zinc-400 line-through' : ''}`} title={getDisplayPath(f.fd, f.path)}>
+                                  {getDisplayPath(f.fd, f.path)}
+                                </span>
+                                {f.isClosed && (
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1 border-zinc-200 dark:border-zinc-800 text-zinc-500">closed</Badge>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))

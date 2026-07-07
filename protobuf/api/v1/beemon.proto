@@ -233,6 +233,7 @@ message SyscallEvent {
 message FileOpenEvent {
   string filename = 1;
   int32 flags = 2;
+  uint32 fd = 3;
 }
 
 message NetworkConnectEvent {

@@ -27,6 +27,7 @@ pub fn convert(e: &EventT) -> Event {
         bpf::EVENT_TYPE_FILE_OPEN => Oneof::FileOpen(FileOpenEvent {
             filename: cstr(&e.file.filename).to_string(),
             flags: e.file.flags,
+            fd: e.file.fd as u32,
         }),
         bpf::EVENT_TYPE_FILE_READ => Oneof::FileRead(FileReadEvent {
             fd: e.rw.fd,

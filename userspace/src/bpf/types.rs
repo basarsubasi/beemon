@@ -75,6 +75,7 @@ pub struct SyscallPayload {
 pub struct FilePayload {
     pub filename: [u8; 256],
     pub flags: i32,
+    pub fd: i32,
 }
 
 #[derive(Copy, Clone, Debug)]
