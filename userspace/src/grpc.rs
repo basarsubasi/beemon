@@ -179,8 +179,8 @@ impl BeemonService for BeemonServiceImpl {
 }
 
 fn flow_to_pb(k: &NetFlowKey, v: &NetFlowStat) -> NetworkFlow {
-    let local_address = Ipv4Addr::from(k.saddr).to_string();
-    let remote_address = Ipv4Addr::from(k.daddr).to_string();
+    let local_address = Ipv4Addr::from(k.saddr.to_ne_bytes()).to_string();
+    let remote_address = Ipv4Addr::from(k.daddr.to_ne_bytes()).to_string();
     let protocol = match k.protocol {
         6 => "TCP".to_string(),
         17 => "UDP".to_string(),

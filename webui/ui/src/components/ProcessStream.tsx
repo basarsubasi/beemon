@@ -285,22 +285,21 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     }
   }, [process?.memoryLimitBytes, process?.cpuQuotaUs]);
 
-  const decodePayload = (b64: string | undefined, totalBytes: string) => {
-    if (!b64) return `"..."`;
+  const decodePayload = (data: Uint8Array | undefined, totalBytes: string | number) => {
+    if (!data || data.length === 0) return `"..."`;
     try {
-      const decoded = atob(b64);
       let safeStr = "";
-      for (let i = 0; i < decoded.length; i++) {
-        const code = decoded.charCodeAt(i);
-        if (code >= 32 && code <= 126) safeStr += decoded[i];
+      for (let i = 0; i < data.length; i++) {
+        const code = data[i];
+        if (code >= 32 && code <= 126) safeStr += String.fromCharCode(code);
         else if (code === 10) safeStr += "\\n";
         else if (code === 9) safeStr += "\\t";
         else if (code === 13) safeStr += "\\r";
         else safeStr += ".";
       }
 
-      const total = parseInt(totalBytes);
-      if (total > decoded.length) {
+      const total = typeof totalBytes === 'string' ? parseInt(totalBytes) : totalBytes;
+      if (total > data.length) {
         return `"${safeStr}..." /* ${total} bytes total */`;
       }
       return `"${safeStr}"`;

@@ -83,16 +83,17 @@ impl CgroupTreeCache {
     }
 }
 
-/// Check if a directory looks like a cgroup v2 leaf (has v2 resource files).
-fn has_v2_limits(dir: &Path) -> bool {
+/// Check if a relative path looks like a cgroup v2 leaf under base.
+fn has_v2_limits(base: &Path, rel: &str) -> bool {
+    let dir = base.join(rel);
     dir.join("memory.max").exists() || dir.join("cpu.max").exists() || dir.join("pids.max").exists()
 }
 
-/// Check if a directory looks like a cgroup v1 leaf (has v1 resource files).
-fn has_v1_limits(dir: &Path) -> bool {
-    dir.join("memory.limit_in_bytes").exists()
-        || dir.join("cpu.cfs_quota_us").exists()
-        || dir.join("pids.max").exists()
+/// Check if a relative path looks like a cgroup v1 leaf under base.
+fn has_v1_limits(base: &Path, rel: &str) -> bool {
+    base.join("memory").join(rel).join("memory.limit_in_bytes").exists()
+        || base.join("cpu").join(rel).join("cpu.cfs_quota_us").exists()
+        || base.join("pids").join(rel).join("pids.max").exists()
 }
 
 /// Translate between cgroup path representations commonly used by container
@@ -117,16 +118,16 @@ fn runtime_cgroup_alternatives(cgroup_path: &str) -> Vec<String> {
     alts
 }
 
-fn find_cgroup_dir(base: &Path, cgroup_path: &str, pid: u32) -> PathBuf {
+fn find_cgroup_rel_path(base: &Path, cgroup_path: &str, pid: u32) -> String {
     // Collect candidate paths to try, in priority order.
-    let mut candidates: Vec<PathBuf> = Vec::new();
+    let mut candidates: Vec<String> = Vec::new();
 
     // 1. Direct path from /proc/<pid>/cgroup
-    candidates.push(base.join(cgroup_path));
+    candidates.push(cgroup_path.to_string());
 
     // 2. Runtime-specific alternative paths (Docker systemd remapping, etc.)
     for alt in runtime_cgroup_alternatives(cgroup_path) {
-        candidates.push(base.join(alt));
+        candidates.push(alt);
     }
 
     // 3. If the path contains a leading segment like "system.slice/" or
@@ -135,56 +136,58 @@ fn find_cgroup_dir(base: &Path, cgroup_path: &str, pid: u32) -> PathBuf {
     {
         let stripped: String = cgroup_path.split('/').skip(1).collect::<Vec<_>>().join("/");
         if !stripped.is_empty() && stripped != cgroup_path {
-            candidates.push(base.join(stripped));
+            candidates.push(stripped);
         }
     }
 
     // 4. /sys/fs/cgroup/<pid> (used by some cgroup v1 layouts)
-    candidates.push(base.join(pid.to_string()));
+    candidates.push(pid.to_string());
 
     // Try each candidate: prefer directories that have actual resource files.
-    for dir in &candidates {
-        if dir.exists() && (has_v2_limits(dir) || has_v1_limits(dir)) {
-            return dir.clone();
+    for rel in &candidates {
+        if has_v2_limits(base, rel) || has_v1_limits(base, rel) {
+            return rel.clone();
         }
     }
 
     // Fallback: return the first candidate even if it doesn't exist, so
     // read_u64_max/read_cpu_max handle the missing-file case gracefully.
-    candidates.into_iter().next().unwrap_or_else(|| base.join(cgroup_path))
+    candidates.into_iter().next().unwrap_or_else(|| cgroup_path.to_string())
 }
 
 fn read_cgroup_limits(cgroup_path: &str, pid: u32) -> CgroupLimits {
     let base = PathBuf::from("/sys/fs/cgroup");
-    let cgroup_dir = find_cgroup_dir(&base, cgroup_path, pid);
+    let rel_path = find_cgroup_rel_path(&base, cgroup_path, pid);
+    let v2_dir = base.join(&rel_path);
 
     // Try cgroup v2 files first, then fall back to cgroup v1 files.
     let memory_limit_bytes = {
-        let v2 = read_u64_max(&cgroup_dir.join("memory.max"));
-        if v2 != 0 || !cgroup_dir.join("memory.limit_in_bytes").exists() {
+        let v2 = read_u64_max(&v2_dir.join("memory.max"));
+        if v2 != 0 || !base.join("memory").join(&rel_path).join("memory.limit_in_bytes").exists() {
             v2
         } else {
-            read_u64_max_v1(&cgroup_dir.join("memory.limit_in_bytes"))
+            read_u64_max_v1(&base.join("memory").join(&rel_path).join("memory.limit_in_bytes"))
         }
     };
 
     let (cpu_quota_us, cpu_period_us) = {
-        let (v2_quota, v2_period) = read_cpu_max(&cgroup_dir.join("cpu.max"));
-        if v2_quota != 0 || v2_period != 0 || !cgroup_dir.join("cpu.cfs_quota_us").exists() {
+        let (v2_quota, v2_period) = read_cpu_max(&v2_dir.join("cpu.max"));
+        if v2_quota != 0 || v2_period != 0 || !base.join("cpu").join(&rel_path).join("cpu.cfs_quota_us").exists() {
             (v2_quota, v2_period)
         } else {
-            let quota = read_u64_max_v1(&cgroup_dir.join("cpu.cfs_quota_us"));
-            let period = read_u64_max_v1(&cgroup_dir.join("cpu.cfs_period_us"));
+            let quota = read_u64_max_v1(&base.join("cpu").join(&rel_path).join("cpu.cfs_quota_us"));
+            let period = read_u64_max_v1(&base.join("cpu").join(&rel_path).join("cpu.cfs_period_us"));
             (quota, period)
         }
     };
 
     let pids_limit = {
-        let v2 = read_u64_max(&cgroup_dir.join("pids.max"));
-        if v2 != 0 || !cgroup_dir.join("pids.max").exists() {
+        let v2 = read_u64_max(&v2_dir.join("pids.max"));
+        if v2 != 0 || !base.join("pids").join(&rel_path).join("pids.max").exists() {
             v2
         } else {
-            read_u64_max_v1(&cgroup_dir.join("pids.limit"))
+            // Note: cgroup v1 pids limit is typically pids.max too
+            read_u64_max_v1(&base.join("pids").join(&rel_path).join("pids.max"))
         }
     };
 
@@ -330,7 +333,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_cgroup_dir() {
+    fn test_find_cgroup_rel_path() {
         use std::fs;
         use tempfile::tempdir;
 
@@ -342,33 +345,33 @@ mod tests {
         let p1 = base_path.join("some/direct/path");
         fs::create_dir_all(&p1).unwrap();
         fs::File::create(p1.join("memory.max")).unwrap();
-        assert_eq!(find_cgroup_dir(&base_path, "some/direct/path", 123), p1);
+        assert_eq!(find_cgroup_rel_path(&base_path, "some/direct/path", 123), "some/direct/path");
 
         // 2. docker/<id> -> system.slice/docker-<id>.scope (with resource files)
         let p2 = base_path.join("system.slice/docker-abcdef.scope");
         fs::create_dir_all(&p2).unwrap();
         fs::File::create(p2.join("memory.max")).unwrap();
-        assert_eq!(find_cgroup_dir(&base_path, "docker/abcdef", 123), p2);
+        assert_eq!(find_cgroup_rel_path(&base_path, "docker/abcdef", 123), "system.slice/docker-abcdef.scope");
 
         // 3. system.slice/docker-<id>.scope -> docker/<id> (with resource files)
         let p3 = base_path.join("docker/12345");
         fs::create_dir_all(&p3).unwrap();
         fs::File::create(p3.join("cpu.max")).unwrap();
-        assert_eq!(find_cgroup_dir(&base_path, "system.slice/docker-12345.scope", 123), p3);
+        assert_eq!(find_cgroup_rel_path(&base_path, "system.slice/docker-12345.scope", 123), "docker/12345");
 
         // 4. Fallback to /sys/fs/cgroup/<pid> (with resource files)
         let p4 = base_path.join("999");
         fs::create_dir_all(&p4).unwrap();
         fs::File::create(p4.join("memory.max")).unwrap();
-        assert_eq!(find_cgroup_dir(&base_path, "missing/path", 999), p4);
+        assert_eq!(find_cgroup_rel_path(&base_path, "missing/path", 999), "999");
 
         // 5. Ultimate fallback: no candidate has resource files -> first candidate
-        assert_eq!(find_cgroup_dir(&base_path, "not/found", 404), base_path.join("not/found"));
+        assert_eq!(find_cgroup_rel_path(&base_path, "not/found", 404), "not/found");
 
-        // 6. cgroup v1 fallback: directory with memory.limit_in_bytes but no v2 files
-        let p6 = base_path.join("v1/path");
-        fs::create_dir_all(&p6).unwrap();
-        fs::File::create(p6.join("memory.limit_in_bytes")).unwrap();
-        assert_eq!(find_cgroup_dir(&base_path, "v1/path", 777), p6);
+        // 6. cgroup v1 fallback: directory with memory.limit_in_bytes under memory controller
+        let p6_mem = base_path.join("memory/v1/path");
+        fs::create_dir_all(&p6_mem).unwrap();
+        fs::File::create(p6_mem.join("memory.limit_in_bytes")).unwrap();
+        assert_eq!(find_cgroup_rel_path(&base_path, "v1/path", 777), "v1/path");
     }
 }

@@ -71,7 +71,7 @@ export interface BeemonEvent {
   fileWrite?: {
     fd: number;
     count: string;
-    data: string;
+    data?: Uint8Array;
   };
   fileClose?: {
     fd: number;
