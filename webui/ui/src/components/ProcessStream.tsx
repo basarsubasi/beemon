@@ -209,7 +209,9 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
         }
 
         const buffer = new Uint8Array(event.data);
+        console.log("[ProcessStream] WS binary message received", buffer.length, "bytes");
         const batch = EventBatch.decode(buffer);
+        console.log("[ProcessStream] Decoded batch", batch.events?.length ?? 0, "events");
 
         if (batch.events && batch.events.length > 0) {
           for (const rawData of batch.events) {

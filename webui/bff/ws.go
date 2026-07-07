@@ -80,7 +80,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 			slog.Error("WS failed to start stream", "error", err)
 			return
 		}
-
+		slog.Info("WS stream opened", "pid", pid, "grpc_endpoint", cfg.GRPCEndpoint)
 
 		// Read loop to detect client disconnect
 		go func() {
@@ -143,26 +143,29 @@ func handleWS(cfg *Config) http.HandlerFunc {
 					return
 				}
 
-				if res.ev.Events != nil {
-					for _, e := range res.ev.Events {
-						if e.TimestampNs > 0 {
-							bootTimeOnce.Do(func() {
-								bootTimeOffsetNs = uint64(time.Now().UnixNano()) - e.TimestampNs
-							})
-							e.TimestampNs = (e.TimestampNs + bootTimeOffsetNs) / 1_000_000
-						}
+if res.ev.Events != nil {
+				for _, e := range res.ev.Events {
+					if e.TimestampNs > 0 {
+						bootTimeOnce.Do(func() {
+							bootTimeOffsetNs = uint64(time.Now().UnixNano()) - e.TimestampNs
+						})
+						e.TimestampNs = (e.TimestampNs + bootTimeOffsetNs) / 1_000_000
 					}
 				}
+			}
 
-				binaryBytes, err := proto.Marshal(res.ev)
+			slog.Info("WS forwarding batch", "pid", pid, "events", len(res.ev.Events))
+
+			binaryBytes, err := proto.Marshal(res.ev)
 				if err != nil {
 					continue
 				}
 
-				if err := conn.WriteMessage(websocket.BinaryMessage, binaryBytes); err != nil {
-					slog.Error("WS message write error", "error", err)
-					return
-				}
+if err := conn.WriteMessage(websocket.BinaryMessage, binaryBytes); err != nil {
+				slog.Error("WS message write error", "error", err)
+				return
+			}
+			slog.Info("WS batch sent", "pid", pid, "bytes", len(binaryBytes))
 			}
 		}
 	}
