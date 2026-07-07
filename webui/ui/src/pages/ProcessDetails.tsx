@@ -4,6 +4,7 @@ import { ProcessStream } from "../components/ProcessStream";
 import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown, Network } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import type { Process, GetProcessMetadataResponse } from "../lib/types";
+import { EventBatch } from "../lib/proto/api/v1/beemon";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -166,32 +167,36 @@ export function ProcessDetails() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/api/v1/processes/${pid}/stream/ws`;
     const ws = new WebSocket(wsUrl);
+    ws.binaryType = "arraybuffer";
     ws.onmessage = (event) => {
         try {
-            const msg = JSON.parse(event.data) as any;
-            if (msg.type === "ping") return;
-            const beemonEvent = msg as import("../lib/types").BeemonEvent;
-            
-            if (beemonEvent.fileOpen && beemonEvent.fileOpen.fd !== undefined) {
-                const fd = beemonEvent.fileOpen.fd;
-                setOpenFilesState(prev => ({
-                    ...prev,
-                    [fd]: {
-                        fd: fd,
-                        path: beemonEvent.fileOpen!.filename,
-                        type: 'regular',
-                        isClosed: false
-                    }
-                }));
-            } else if (beemonEvent.fileClose) {
-                const fd = beemonEvent.fileClose.fd;
-                setOpenFilesState(prev => {
-                    if (!prev[fd]) return prev;
-                    return {
+            if (typeof event.data === "string") return;
+            const buffer = new Uint8Array(event.data);
+            const batch = EventBatch.decode(buffer);
+            if (!batch.events) return;
+            for (const raw of batch.events) {
+                const ev = raw as any;
+                if (ev.fileOpen && ev.fileOpen.fd !== undefined) {
+                    const fd = ev.fileOpen.fd;
+                    setOpenFilesState(prev => ({
                         ...prev,
-                        [fd]: { ...prev[fd], isClosed: true }
-                    };
-                });
+                        [fd]: {
+                            fd: fd,
+                            path: ev.fileOpen.filename,
+                            type: 'regular',
+                            isClosed: false
+                        }
+                    }));
+                } else if (ev.fileClose) {
+                    const fd = ev.fileClose.fd;
+                    setOpenFilesState(prev => {
+                        if (!prev[fd]) return prev;
+                        return {
+                            ...prev,
+                            [fd]: { ...prev[fd], isClosed: true }
+                        };
+                    });
+                }
             }
         } catch (e) {}
     };

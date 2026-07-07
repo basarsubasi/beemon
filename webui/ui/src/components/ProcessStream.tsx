@@ -375,7 +375,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
   const formatTimestamp = (ts: string | undefined) => {
     try {
       if (!ts) return "00:00:00.000 UTC";
-      return new Date(parseInt(ts) / 1000000).toISOString().split('T')[1].slice(0, -1) + " UTC";
+      return new Date(parseInt(ts)).toISOString().split('T')[1].slice(0, -1) + " UTC";
     } catch {
       return "00:00:00.000 UTC";
     }

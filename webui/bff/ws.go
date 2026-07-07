@@ -149,7 +149,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 							bootTimeOnce.Do(func() {
 								bootTimeOffsetNs = uint64(time.Now().UnixNano()) - e.TimestampNs
 							})
-							e.TimestampNs += bootTimeOffsetNs
+							e.TimestampNs = (e.TimestampNs + bootTimeOffsetNs) / 1_000_000
 						}
 					}
 				}
