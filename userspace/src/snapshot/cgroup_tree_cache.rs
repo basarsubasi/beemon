@@ -84,7 +84,8 @@ impl CgroupTreeCache {
 }
 
 fn read_cgroup_limits(cgroup_path: &str, _pid: u32) -> CgroupLimits {
-    let dir = PathBuf::from("/sys/fs/cgroup").join(cgroup_path);
+    let base = PathBuf::from("/sys/fs/cgroup");
+    let dir = find_cgroup_dir(&base, cgroup_path);
 
     let memory_limit_bytes = read_u64_max(&dir.join("memory.max"));
     let (cpu_quota_us, cpu_period_us) = read_cpu_max(&dir.join("cpu.max"));
@@ -96,6 +97,39 @@ fn read_cgroup_limits(cgroup_path: &str, _pid: u32) -> CgroupLimits {
         cpu_period_us,
         pids_limit,
     }
+}
+
+/// Normalize a cgroup path by resolving `..` components and stripping leading `/`.
+/// If the direct path doesn't exist under base, search for the leaf directory name
+/// in common parent directories (system.slice, user.slice, machine.slice).
+fn find_cgroup_dir(base: &std::path::Path, cgroup_path: &str) -> PathBuf {
+    // Strip leading `/` and normalize `..` components
+    let normalized = cgroup_path
+        .trim_start_matches('/')
+        .split('/')
+        .filter(|s| *s != ".." && *s != ".")
+        .collect::<Vec<_>>()
+        .join("/");
+
+    let direct = base.join(&normalized);
+    if direct.exists() && (direct.join("memory.max").exists() || direct.join("cpu.max").exists()) {
+        return direct;
+    }
+
+    // Extract leaf directory name
+    let leaf = normalized.rsplit('/').next().unwrap_or(&normalized);
+    
+    // Search in common parent directories
+    let parents = ["system.slice", "user.slice", "machine.slice", "init.scope"];
+    for parent in &parents {
+        let candidate = base.join(parent).join(leaf);
+        if candidate.exists() && (candidate.join("memory.max").exists() || candidate.join("cpu.max").exists()) {
+            return candidate;
+        }
+    }
+
+    // Fallback to direct path (will return 0 limits if files don't exist)
+    direct
 }
 
 /// Convenience: read the limits for a *host-level* process (no cgroup `path`).
