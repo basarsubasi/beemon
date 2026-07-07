@@ -101,3 +101,29 @@ impl<'a> NetFlows<'a> {
         Ok(out)
     }
 }
+
+// ------------------------------------------------------------------
+// Standalone helpers operating on owned maps (used by the rates poller,
+// which holds `OwnedIoStats` / `OwnedNetFlows` directly behind a `Mutex`).
+// ------------------------------------------------------------------
+
+/// Sum per-CPU `IoStat` values for every PID in the owned IO stats map.
+pub fn io_stats_summed(map: &OwnedIoStats) -> Result<Vec<(u32, IoStat)>> {
+    let mut out = Vec::new();
+    for entry in map.iter() {
+        let (pid, per_cpu) = entry.map_err(|e| anyhow!("io_stats iter: {e}"))?;
+        let sum = sum_per_cpu(&per_cpu);
+        out.push((pid, sum));
+    }
+    Ok(out)
+}
+
+/// Collect every (key, stat) pair from the owned net-flow map.
+pub fn net_flows_all(map: &OwnedNetFlows) -> Result<Vec<(NetFlowKey, NetFlowStat)>> {
+    let mut out = Vec::new();
+    for entry in map.iter() {
+        let (k, v) = entry.map_err(|e| anyhow!("net_flow iter: {e}"))?;
+        out.push((k, v));
+    }
+    Ok(out)
+}

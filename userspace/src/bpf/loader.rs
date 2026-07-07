@@ -187,6 +187,45 @@ impl BpfHandle {
         let _ = m.remove(&pid);
         Ok(())
     }
+
+    /// Take ownership of the three daemon-shared BPF maps (target_pids,
+    /// process_io_stats, process_net_flow_stats) so the long-lived tasks
+    /// (registry, rates poller) can hold them independently of any `&mut Ebpf`
+    /// borrow. The `events` RingBuf is taken separately via
+    /// [`take_events_ringbuf`].
+    pub fn take_owned_state_maps(&mut self) -> Result<(
+        super::maps::OwnedTargetPids,
+        super::maps::OwnedIoStats,
+        super::maps::OwnedNetFlows,
+    )> {
+        use aya::maps::{HashMap, PerCpuHashMap};
+        let target_pids = self
+            .ebpf
+            .take_map("target_pids")
+            .ok_or_else(|| anyhow!("target_pids map missing"))?;
+        let target_pids: super::maps::OwnedTargetPids = HashMap::try_from(target_pids)?;
+        let io_stats = self
+            .ebpf
+            .take_map("process_io_stats")
+            .ok_or_else(|| anyhow!("process_io_stats map missing"))?;
+        let io_stats: super::maps::OwnedIoStats = PerCpuHashMap::try_from(io_stats)?;
+        let net_flows = self
+            .ebpf
+            .take_map("process_net_flow_stats")
+            .ok_or_else(|| anyhow!("process_net_flow_stats map missing"))?;
+        let net_flows: super::maps::OwnedNetFlows = HashMap::try_from(net_flows)?;
+        Ok((target_pids, io_stats, net_flows))
+    }
+
+    /// Take the events ringbuf map (consuming it from `Ebpf`).
+    pub fn take_events_ringbuf(&mut self) -> Result<aya::maps::RingBuf<aya::maps::MapData>> {
+        use aya::maps::RingBuf;
+        let map = self
+            .ebpf
+            .take_map("events")
+            .ok_or_else(|| anyhow!("events map missing"))?;
+        Ok(RingBuf::try_from(map)?)
+    }
 }
 
 /// Raise `RLIMIT_MEMLOCK` to infinity so we can load BPF programs without
