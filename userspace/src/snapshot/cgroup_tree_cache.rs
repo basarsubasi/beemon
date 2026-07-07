@@ -96,7 +96,46 @@ fn has_v1_limits(base: &Path, rel: &str) -> bool {
         || base.join("pids").join(rel).join("pids.max").exists()
 }
 
-/// Translate between cgroup path representations commonly used by container
+/// Extract container ID from /proc/<pid>/cgroup path.
+/// Docker container IDs are 64-character hex strings.
+fn extract_container_id(cgroup_path: &str) -> Option<String> {
+    // Look for 64-char hex string (full container ID)
+    for segment in cgroup_path.split('/') {
+        if segment.len() == 64 && segment.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Some(segment.to_string());
+        }
+        // Also check for docker-<id>.scope pattern
+        if let Some(rest) = segment.strip_prefix("docker-") {
+            if let Some(id) = rest.strip_suffix(".scope") {
+                if id.len() == 64 && id.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Some(id.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Find cgroup directory by container ID.
+/// Searches common container runtime cgroup patterns.
+fn find_cgroup_by_container_id(base: &Path, container_id: &str) -> Option<String> {
+    let patterns = [
+        format!("system.slice/docker-{}.scope", container_id),
+        format!("docker/{}", container_id),
+        format!("system.slice/containerd-{}.scope", container_id),
+        format!("machine.slice/libpod-{}.scope", container_id),
+        format!("libpod/{}", container_id),
+    ];
+    
+    for pattern in &patterns {
+        let path = base.join(pattern);
+        if path.exists() && (has_v2_limits(base, pattern) || has_v1_limits(base, pattern)) {
+            return Some(pattern.clone());
+        }
+    }
+    
+    None
+}
 /// runtimes under systemd. This helper generates alternative path forms to try
 /// when the raw path doesn't resolve.
 ///
@@ -235,6 +274,15 @@ fn find_cgroup_rel_path(base: &Path, cgroup_path: &str, pid: u32) -> String {
             } else {
                 break;
             }
+        }
+    }
+
+    // 6. Extract container ID from cgroup path and search for matching directory.
+    //    This handles cases where the daemon runs in a different cgroup namespace
+    //    than the host (e.g., Docker with pid:host).
+    if let Some(container_id) = extract_container_id(cgroup_path) {
+        if let Some(found) = find_cgroup_by_container_id(base, &container_id) {
+            return found;
         }
     }
 
