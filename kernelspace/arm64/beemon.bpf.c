@@ -187,6 +187,202 @@ static __always_inline bool should_trace_events(u32 pid) {
 }
 
 // -----------------------------------------------------------------------------
+// SIGNALS
+// -----------------------------------------------------------------------------
+
+SEC("tracepoint/syscalls/sys_enter_kill")
+int trace_sys_enter_kill(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SIGNAL)
+e->signal.target_pid = (u32)ctx->args[0];
+    e->signal.target_tid = 0;
+    e->signal.sig = (int)ctx->args[1];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_tgkill")
+int trace_sys_enter_tgkill(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SIGNAL)
+e->signal.target_pid = (u32)ctx->args[0];
+    e->signal.target_tid = (u32)ctx->args[1];
+    e->signal.sig = (int)ctx->args[2];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+struct trace_event_raw_signal_deliver {
+    u64 pad;
+    int sig;
+    int errno_;
+    int code;
+    unsigned long sa_handler;
+    unsigned long sa_flags;
+};
+
+SEC("tracepoint/signal/signal_deliver")
+int trace_signal_deliver(struct trace_event_raw_signal_deliver *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SIGNAL)
+e->signal.target_pid = user_pid;
+    e->signal.target_tid = user_tid;
+    e->signal.sig = ctx->sig;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+// FILE METADATA & MISC
+// -----------------------------------------------------------------------------
+
+SEC("tracepoint/syscalls/sys_enter_newstat")
+int trace_sys_enter_newstat(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+const char *pathname = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&e->file_meta.pathname, sizeof(e->file_meta.pathname), pathname);
+    e->file_meta.fd = -1;
+    e->file_meta.mode = 0;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_newlstat")
+int trace_sys_enter_newlstat(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+const char *pathname = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&e->file_meta.pathname, sizeof(e->file_meta.pathname), pathname);
+    e->file_meta.fd = -1;
+    e->file_meta.mode = 0;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_newfstat")
+int trace_sys_enter_newfstat(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+e->file_meta.pathname[0] = 0;
+    e->file_meta.fd = (u32)ctx->args[0];
+    e->file_meta.mode = 0;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_access")
+int trace_sys_enter_access(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+const char *pathname = (const char *)ctx->args[0];
+    bpf_probe_read_user_str(&e->file_meta.pathname, sizeof(e->file_meta.pathname), pathname);
+    e->file_meta.fd = -1;
+    e->file_meta.mode = (int)ctx->args[1];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_lseek")
+int trace_sys_enter_lseek(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_LSEEK)
+e->lseek.fd = (int)ctx->args[0];
+    e->lseek.offset = (u64)ctx->args[1];
+    e->lseek.whence = (int)ctx->args[2];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_fcntl")
+int trace_sys_enter_fcntl(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_FCNTL)
+e->ioctl_fcntl.fd = (int)ctx->args[0];
+    e->ioctl_fcntl.cmd = (u64)ctx->args[1];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_ioctl")
+int trace_sys_enter_ioctl(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_IOCTL)
+e->ioctl_fcntl.fd = (int)ctx->args[0];
+    e->ioctl_fcntl.cmd = (u64)ctx->args[1];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+// SOCKETS & IPC
+// -----------------------------------------------------------------------------
+
+SEC("tracepoint/syscalls/sys_enter_socket")
+int trace_sys_enter_socket(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SOCKET)
+e->socket.family = (int)ctx->args[0];
+    e->socket.type = (int)ctx->args[1];
+    e->socket.protocol = (int)ctx->args[2];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_setsockopt")
+int trace_sys_enter_setsockopt(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SOCKOPT)
+e->sockopt.fd = (int)ctx->args[0];
+    e->sockopt.level = (int)ctx->args[1];
+    e->sockopt.optname = (int)ctx->args[2];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_getsockopt")
+int trace_sys_enter_getsockopt(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SOCKOPT)
+e->sockopt.fd = (int)ctx->args[0];
+    e->sockopt.level = (int)ctx->args[1];
+    e->sockopt.optname = (int)ctx->args[2];
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_pipe")
+int trace_sys_enter_pipe(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
+e->syscall.syscall_id = (u32)ctx->id;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_pipe2")
+int trace_sys_enter_pipe2(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
+e->syscall.syscall_id = (u32)ctx->id;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+// PROCESS INFO
+// -----------------------------------------------------------------------------
+
+SEC("tracepoint/syscalls/sys_enter_getpid")
+int trace_sys_enter_getpid(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
+e->syscall.syscall_id = (u32)ctx->id;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_getuid")
+int trace_sys_enter_getuid(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
+e->syscall.syscall_id = (u32)ctx->id;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_newuname")
+int trace_sys_enter_newuname(struct trace_event_raw_sys_enter *ctx) {
+    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
+e->syscall.syscall_id = (u32)ctx->id;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
 // IO STATS ACCOUNTING PROBES
 // -----------------------------------------------------------------------------
 
@@ -866,25 +1062,13 @@ int trace_sys_enter_unshare(struct trace_event_raw_sys_enter *ctx) {
 // EXTENDED SYSCALLS
 // -----------------------------------------------------------------------------
 
-#define NEW_EVENT(TYPE) \
-    u64 id = bpf_get_current_pid_tgid(); \
-    u32 user_pid = id >> 32; \
-    u32 user_tid = (u32)id; \
-    if (!should_trace_events(user_pid)) return 0; \
-    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0); \
-    if (!e) return 0; \
-    e->pid = user_tid; \
-    e->tgid = user_pid; \
-    e->type = TYPE; \
-    e->ts = bpf_ktime_get_ns();
-
 // -----------------------------------------------------------------------------
 // PROCESS / SCHEDULING
 // -----------------------------------------------------------------------------
 
 SEC("tracepoint/syscalls/sys_enter_wait4")
 int trace_sys_enter_wait4(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_WAIT4)
+    RESERVE_EVENT(EVENT_TYPE_WAIT4)
     e->wait4.pid = (u32)ctx->args[0];
     e->wait4.options = (int)ctx->args[2];
     bpf_ringbuf_submit(e, 0);
@@ -897,7 +1081,7 @@ int trace_sys_enter_wait4(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_mmap")
 int trace_sys_enter_mmap(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_MMAP)
+    RESERVE_EVENT(EVENT_TYPE_MMAP)
     e->mmap.addr = (u64)ctx->args[0];
     e->mmap.len = (u64)ctx->args[1];
     e->mmap.prot = (int)ctx->args[2];
@@ -910,7 +1094,7 @@ int trace_sys_enter_mmap(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_munmap")
 int trace_sys_enter_munmap(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_MUNMAP)
+    RESERVE_EVENT(EVENT_TYPE_MUNMAP)
     e->munmap.addr = (u64)ctx->args[0];
     e->munmap.len = (u64)ctx->args[1];
     bpf_ringbuf_submit(e, 0);
@@ -919,7 +1103,7 @@ int trace_sys_enter_munmap(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_mprotect")
 int trace_sys_enter_mprotect(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_MPROTECT)
+    RESERVE_EVENT(EVENT_TYPE_MPROTECT)
     e->mprotect.start = (u64)ctx->args[0];
     e->mprotect.len = (u64)ctx->args[1];
     e->mprotect.prot = (int)ctx->args[2];
@@ -929,7 +1113,7 @@ int trace_sys_enter_mprotect(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_brk")
 int trace_sys_enter_brk(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_BRK)
+    RESERVE_EVENT(EVENT_TYPE_BRK)
     e->brk.brk = (u64)ctx->args[0];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -941,7 +1125,7 @@ int trace_sys_enter_brk(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_accept")
 int trace_sys_enter_accept(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_ACCEPT)
+    RESERVE_EVENT(EVENT_TYPE_ACCEPT)
     e->accept.fd = (int)ctx->args[0];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -949,7 +1133,7 @@ int trace_sys_enter_accept(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_accept4")
 int trace_sys_enter_accept4(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_ACCEPT)
+    RESERVE_EVENT(EVENT_TYPE_ACCEPT)
     e->accept.fd = (int)ctx->args[0];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -957,7 +1141,7 @@ int trace_sys_enter_accept4(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_bind")
 int trace_sys_enter_bind(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_BIND)
+    RESERVE_EVENT(EVENT_TYPE_BIND)
     e->bind.fd = (int)ctx->args[0];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -965,7 +1149,7 @@ int trace_sys_enter_bind(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_sendto")
 int trace_sys_enter_sendto(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_SENDTO)
+    RESERVE_EVENT(EVENT_TYPE_SENDTO)
     e->net_rw.fd = (int)ctx->args[0];
     e->net_rw.len = (u64)ctx->args[2];
     bpf_ringbuf_submit(e, 0);
@@ -974,7 +1158,7 @@ int trace_sys_enter_sendto(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_recvfrom")
 int trace_sys_enter_recvfrom(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_RECVFROM)
+    RESERVE_EVENT(EVENT_TYPE_RECVFROM)
     e->net_rw.fd = (int)ctx->args[0];
     e->net_rw.len = (u64)ctx->args[2];
     bpf_ringbuf_submit(e, 0);
@@ -987,7 +1171,7 @@ int trace_sys_enter_recvfrom(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_unlinkat")
 int trace_sys_enter_unlinkat(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_UNLINKAT)
+    RESERVE_EVENT(EVENT_TYPE_UNLINKAT)
     e->unlinkat.dfd = (int)ctx->args[0];
     const char *pathname = (const char *)ctx->args[1];
     bpf_probe_read_user_str(&e->unlinkat.pathname, sizeof(e->unlinkat.pathname), pathname);
@@ -997,7 +1181,7 @@ int trace_sys_enter_unlinkat(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_rename")
 int trace_sys_enter_rename(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_RENAME)
+    RESERVE_EVENT(EVENT_TYPE_RENAME)
     const char *oldname = (const char *)ctx->args[0];
     const char *newname = (const char *)ctx->args[1];
     bpf_probe_read_user_str(&e->rename.oldname, sizeof(e->rename.oldname), oldname);
@@ -1008,7 +1192,7 @@ int trace_sys_enter_rename(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_renameat")
 int trace_sys_enter_renameat(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_RENAME)
+    RESERVE_EVENT(EVENT_TYPE_RENAME)
     const char *oldname = (const char *)ctx->args[1];
     const char *newname = (const char *)ctx->args[3];
     bpf_probe_read_user_str(&e->rename.oldname, sizeof(e->rename.oldname), oldname);
@@ -1019,7 +1203,7 @@ int trace_sys_enter_renameat(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_renameat2")
 int trace_sys_enter_renameat2(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_RENAME)
+    RESERVE_EVENT(EVENT_TYPE_RENAME)
     const char *oldname = (const char *)ctx->args[1];
     const char *newname = (const char *)ctx->args[3];
     bpf_probe_read_user_str(&e->rename.oldname, sizeof(e->rename.oldname), oldname);
@@ -1034,7 +1218,7 @@ int trace_sys_enter_renameat2(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_futex")
 int trace_sys_enter_futex(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_FUTEX)
+    RESERVE_EVENT(EVENT_TYPE_FUTEX)
     e->futex.uaddr = (u64)ctx->args[0];
     e->futex.op = (int)ctx->args[1];
     e->futex.val = (u32)ctx->args[2];
@@ -1044,7 +1228,7 @@ int trace_sys_enter_futex(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_epoll_wait")
 int trace_sys_enter_epoll_wait(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_EPOLL_WAIT)
+    RESERVE_EVENT(EVENT_TYPE_EPOLL_WAIT)
     e->epoll_wait.epfd = (int)ctx->args[0];
     e->epoll_wait.maxevents = (int)ctx->args[2];
     bpf_ringbuf_submit(e, 0);
@@ -1053,7 +1237,7 @@ int trace_sys_enter_epoll_wait(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_select")
 int trace_sys_enter_select(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_SELECT)
+    RESERVE_EVENT(EVENT_TYPE_SELECT)
     e->select_poll.nfds = (int)ctx->args[0];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -1061,7 +1245,7 @@ int trace_sys_enter_select(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_poll")
 int trace_sys_enter_poll(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_POLL)
+    RESERVE_EVENT(EVENT_TYPE_POLL)
     e->select_poll.nfds = (int)ctx->args[1];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -1073,7 +1257,7 @@ int trace_sys_enter_poll(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_ptrace")
 int trace_sys_enter_ptrace(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_PTRACE)
+    RESERVE_EVENT(EVENT_TYPE_PTRACE)
     e->ptrace.request = (long)ctx->args[0];
     e->ptrace.target_pid = (u32)ctx->args[1];
     bpf_ringbuf_submit(e, 0);
@@ -1082,7 +1266,7 @@ int trace_sys_enter_ptrace(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_bpf")
 int trace_sys_enter_bpf(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_BPF)
+    RESERVE_EVENT(EVENT_TYPE_BPF)
     e->bpf.cmd = (int)ctx->args[0];
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -1090,7 +1274,7 @@ int trace_sys_enter_bpf(struct trace_event_raw_sys_enter *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_capset")
 int trace_sys_enter_capset(struct trace_event_raw_sys_enter *ctx) {
-    NEW_EVENT(EVENT_TYPE_CAPSET)
+    RESERVE_EVENT(EVENT_TYPE_CAPSET)
     e->capset.target_pid = 0;
     void *header = (void *)ctx->args[0];
     if (header) {

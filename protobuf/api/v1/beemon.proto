@@ -159,37 +159,43 @@ message Event {
   uint32 pid = 2;
   
   oneof event {
-    ProcessEvent process = 4;
-    LimitChangedEvent limit_changed = 5;
-    SyscallEvent syscall = 6;
-    FileOpenEvent file_open = 7;
-    FileReadEvent file_read = 8;
-    FileWriteEvent file_write = 9;
-    FileCloseEvent file_close = 10;
-    NetworkConnectEvent network_connect = 11;
-    ChrootEvent chroot = 12;
-    PivotRootEvent pivot_root = 13;
-    SetnsEvent setns = 14;
-    UnshareEvent unshare = 15;
-    Wait4Event wait4 = 16;
-    MmapEvent mmap = 17;
-    MunmapEvent munmap = 18;
-    MprotectEvent mprotect = 19;
-    BrkEvent brk = 20;
-    AcceptEvent accept = 21;
-    BindEvent bind = 22;
-    SendtoEvent sendto = 23;
-    RecvfromEvent recvfrom = 24;
-    UnlinkatEvent unlinkat = 25;
-    RenameEvent rename = 26;
-    FutexEvent futex = 27;
-    EpollWaitEvent epoll_wait = 28;
-    SelectEvent select = 29;
-    PollEvent poll = 30;
-    PtraceEvent ptrace = 31;
-    BpfEvent bpf = 32;
-    CapsetEvent capset = 33;
-    NetworkAcceptEvent network_accept = 34;
+    SyscallEvent syscall = 3;
+    FileOpenEvent file_open = 4;
+    NetworkConnectEvent network_connect = 5;
+    ProcessEvent process = 6;
+    FileReadEvent file_read = 7;
+    FileWriteEvent file_write = 8;
+    FileCloseEvent file_close = 9;
+    ChrootEvent chroot = 10;
+    PivotRootEvent pivot_root = 11;
+    SetnsEvent setns = 12;
+    UnshareEvent unshare = 13;
+    Wait4Event wait4 = 14;
+    MmapEvent mmap = 15;
+    MunmapEvent munmap = 16;
+    MprotectEvent mprotect = 17;
+    BrkEvent brk = 18;
+    AcceptEvent accept = 19;
+    BindEvent bind = 20;
+    SendtoEvent sendto = 21;
+    RecvfromEvent recvfrom = 22;
+    UnlinkatEvent unlinkat = 23;
+    RenameEvent rename = 24;
+    FutexEvent futex = 25;
+    EpollWaitEvent epoll_wait = 26;
+    SelectEvent select = 27;
+    PollEvent poll = 28;
+    PtraceEvent ptrace = 29;
+    BpfEvent bpf = 30;
+    CapsetEvent capset = 31;
+    NetworkAcceptEvent network_accept = 32;
+    SignalEvent signal = 33;
+    FileMetaEvent file_meta = 34;
+    IoctlEvent ioctl = 35;
+    FcntlEvent fcntl = 36;
+    LseekEvent lseek = 37;
+    SocketEvent socket = 38;
+    SocketOptEvent socket_opt = 39;
   }
 }
 
@@ -358,3 +364,44 @@ message BpfEvent {
 message CapsetEvent {
   uint32 target_pid = 1;
 }
+
+message SignalEvent {
+  uint32 target_pid = 1;
+  uint32 target_tid = 2;
+  int32 sig = 3;
+}
+
+message FileMetaEvent {
+  string pathname = 1;
+  int32 fd = 2;
+  int32 mode = 3;
+}
+
+message IoctlEvent {
+  int32 fd = 1;
+  uint64 cmd = 2;
+}
+
+message FcntlEvent {
+  int32 fd = 1;
+  int32 cmd = 2;
+}
+
+message LseekEvent {
+  int32 fd = 1;
+  uint64 offset = 2;
+  int32 whence = 3;
+}
+
+message SocketEvent {
+  int32 family = 1;
+  int32 type = 2;
+  int32 protocol = 3;
+}
+
+message SocketOptEvent {
+  int32 fd = 1;
+  int32 level = 2;
+  int32 optname = 3;
+}
+

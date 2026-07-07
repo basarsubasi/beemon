@@ -50,6 +50,13 @@ pub const EVENT_TYPE_PTRACE: u32 = 27;
 pub const EVENT_TYPE_BPF: u32 = 28;
 pub const EVENT_TYPE_CAPSET: u32 = 29;
 pub const EVENT_TYPE_NET_ACCEPT: u32 = 30;
+pub const EVENT_TYPE_SIGNAL: u32 = 31;
+pub const EVENT_TYPE_FILE_META: u32 = 32;
+pub const EVENT_TYPE_IOCTL: u32 = 33;
+pub const EVENT_TYPE_FCNTL: u32 = 34;
+pub const EVENT_TYPE_LSEEK: u32 = 35;
+pub const EVENT_TYPE_SOCKET: u32 = 36;
+pub const EVENT_TYPE_SOCKOPT: u32 = 37;
 
 // ------------------------------------------------------------------
 // Trace flags written to the `target_pids` BPF hash map values.
@@ -241,6 +248,53 @@ pub struct CapsetPayload {
     pub target_pid: u32,
 }
 
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct SignalPayload {
+    pub target_pid: u32,
+    pub target_tid: u32,
+    pub sig: i32,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct FileMetaPayload {
+    pub pathname: [u8; 256],
+    pub fd: u32,
+    pub mode: i32,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct IoctlFcntlPayload {
+    pub fd: i32,
+    pub cmd: u64,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct LseekPayload {
+    pub fd: i32,
+    pub offset: u64,
+    pub whence: i32,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct SocketPayload {
+    pub family: i32,
+    pub type_: i32,
+    pub protocol: i32,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct SockOptPayload {
+    pub fd: i32,
+    pub level: i32,
+    pub optname: i32,
+}
+
 // ------------------------------------------------------------------
 // The full event_t (flat; sequential sub-structs as named fields).
 // Field order with matching types is the only contract -- #[repr(C)]
@@ -277,6 +331,12 @@ pub struct EventT {
     pub ptrace: PtracePayload,
     pub bpf: BpfPayload,
     pub capset: CapsetPayload,
+    pub signal: SignalPayload,
+    pub file_meta: FileMetaPayload,
+    pub ioctl_fcntl: IoctlFcntlPayload,
+    pub lseek: LseekPayload,
+    pub socket: SocketPayload,
+    pub sockopt: SockOptPayload,
 }
 
 // ------------------------------------------------------------------

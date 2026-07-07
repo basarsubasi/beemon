@@ -155,6 +155,39 @@ pub fn convert(e: &EventT) -> Event {
         bpf::EVENT_TYPE_CAPSET => Oneof::Capset(CapsetEvent {
             target_pid: e.capset.target_pid,
         }),
+        bpf::EVENT_TYPE_SIGNAL => Oneof::Signal(SignalEvent {
+            target_pid: e.signal.target_pid,
+            target_tid: e.signal.target_tid,
+            sig: e.signal.sig,
+        }),
+        bpf::EVENT_TYPE_FILE_META => Oneof::FileMeta(FileMetaEvent {
+            pathname: parse_c_string(&e.file_meta.pathname),
+            fd: e.file_meta.fd as i32,
+            mode: e.file_meta.mode,
+        }),
+        bpf::EVENT_TYPE_IOCTL => Oneof::Ioctl(IoctlEvent {
+            fd: e.ioctl_fcntl.fd,
+            cmd: e.ioctl_fcntl.cmd,
+        }),
+        bpf::EVENT_TYPE_FCNTL => Oneof::Fcntl(FcntlEvent {
+            fd: e.ioctl_fcntl.fd,
+            cmd: e.ioctl_fcntl.cmd as i32,
+        }),
+        bpf::EVENT_TYPE_LSEEK => Oneof::Lseek(LseekEvent {
+            fd: e.lseek.fd,
+            offset: e.lseek.offset,
+            whence: e.lseek.whence,
+        }),
+        bpf::EVENT_TYPE_SOCKET => Oneof::Socket(SocketEvent {
+            family: e.socket.family,
+            type_: e.socket.type_,
+            protocol: e.socket.protocol,
+        }),
+        bpf::EVENT_TYPE_SOCKOPT => Oneof::SocketOpt(SocketOptEvent {
+            fd: e.sockopt.fd,
+            level: e.sockopt.level,
+            optname: e.sockopt.optname,
+        }),
 
         // The BPF program doesn't emit LimitChanged; cgroup limit
         // changes are surfaced to the UI via the periodic scanner (which
