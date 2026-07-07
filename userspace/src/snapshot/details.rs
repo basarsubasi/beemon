@@ -5,6 +5,9 @@
 //! `open_files` walks `/proc/<pid>/fd/*` and `readlink`s each entry.
 //! `active_connections` parses `/proc/net/{tcp,tcp6,udp,udp6}` and matches
 //! socket inode to the pid's fd set.
+//!
+//! `GetNamespaceDetails` falls back to the [`super::namespace_tree_cache`]
+//! to resolve a reference pid when the caller provides `reference_pid = 0`.
 
 use std::collections::HashMap;
 use std::fs;
@@ -185,16 +188,46 @@ fn push_udp(out: &mut Vec<NetworkConnection>, inode_set: &std::collections::Hash
 
 /// Implementation of `GetNamespaceDetails`. Walks the per-namespace files
 /// under `/proc/<reference_pid>/` to derive the human-readable strings.
+///
+/// If `reference_pid == 0`, the namespace tree cache resolves any pid sharing
+/// the requested `(ns_type, ns_inode)` — failing that, the response is empty.
 pub fn read_namespace_details(
     ns_type: &str,
     ns_inode: &str,
     reference_pid: u32,
+    namespace_tree: &super::namespace_tree_cache::NamespaceTreeCache,
 ) -> GetNamespaceDetailsResponse {
-    let mount_info = read_file_string(&format!("/proc/{reference_pid}/mountinfo"));
-    let net_links = read_file_string(&format!("/proc/{reference_pid}/net/ip_tables_names"));
-    let net_routes = read_file_string(&format!("/proc/{reference_pid}/net/route"));
-    let uts_info = read_uts(reference_pid);
-    let user_maps = read_user_maps(reference_pid);
+    let ref_pid = if reference_pid > 0 {
+        reference_pid
+    } else {
+        // Parse the ns_inode string to a u64 and look up any pid in the
+        // namespace tree cache.
+        match ns_inode.parse::<u64>() {
+            Ok(inode) => namespace_tree.find_any_pid(ns_type, inode).unwrap_or(0),
+            Err(_) => 0,
+        }
+    };
+
+    if ref_pid == 0 {
+        // No reference pid available; return an empty (but valid) response
+        // that echoes the requested inode/type. The UI renders an empty
+        // details panel rather than 404'ing the whole RPC.
+        return GetNamespaceDetailsResponse {
+            ns_type: ns_type.to_string(),
+            ns_inode: ns_inode.to_string(),
+            mount_info: String::new(),
+            net_links: String::new(),
+            net_routes: String::new(),
+            uts_info: String::new(),
+            user_maps: String::new(),
+        };
+    }
+
+    let mount_info = read_file_string(&format!("/proc/{ref_pid}/mountinfo"));
+    let net_links = read_file_string(&format!("/proc/{ref_pid}/net/ip_tables_names"));
+    let net_routes = read_file_string(&format!("/proc/{ref_pid}/net/route"));
+    let uts_info = read_uts(ref_pid);
+    let user_maps = read_user_maps(ref_pid);
 
     GetNamespaceDetailsResponse {
         ns_type: ns_type.to_string(),

@@ -87,23 +87,6 @@ fn read_vmrss_kb(pid: i32) -> u64 {
     0
 }
 
-/// Read `/proc/<pid>/ns/*` symlinks, returning formatted strings like
-/// `mnt:[4026531840]`. Used by the scanner's namespace fills.
-pub fn read_namespaces(pid: i32) -> Vec<String> {
-    let mut out = Vec::new();
-    if let Ok(entries) = fs::read_dir(format!("/proc/{pid}/ns")) {
-        for e in entries.flatten() {
-            if let Ok(target) = fs::read_link(e.path()) {
-                if let Some(s) = target.to_str() {
-                    out.push(s.to_string());
-                }
-            }
-        }
-    }
-    out.sort();
-    out
-}
-
 /// Map a Linux task-state char from `/proc/<pid>/stat` to a readable string
 /// the UI can render. Matches the convention used by `ps`-style tools.
 pub fn state_label(state_char: char) -> &'static str {

@@ -7,7 +7,7 @@
 use pb::event::Event as Oneof;
 use pb::{
     AcceptEvent, BindEvent, BrkEvent, BpfEvent, CapsetEvent, ChrootEvent, EpollWaitEvent, Event,
-    FutexEvent, FileCloseEvent, FileOpenEvent, FileReadEvent, FileWriteEvent, LimitChangedEvent,
+    FutexEvent, FileCloseEvent, FileOpenEvent, FileReadEvent, FileWriteEvent,
     MmapEvent, MprotectEvent, MunmapEvent, NetworkAcceptEvent, NetworkConnectEvent,
     PivotRootEvent, PollEvent, ProcessEvent, PtraceEvent, RecvfromEvent, RenameEvent,
     SelectEvent, SendtoEvent, SetnsEvent, SyscallEvent, UnlinkatEvent, UnshareEvent,
@@ -155,10 +155,13 @@ pub fn convert(e: &EventT) -> Event {
             target_pid: e.capset.target_pid,
         }),
 
-        // The BPF program doesn't emit LimitChanged; the daemon synthesises
-        // those from a cgroup-watcher task in `rates.rs`. Unknown event type
-        // ⇒ emit a no-op Syscall event with syscall_id 0 so the client can
-        // still see the timestamp/pid pair, accounting for forward-compat.
+        // The BPF program doesn't emit LimitChanged; cgroup limit
+        // changes are surfaced to the UI via the periodic scanner (which
+        // reads the cgroup_tree_cache, refreshed every 10s) through the
+        // ListProcesses/GetProcessMetadata RPCs. We therefore never emit a
+        // LimitChangedEvent on the stream. Unknown event type ⇒ emit a
+        // no-op Syscall event with syscall_id 0 so the client can still see
+        // the timestamp/pid pair, accounting for forward-compat.
         unknown => {
             tracing::warn!(event_type = unknown, "unknown BPF event type");
             Oneof::Syscall(SyscallEvent { syscall_id: 0 })
@@ -169,20 +172,5 @@ pub fn convert(e: &EventT) -> Event {
         timestamp_ns,
         pid,
         event: Some(oneof),
-    }
-}
-
-/// Convenience: build a `LimitChangedEvent` oneof (used by `rates.rs` to
-/// surface host cgroup changes to the streaming client).
-pub fn limit_changed_event(mem: u64, quota: u64, period: u64, pids: u64) -> Event {
-    Event {
-        timestamp_ns: 0,
-        pid: 0,
-        event: Some(Oneof::LimitChanged(LimitChangedEvent {
-            memory_limit_bytes: mem,
-            cpu_quota_us: quota,
-            cpu_period_us: period,
-            pids_limit: pids,
-        })),
     }
 }
