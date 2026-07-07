@@ -7,6 +7,13 @@ use aya::maps::{HashMap, Map, MapData, PerCpuHashMap, PerCpuValues};
 
 use super::types::{IoStat, NetFlowKey, NetFlowStat};
 
+// Owned (taken-out-of-Ebpf) map wrappers. Maps taken by `Ebpf::take_map`
+// are fully owned, so their lifetime is independent of any `&'a` borrow.
+// Putting them behind `Mutex<..>` lets multiple tokio tasks share access.
+pub type OwnedTargetPids = HashMap<MapData, u32, u8>;
+pub type OwnedIoStats   = PerCpuHashMap<MapData, u32, IoStat>;
+pub type OwnedNetFlows  = HashMap<MapData, NetFlowKey, NetFlowStat>;
+
 /// Sum of all per-CPU `IoStat` counters for one PID.
 pub struct IoStats<'a> {
     inner: PerCpuHashMap<&'a mut MapData, u32, IoStat>,
