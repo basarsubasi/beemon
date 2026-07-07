@@ -285,8 +285,7 @@ mod tests {
             cache.get_or_load(pid);
         }
         
-        // At least some should have loaded
-        assert!(cache.entries().len() >= 0);
+        // The number of loaded entries depends on which pids exist on this system
     }
 
     #[test]
@@ -311,7 +310,6 @@ mod tests {
         
         if let Some(entry) = cache.get_or_load(1) {
             assert_eq!(entry.pid, 1);
-            assert!(entry.ppid >= 0);
             assert!(!entry.comm.is_empty());
             // namespaces may be empty or have entries depending on system
             // cgroup_path may be None or Some
@@ -331,7 +329,7 @@ mod tests {
         let mut cache = ProcCache::new(Duration::from_secs(10));
         
         // Manually insert entries for testing
-        let mut entry1 = ProcCacheEntry {
+        let entry1 = ProcCacheEntry {
             pid: 100,
             ppid: 1,
             comm: "test1".to_string(),

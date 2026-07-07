@@ -130,7 +130,7 @@ pub fn net_flows_all(map: &OwnedNetFlows) -> Result<Vec<(NetFlowKey, NetFlowStat
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use crate::bpf::types::{IoStat, NetFlowKey, NetFlowStat};
 
     #[test]
