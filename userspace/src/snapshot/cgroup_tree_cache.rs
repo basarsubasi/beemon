@@ -13,7 +13,7 @@
 //! because the UI re-opens the details view frequently).
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use super::cgroup::{read_cpu_max, read_u64_max};
@@ -50,7 +50,7 @@ impl CgroupTreeCache {
     /// Returns limits for the given cgroup path, loading it from sysfs if
     /// missing or stale. Returns `None` for a `None` path (process not in
     /// any v2 cgroup — proto: "0 means no limit").
-    pub fn get_or_load(&mut self, cgroup_path: &Option<String>) -> Option<CgroupLimits> {
+    pub fn get_or_load(&mut self, cgroup_path: &Option<String>, pid: u32) -> Option<CgroupLimits> {
         let path = cgroup_path.as_ref()?;
         let stale = self
             .loaded_at
@@ -58,7 +58,7 @@ impl CgroupTreeCache {
             .map(|t| t.elapsed() > self.ttl)
             .unwrap_or(true);
         if stale {
-            let limits = read_cgroup_limits(path);
+            let limits = read_cgroup_limits(path, pid);
             let was_new = !self.entries.contains_key(path);
             self.entries.insert(path.clone(), limits);
             self.loaded_at.insert(path.clone(), Instant::now());
@@ -83,11 +83,44 @@ impl CgroupTreeCache {
     }
 }
 
-fn read_cgroup_limits(cgroup_path: &str) -> CgroupLimits {
-    let base = PathBuf::from("/sys/fs/cgroup").join(cgroup_path);
-    let memory_limit_bytes = read_u64_max(&base.join("memory.max"));
-    let (cpu_quota_us, cpu_period_us) = read_cpu_max(&base.join("cpu.max"));
-    let pids_limit = read_u64_max(&base.join("pids.max"));
+fn find_cgroup_dir(base: &Path, cgroup_path: &str, pid: u32) -> PathBuf {
+    // 1. Direct from /proc/(pid)/cgroup
+    let p1 = base.join(cgroup_path);
+    if p1.exists() && (p1.join("memory.max").exists() || p1.join("cpu.max").exists()) {
+        return p1;
+    }
+    
+    // 2. Docker systemd slice mapping: docker/ID -> system.slice/docker-ID.scope
+    if let Some(id) = cgroup_path.strip_prefix("docker/") {
+        let p2 = base.join(format!("system.slice/docker-{}.scope", id));
+        if p2.exists() {
+            return p2;
+        }
+    } else if let Some(id) = cgroup_path.strip_prefix("system.slice/docker-") {
+        if let Some(end) = id.strip_suffix(".scope") {
+            let p2 = base.join(format!("docker/{}", end));
+            if p2.exists() {
+                return p2;
+            }
+        }
+    }
+    
+    // 3. /sys/fs/cgroup/(pid)
+    let p3 = base.join(pid.to_string());
+    if p3.exists() {
+        return p3;
+    }
+    
+    // Fallback to the direct path, even if it doesn't exist, to let read_u64_max handle defaults.
+    p1
+}
+
+fn read_cgroup_limits(cgroup_path: &str, pid: u32) -> CgroupLimits {
+    let base = PathBuf::from("/sys/fs/cgroup");
+    let cgroup_dir = find_cgroup_dir(&base, cgroup_path, pid);
+    let memory_limit_bytes = read_u64_max(&cgroup_dir.join("memory.max"));
+    let (cpu_quota_us, cpu_period_us) = read_cpu_max(&cgroup_dir.join("cpu.max"));
+    let pids_limit = read_u64_max(&cgroup_dir.join("pids.max"));
     CgroupLimits {
         memory_limit_bytes,
         cpu_quota_us,
@@ -126,7 +159,7 @@ mod tests {
     #[test]
     fn test_cgroup_tree_cache_get_or_load_none_path() {
         let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
-        let result = cache.get_or_load(&None);
+        let result = cache.get_or_load(&None, 0);
         assert!(result.is_none());
         assert_eq!(cache.len(), 0);
     }
@@ -135,7 +168,7 @@ mod tests {
     fn test_cgroup_tree_cache_get_or_load_nonexistent_path() {
         let mut cache = CgroupTreeCache::new(Duration::from_secs(10));
         let path = Some("nonexistent/cgroup/path".to_string());
-        let result = cache.get_or_load(&path);
+        let result = cache.get_or_load(&path, 0);
         
         // Should return Some with zero values (file doesn't exist)
         assert!(result.is_some());
@@ -156,13 +189,13 @@ mod tests {
         let path = Some("test/path".to_string());
         
         // First call
-        let result1 = cache.get_or_load(&path);
+        let result1 = cache.get_or_load(&path, 0);
         assert!(result1.is_some());
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.total_paths_seen, 1);
         
         // Second call should use cache
-        let result2 = cache.get_or_load(&path);
+        let result2 = cache.get_or_load(&path, 0);
         assert!(result2.is_some());
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.total_paths_seen, 1); // Still 1, not reloaded
@@ -174,7 +207,7 @@ mod tests {
         let path = Some("test/path".to_string());
         
         // Load into cache
-        cache.get_or_load(&path);
+        cache.get_or_load(&path, 0);
         assert_eq!(cache.len(), 1);
         
         // Invalidate
@@ -182,7 +215,7 @@ mod tests {
         assert_eq!(cache.len(), 0);
         
         // Next load should reload
-        cache.get_or_load(&path);
+        cache.get_or_load(&path, 0);
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.total_paths_seen, 2); // Reloaded
     }
@@ -195,9 +228,9 @@ mod tests {
         let path2 = Some("path2".to_string());
         let path3 = Some("path3".to_string());
         
-        cache.get_or_load(&path1);
-        cache.get_or_load(&path2);
-        cache.get_or_load(&path3);
+        cache.get_or_load(&path1, 0);
+        cache.get_or_load(&path2, 0);
+        cache.get_or_load(&path3, 0);
         
         assert_eq!(cache.len(), 3);
         assert_eq!(cache.total_paths_seen, 3);
@@ -209,14 +242,14 @@ mod tests {
         let path = Some("test/path".to_string());
         
         // First load
-        cache.get_or_load(&path);
+        cache.get_or_load(&path, 0);
         assert_eq!(cache.total_paths_seen, 1);
         
         // Wait for TTL to expire
         std::thread::sleep(Duration::from_millis(20));
         
         // Should reload, but total_paths_seen stays at 1 (only counts new paths, not reloads)
-        cache.get_or_load(&path);
+        cache.get_or_load(&path, 0);
         assert_eq!(cache.total_paths_seen, 1);
     }
 
@@ -227,5 +260,39 @@ mod tests {
         assert_eq!(limits.cpu_quota_us, 0);
         assert_eq!(limits.cpu_period_us, 0);
         assert_eq!(limits.pids_limit, 0);
+    }
+
+    #[test]
+    fn test_find_cgroup_dir() {
+        use std::fs;
+        use tempfile::tempdir;
+        
+        let dir = tempdir().unwrap();
+        let base_path = dir.path().join("sys/fs/cgroup");
+        fs::create_dir_all(&base_path).unwrap();
+        
+        // 1. Test direct path mapping
+        let p1 = base_path.join("some/direct/path");
+        fs::create_dir_all(&p1).unwrap();
+        fs::File::create(p1.join("memory.max")).unwrap();
+        assert_eq!(find_cgroup_dir(&base_path, "some/direct/path", 123), p1);
+
+        // 2. Test docker/ mapping -> system.slice/docker-*.scope
+        let p2 = base_path.join("system.slice/docker-abcdef.scope");
+        fs::create_dir_all(&p2).unwrap();
+        assert_eq!(find_cgroup_dir(&base_path, "docker/abcdef", 123), p2);
+
+        // 3. Test system.slice/docker-*.scope -> docker/*
+        let p3 = base_path.join("docker/12345");
+        fs::create_dir_all(&p3).unwrap();
+        assert_eq!(find_cgroup_dir(&base_path, "system.slice/docker-12345.scope", 123), p3);
+
+        // 4. Test fallback to pid
+        let p4 = base_path.join("999");
+        fs::create_dir_all(&p4).unwrap();
+        assert_eq!(find_cgroup_dir(&base_path, "missing/path", 999), p4);
+
+        // 5. Test ultimate fallback (path doesn't exist)
+        assert_eq!(find_cgroup_dir(&base_path, "not/found", 404), base_path.join("not/found"));
     }
 }

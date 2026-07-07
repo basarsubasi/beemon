@@ -149,7 +149,7 @@ fn scan_once(
         // Cgroup limits shared across all pids in the same path. With the
         // cache this is a sysfs read every 10s per unique cgroup, not per pid.
         let (mem_limit, cpu_quota, cpu_period, pids_limit) =
-            cg_lock.get_or_load(&cgroup_path).map_or((0, 0, 0, 0), |l| {
+            cg_lock.get_or_load(&cgroup_path, pid as u32).map_or((0, 0, 0, 0), |l| {
                 (l.memory_limit_bytes, l.cpu_quota_us, l.cpu_period_us, l.pids_limit)
             });
 

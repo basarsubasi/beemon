@@ -235,11 +235,19 @@ pub fn read_namespace_details(
         };
     }
 
-    let mount_info = read_file_string(&format!("/proc/{ref_pid}/mountinfo"));
-    let net_links = read_file_string(&format!("/proc/{ref_pid}/net/ip_tables_names"));
-    let net_routes = read_file_string(&format!("/proc/{ref_pid}/net/route"));
-    let uts_info = read_uts(ref_pid);
-    let user_maps = read_user_maps(ref_pid);
+    let mount_info = exec_nsenter(ref_pid, "-m", "cat /proc/self/mountinfo");
+    let net_links = exec_nsenter(ref_pid, "-n", "ip link");
+    let net_routes = exec_nsenter(ref_pid, "-n", "ip route");
+    let uts_info = format!(
+        "hostname={}\ndomainname={}",
+        exec_nsenter(ref_pid, "-u", "hostname"),
+        exec_nsenter(ref_pid, "-u", "domainname")
+    );
+    let user_maps = format!(
+        "uid_map:\n{}\ngid_map:\n{}",
+        exec_nsenter(ref_pid, "-U", "cat /proc/self/uid_map"),
+        exec_nsenter(ref_pid, "-U", "cat /proc/self/gid_map")
+    );
 
     GetNamespaceDetailsResponse {
         ns_type: ns_type.to_string(),
@@ -252,20 +260,23 @@ pub fn read_namespace_details(
     }
 }
 
-fn read_file_string(path: &str) -> String {
-    fs::read_to_string(path).unwrap_or_default()
-}
+fn exec_nsenter(pid: u32, ns_flag: &str, cmd: &str) -> String {
+    let mut parts = cmd.split_whitespace();
+    let bin = parts.next().unwrap_or("");
+    let args: Vec<&str> = parts.collect();
 
-fn read_uts(reference_pid: u32) -> String {
-    let hostname = read_file_string(&format!("/proc/{reference_pid}/uts/hostname"));
-    let domainname = read_file_string(&format!("/proc/{reference_pid}/uts/domainname"));
-    format!("hostname={hostname}\ndomainname={domainname}")
-}
+    let output = std::process::Command::new("nsenter")
+        .arg("-t")
+        .arg(pid.to_string())
+        .arg(ns_flag)
+        .arg(bin)
+        .args(args)
+        .output();
 
-fn read_user_maps(reference_pid: u32) -> String {
-    let uid_map = read_file_string(&format!("/proc/{reference_pid}/uid_map"));
-    let gid_map = read_file_string(&format!("/proc/{reference_pid}/gid_map"));
-    format!("uid_map:\n{uid_map}\ngid_map:\n{gid_map}")
+    match output {
+        Ok(out) => String::from_utf8_lossy(&out.stdout).trim().to_string(),
+        Err(_) => String::new(),
+    }
 }
 
 /// Resolve the children of `pid` by reading `/proc/<child>/stat.ppid` for
@@ -415,38 +426,6 @@ mod tests {
         assert_eq!(result.ns_type, "mnt");
         assert_eq!(result.ns_inode, "not_a_number");
         assert!(result.mount_info.is_empty());
-    }
-
-    #[test]
-    fn test_read_file_string_nonexistent() {
-        let result = read_file_string("/nonexistent/path/to/file");
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn test_read_file_string_existing() {
-        use std::io::Write;
-        use tempfile::NamedTempFile;
-        
-        let mut tmp = NamedTempFile::new().unwrap();
-        writeln!(tmp, "test content").unwrap();
-        
-        let result = read_file_string(tmp.path().to_str().unwrap());
-        assert_eq!(result, "test content\n");
-    }
-
-    #[test]
-    fn test_read_uts_nonexistent_pid() {
-        let result = read_uts(999999999);
-        assert!(result.contains("hostname="));
-        assert!(result.contains("domainname="));
-    }
-
-    #[test]
-    fn test_read_user_maps_nonexistent_pid() {
-        let result = read_user_maps(999999999);
-        assert!(result.contains("uid_map:"));
-        assert!(result.contains("gid_map:"));
     }
 
     #[test]

@@ -82,7 +82,7 @@ pub fn read_memtotal_bytes() -> u64 {
 /// Read from `/proc/self/ns/` once at startup (they don't change per host).
 pub fn read_host_namespaces() -> Vec<String> {
     let mut out = Vec::new();
-    if let Ok(entries) = fs::read_dir("/proc/self/ns") {
+    if let Ok(entries) = fs::read_dir("/proc/1/ns") {
         for e in entries.flatten() {
             if let Ok(target) = fs::read_link(e.path()) {
                 if let Some(s) = target.to_str() {
