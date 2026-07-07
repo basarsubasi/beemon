@@ -128,14 +128,16 @@ fn read_ns_inodes(pid: u32) -> HashMap<String, u64> {
             continue;
         };
         let s = target.to_string_lossy().to_string();
-        // Parse `name:[inode]`. We match the prefix loosely so we don't
-        // double-count variations like `time_for_children`.
-        if let Some(rest) = s
-            .strip_prefix(&format!("{name}:["))
-            .and_then(|r| r.strip_suffix(']'))
-        {
-            if let Ok(inode) = rest.parse::<u64>() {
-                out.insert(name, inode);
+        // Target format is typically `<type>:[<inode>]` like `pid:[4026531836]`.
+        // We extract the inode number between `:[` and `]`.
+        if let Some(start) = s.find(":[") {
+            if let Some(end) = s.rfind(']') {
+                if start < end {
+                    let inode_str = &s[start + 2..end];
+                    if let Ok(inode) = inode_str.parse::<u64>() {
+                        out.insert(name, inode);
+                    }
+                }
             }
         }
     }

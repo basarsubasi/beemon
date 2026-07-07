@@ -20,7 +20,7 @@ impl Default for Config {
             grpc_port: 50051,
             log_directive: "warn".to_string(),
             event_limit: 150,
-            rates_poll_secs: 5,
+            rates_poll_secs: 1,
         }
     }
 }
@@ -68,7 +68,7 @@ mod tests {
         let cfg = Config::default();
         assert_eq!(cfg.grpc_addr, "0.0.0.0");
         assert_eq!(cfg.grpc_port, 50051);
-        assert_eq!(cfg.rates_poll_secs, 5);
+        assert_eq!(cfg.rates_poll_secs, 1);
         assert_eq!(cfg.event_limit, 150);
         assert_eq!(cfg.log_directive, "warn");
     }
@@ -118,7 +118,7 @@ mod tests {
         let cfg = Config::from_env();
         assert_eq!(cfg.grpc_addr, "0.0.0.0"); // default
         assert_eq!(cfg.grpc_port, 8080); // from env
-        assert_eq!(cfg.rates_poll_secs, 5); // default
+        assert_eq!(cfg.rates_poll_secs, 1); // default
         assert_eq!(cfg.event_limit, 150); // default
         assert_eq!(cfg.log_directive, "warn"); // from env
 
@@ -135,7 +135,7 @@ mod tests {
         let cfg = Config::from_env();
         // Should fall back to defaults for invalid values
         assert_eq!(cfg.grpc_port, 50051);
-        assert_eq!(cfg.rates_poll_secs, 5);
+        assert_eq!(cfg.rates_poll_secs, 1);
 
         // Cleanup
         std::env::remove_var("BEEMON_GRPC_PORT");

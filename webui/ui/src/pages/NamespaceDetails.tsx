@@ -260,7 +260,7 @@ export function NamespaceDetails() {
         const procsRes = await fetch(`/api/v1/processes`);
         const procsData = (await procsRes.json()) as ListProcessesResponse;
         
-        const targetNsStr = `${type}:${type}:[${inode}]`;
+        const targetNsStr = `${type}:[${inode}]`;
         const inNs = (procsData.processes || []).filter(p => p.namespaces?.includes(targetNsStr));
         setProcesses(inNs);
         setHostNamespaces(procsData.hostNamespaces || []);
@@ -294,7 +294,7 @@ export function NamespaceDetails() {
     return `${mb.toFixed(1)} MB`;
   };
 
-  const isHost = hostNamespaces.includes(`${type}:${type}:[${inode}]`);
+  const isHost = hostNamespaces.includes(`${type}:[${inode}]`);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6 flex flex-col h-screen">

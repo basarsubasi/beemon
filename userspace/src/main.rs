@@ -84,7 +84,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         proc_cache.clone(),
         cgroup_tree.clone(),
         namespace_tree.clone(),
-        2, // 2s scanner cadence
+        2, // 1s scanner cadence
     );
     spawn_rates(state_maps.clone(), rates_snapshot.clone(), cfg.rates_poll_secs);
 
