@@ -38,11 +38,14 @@ pub fn read_light(pid: i32) -> Option<LightProc> {
 /// Returns None on any parse / IO failure.
 fn read_stat(pid: i32) -> Option<(i32, i32, String, char, u64, u64)> {
     let raw = fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
-    parse_stat(&raw)
+    parse_stat(&raw, pid)
 }
 
-/// Parse the contents of `/proc/<pid>/stat`. Used by tests to avoid disk IO.
-pub fn parse_stat(raw: &str) -> Option<(i32, i32, String, char, u64, u64)> {
+/// Parse the contents of `/proc/<pid>/stat` for (pid, ppid, comm, state,
+/// utime, stime). The `pid` argument is the caller's pid — we don't re-parse
+/// it from the raw line because some kernel versions pad the comm with
+/// spaces, and the parser already splits on parens for comm.
+pub fn parse_stat(raw: &str, pid: i32) -> Option<(i32, i32, String, char, u64, u64)> {
     // comm in /proc/pid/stat may contain spaces and parens; the `(` marks the
     // start, the *last* `)` marks the end. We split carefully.
     let lparen = raw.find('(')?;

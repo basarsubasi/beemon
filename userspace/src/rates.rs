@@ -43,8 +43,8 @@ pub struct HostIoRates {
 /// the spawn_blocking closure can hold them by `Arc<Mutex<..>>` (BPF maps
 /// are not `Sync`).
 pub struct BpfStateMaps {
-    pub io_stats: std::sync::Mutex<OwnedIoStats>,
-    pub net_flows: std::sync::Mutex<OwnedNetFlows>,
+    pub io_stats: Arc<std::sync::Mutex<OwnedIoStats>>,
+    pub net_flows: Arc<std::sync::Mutex<OwnedNetFlows>>,
 }
 
 /// Spawn the 5s rates poller task.
@@ -54,14 +54,14 @@ pub fn spawn(maps: Arc<BpfStateMaps>, snapshot: Arc<RwLock<RateSnapshot>>, perio
         // Previous cumulative counters per pid (summed across CPUs) for
         // computing per-pid delta/sec and the host aggregate rate.
         let mut prev_io: HashMap<u32, IoStat> = HashMap::new();
-        let prev_at: Option<Instant> = None;
-        let mut prev_at = prev_at;
+        let mut prev_at: Option<Instant> = None;
         loop {
             ticker.tick().await;
 
-            let maps = maps.clone();
+            let maps_io = maps.io_stats.clone();
+            let maps_net = maps.net_flows.clone();
             let (new_io, new_flows) = tokio::task::spawn_blocking(move || {
-                read_bpf_maps(&maps)
+                read_bpf_maps(&maps_io, &maps_net)
             })
             .await
             .unwrap_or_default();
@@ -83,9 +83,12 @@ pub fn spawn(maps: Arc<BpfStateMaps>, snapshot: Arc<RwLock<RateSnapshot>>, perio
 }
 
 /// Pull the latest cumulative values from the BPF maps.
-fn read_bpf_maps(maps: &BpfStateMaps) -> (HashMap<u32, IoStat>, HashMap<u32, Vec<(NetFlowKey, NetFlowStat)>>) {
+fn read_bpf_maps(
+    io_stats: &Arc<std::sync::Mutex<OwnedIoStats>>,
+    net_flows: &Arc<std::sync::Mutex<OwnedNetFlows>>,
+) -> (HashMap<u32, IoStat>, HashMap<u32, Vec<(NetFlowKey, NetFlowStat)>>) {
     let mut io = HashMap::new();
-    if let Ok(stats) = maps.io_stats.lock() {
+    if let Ok(stats) = io_stats.lock() {
         match io_stats_summed(&stats) {
             Ok(v) => {
                 for (pid, stat) in v {
@@ -97,7 +100,7 @@ fn read_bpf_maps(maps: &BpfStateMaps) -> (HashMap<u32, IoStat>, HashMap<u32, Vec
     }
 
     let mut flows: HashMap<u32, Vec<(NetFlowKey, NetFlowStat)>> = HashMap::new();
-    if let Ok(nf) = maps.net_flows.lock() {
+    if let Ok(nf) = net_flows.lock() {
         match net_flows_all(&nf) {
             Ok(v) => {
                 for (k, stat) in v {

@@ -39,10 +39,10 @@ struct Inner {
 /// broadcast entry evicted.
 pub struct Subscription {
     pub rx: broadcast::Receiver<Event>,
-    guard: SubscriptionGuard,
+    pub guard: SubscriptionGuard,
 }
 
-struct SubscriptionGuard {
+pub struct SubscriptionGuard {
     pid: u32,
     inner: Arc<Inner>,
 }
@@ -62,7 +62,7 @@ impl Drop for SubscriptionGuard {
         drop(streams);
         if should_unmap {
             if let Ok(mut tp) = self.inner.target_pids.lock() {
-                if let Err(e) = tp.remove(self.pid) {
+                if let Err(e) = tp.remove(&self.pid) {
                     warn!(pid = self.pid, error = %e, "failed to delete from target_pids");
                 }
             }
@@ -97,7 +97,7 @@ impl StreamRegistry {
 
         if needs_arm {
             if let Ok(mut tp) = self.inner.target_pids.lock() {
-                if let Err(e) = tp.insert(pid, TRACE_FLAG_ALL) {
+                if let Err(e) = tp.insert(pid, TRACE_FLAG_ALL, 0) {
                     warn!(pid, error = %e, "insert target_pids failed");
                 }
             }

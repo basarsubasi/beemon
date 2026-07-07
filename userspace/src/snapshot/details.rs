@@ -27,6 +27,12 @@ pub fn enrich(process: &mut Process) {
 
 /// Walk `/proc/<pid>/fd/*` and produce `OpenFile` entries. On error returns `Vec::new()`.
 fn read_open_files(pid: u32) -> Vec<OpenFile> {
+    read_open_files_pub(pid)
+}
+
+/// Public version used by the gRPC service to enrich the requested `Process`
+/// without going through `enrich()` (which would mutate the cached entry).
+pub fn read_open_files_pub(pid: u32) -> Vec<OpenFile> {
     let fd_dir = format!("/proc/{pid}/fd");
     let mut out = Vec::new();
     let entries = match fs::read_dir(&fd_dir) {
@@ -120,6 +126,11 @@ fn socket_inodes_for_pid(pid: u32) -> Vec<u64> {
 /// Parse the four `/proc/net/*` socket tables and return every connection
 /// whose inode matches one of the pid's socket fds.
 fn read_active_connections(pid: u32) -> Vec<NetworkConnection> {
+    read_active_connections_pub(pid)
+}
+
+/// Public version (see [`read_open_files_pub`]).
+pub fn read_active_connections_pub(pid: u32) -> Vec<NetworkConnection> {
     let inodes = socket_inodes_for_pid(pid);
     if inodes.is_empty() {
         return Vec::new();

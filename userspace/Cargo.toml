@@ -17,8 +17,9 @@ path = "src/main.rs"
 [dependencies]
 aya = { version = "0.14", default-features = false }
 tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "net", "signal", "fs", "sync", "time", "io-util"] }
-tokio-stream = "0.1"
+tokio-stream = { version = "0.1", features = ["sync"] }
 tonic = { version = "0.14", default-features = false, features = ["codegen", "server", "transport"] }
+tonic-prost = "0.14"
 prost = "0.14"
 procfs = "0.18"
 nix = { version = "0.31", default-features = false, features = ["fs", "process", "resource", "user"] }

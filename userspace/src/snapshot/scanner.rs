@@ -31,7 +31,7 @@ use crate::snapshot::procfields::{self, state_label};
 const CLKTCK: f32 = 100.0; // sysconf(_SC_CLK_TCK) on Linux is always 100.
 
 /// Per-pid CPU sample retained between scanner iterations for delta calc.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 struct CpuPrev {
     pid: i32,
     utime_stime: u64,
@@ -74,10 +74,9 @@ pub fn spawn(
             };
 
             match cache_clone {
-                Ok(Ok(snap)) => {
+                Ok(snap) => {
                     *cache.write().await = snap;
                 }
-                Ok(Err(e)) => warn!(error = %e, "scan_once failed"),
                 Err(e) => warn!(error = %e, "scan_once join failed"),
             }
         }
