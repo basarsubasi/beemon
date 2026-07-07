@@ -233,7 +233,7 @@ export function Dashboard() {
           <p className="text-zinc-500 dark:text-zinc-400">Real-time eBPF Linux process monitoring.</p>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap items-start gap-4">
           <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
             <div className="p-3 bg-blue-50 dark:bg-zinc-900 rounded-full">
               <MemoryStick className="text-blue-500 dark:text-blue-400 h-6 w-6" />
@@ -246,23 +246,23 @@ export function Dashboard() {
               </div>
             </div>
           </Card>
-          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
-            <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full shrink-0">
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[250px] flex items-start gap-4 shadow-sm">
+            <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full shrink-0 mt-1">
               <Cpu className="text-green-600 dark:text-green-400 h-6 w-6" />
             </div>
-            <div className="flex-1">
-              <div className="flex justify-between items-baseline mb-2">
+            <div className="flex-1 min-w-[150px]">
+              <div className="flex justify-between items-baseline mb-3">
                 <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
                 <p className="text-xl font-mono text-zinc-900 dark:text-white">{totalCpu.toFixed(1)}%</p>
               </div>
               
               {hostCpuPerCore.length > 0 && (
-                <div className="grid gap-1 mt-2">
+                <div className={`grid gap-x-4 gap-y-1.5 mt-2 ${hostCpuPerCore.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   {hostCpuPerCore.map((pct, i) => (
                     <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <span className="w-8 font-mono text-zinc-500">core{i}</span>
-                      <Progress value={pct} className="h-1.5 flex-1" />
-                      <span className="w-8 font-mono text-right text-zinc-500">{pct.toFixed(0)}%</span>
+                      <span className="w-7 font-mono text-zinc-500">c{i}</span>
+                      <Progress value={pct} className="h-1.5 flex-1 min-w-[40px]" />
+                      <span className="w-7 font-mono text-right text-zinc-500">{pct.toFixed(0)}%</span>
                     </div>
                   ))}
                 </div>
