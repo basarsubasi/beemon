@@ -134,6 +134,22 @@ function renderNetRoutes(netRoutes?: string) {
   const lines = netRoutes.trim().split('\n').filter(l => l.trim());
   if (lines.length === 0) return <div className="text-zinc-500 italic mt-2 mb-6">No routes found</div>;
 
+  const isRawRoute = lines.length > 0 && lines[0].startsWith("Iface");
+  const parseHexIp = (hex: string) => {
+    if (hex === "00000000") return "0.0.0.0";
+    const match = hex.match(/.{2}/g);
+    if (!match) return hex;
+    return match.reverse().map(h => parseInt(h, 16)).join(".");
+  };
+
+  const calculatePrefix = (hex: string) => {
+    if (hex === "00000000") return 0;
+    const match = hex.match(/.{2}/g);
+    if (!match) return 0;
+    const binary = match.reverse().map(h => parseInt(h, 16).toString(2).padStart(8, '0')).join("");
+    return binary.split('1').length - 1;
+  };
+
   return (
     <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 mt-2 mb-6 overflow-hidden">
       <Table>
@@ -145,7 +161,29 @@ function renderNetRoutes(netRoutes?: string) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lines.map((line, i) => {
+          {isRawRoute ? lines.slice(1).map((line, i) => {
+            const tokens = line.trim().split(/\s+/);
+            if (tokens.length < 8) return null;
+            const iface = tokens[0];
+            const destIp = parseHexIp(tokens[1]);
+            const gatewayIp = parseHexIp(tokens[2]);
+            const prefix = calculatePrefix(tokens[7]);
+            
+            const dest = tokens[1] === "00000000" ? "default" : `${destIp}/${prefix}`;
+            const details = tokens[2] === "00000000" ? "" : `via ${gatewayIp}`;
+            
+            return (
+              <TableRow key={i} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                <TableCell className="font-mono font-medium text-zinc-900 dark:text-zinc-100">{dest}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300">
+                    {iface}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-zinc-600 dark:text-zinc-400 text-xs">{details}</TableCell>
+              </TableRow>
+            );
+          }) : lines.map((line, i) => {
             const tokens = line.trim().split(/\s+/);
             const dest = tokens[0];
             const devIdx = tokens.indexOf('dev');

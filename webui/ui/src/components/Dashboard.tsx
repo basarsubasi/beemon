@@ -187,7 +187,11 @@ export function Dashboard() {
       });
     });
 
-    return Array.from(nsMap.values()).sort((a, b) => b.count - a.count);
+    return Array.from(nsMap.values()).sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      if (a.type !== b.type) return a.type.localeCompare(b.type);
+      return a.inode.localeCompare(b.inode);
+    });
   }, [processes, hostNamespaces]);
 
   const cgroups = useMemo(() => {
@@ -214,7 +218,10 @@ export function Dashboard() {
       }
     });
 
-    return Array.from(cgMap.values()).sort((a, b) => b.count - a.count);
+    return Array.from(cgMap.values()).sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.inode.localeCompare(b.inode);
+    });
   }, [processes, hostNamespaces]);
 
   const totalMemory = processes.reduce((acc, p) => acc + (parseInt(p.memoryUsageBytes) || 0), 0);

@@ -250,7 +250,7 @@ pub fn read_namespace_details(
         "user" => {
             let uid = std::fs::read_to_string(format!("/proc/{}/uid_map", ref_pid)).unwrap_or_default();
             let gid = std::fs::read_to_string(format!("/proc/{}/gid_map", ref_pid)).unwrap_or_default();
-            user_maps = format!("uid_map:\n{}\ngid_map:\n{}", uid, gid);
+            user_maps = format!("UID Map:\n{}\nGID Map:\n{}", uid, gid);
         }
         "uts" => {
             // Read hostname from /proc/<pid>/environ if available, or fall back to native setns.
@@ -305,7 +305,7 @@ pub fn read_namespace_details(
 
                 let mut out = String::new();
                 if let Ok(addrs) = nix::ifaddrs::getifaddrs() {
-                    let mut iface_map: std::collections::HashMap<String, (String, Vec<String>)> = std::collections::HashMap::new();
+                    let mut iface_map: std::collections::BTreeMap<String, (String, Vec<String>)> = std::collections::BTreeMap::new();
                     
                     for iface in addrs {
                         let name = iface.interface_name;
@@ -526,7 +526,7 @@ mod tests {
         // Test USER
         let user_res = read_namespace_details("user", "123", my_pid, &ns_tree);
         assert_eq!(user_res.ns_type, "user");
-        assert!(user_res.user_maps.contains("uid_map:"), "user_maps should contain uid_map:");
+        assert!(user_res.user_maps.contains("UID Map:"), "user_maps should contain UID Map:");
     }
 
     #[test]
