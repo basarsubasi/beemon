@@ -9,5 +9,6 @@ generate:
 	cp swagger-ui/index.html ../webui/bff/assets/swagger/
 
 clean:
+	rm -rf ../webui/bff/gen/go/
 	rm -rf gen/
 	rm -rf ../webui/bff/assets/swagger/

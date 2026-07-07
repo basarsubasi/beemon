@@ -476,7 +476,7 @@ fn test_bpf_captures_remaining_syscalls() {
                 libc::mprotect(addr, 4096, libc::PROT_READ);
                 libc::munmap(addr, 4096);
             }
-            let mut brk_ptr = std::ptr::null_mut();
+            let  brk_ptr = std::ptr::null_mut();
             libc::brk(brk_ptr);
             
             // File I/O

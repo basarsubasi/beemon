@@ -26,6 +26,7 @@ use crate::snapshot::details;
 use crate::snapshot::namespace_tree_cache::NamespaceTreeCache;
 use crate::stream::StreamRegistry;
 
+#[derive(Clone)]
 pub struct BeemonServiceImpl {
     pub snapshot: Arc<RwLock<SnapshotCache>>,
     pub rates: Arc<RwLock<RateSnapshot>>,
@@ -114,7 +115,7 @@ impl BeemonService for BeemonServiceImpl {
         }))
     }
 
-    type StreamEventsStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<crate::pb::pb::Event, Status>> + Send>>;
+    type StreamEventsStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<crate::pb::pb::EventBatch, Status>> + Send>>;
 
     async fn stream_events(
         &self,
@@ -131,9 +132,11 @@ impl BeemonService for BeemonServiceImpl {
 
         let stream = BroadcastStream::new(sub.rx)
             .filter_map(|res| match res {
-                Ok(ev) => Some(Ok(ev)),
+                Ok(ev) => Some(ev),
                 Err(_) => None, // drop lagged events rather than closing stream
-            });
+            })
+            .chunks_timeout(200, std::time::Duration::from_millis(50))
+            .map(|events| Ok(crate::pb::pb::EventBatch { events }));
 
         // Drop `guard` lazily when the client disconnects: we wrap the
         // stream + guard in a custom adapter that on drop releases both.
@@ -221,12 +224,12 @@ fn read_flows_for_pid(
 /// drops `guard`, which decrements the registry refcount and (if it's the
 /// last subscriber) removes the pid from `target_pids` on the BPF side.
 struct GuardedStream {
-    inner: std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<crate::pb::pb::Event, Status>> + Send>>,
+    inner: std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<crate::pb::pb::EventBatch, Status>> + Send>>,
     _guard: crate::stream::SubscriptionGuard,
 }
 
 impl tokio_stream::Stream for GuardedStream {
-    type Item = Result<crate::pb::pb::Event, Status>;
+    type Item = Result<crate::pb::pb::EventBatch, Status>;
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

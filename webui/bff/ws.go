@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
+	pb "github.com/basarsubasi/beemon/webui/bff/gen/go/api/v1"
 	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 var upgrader = websocket.Upgrader{
@@ -55,7 +55,13 @@ func handleWS(cfg *Config) http.HandlerFunc {
 		}
 		defer conn.Close()
 
-		grpcConn, err := grpc.NewClient(cfg.GRPCEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpcConn, err := grpc.NewClient(cfg.GRPCEndpoint, 
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithReadBufferSize(4*1024*1024),
+			grpc.WithWriteBufferSize(4*1024*1024),
+			grpc.WithInitialWindowSize(64*1024*1024),
+			grpc.WithInitialConnWindowSize(64*1024*1024),
+		)
 		if err != nil {
 			slog.Error("WS failed to dial gRPC", "error", err)
 			return
@@ -75,10 +81,6 @@ func handleWS(cfg *Config) http.HandlerFunc {
 			return
 		}
 
-		marshaler := protojson.MarshalOptions{
-			UseProtoNames:   false,
-			EmitUnpopulated: true,
-		}
 
 		// Read loop to detect client disconnect
 		go func() {
@@ -92,7 +94,7 @@ func handleWS(cfg *Config) http.HandlerFunc {
 
 		// Channel for gRPC events
 		type eventOrErr struct {
-			ev  *pb.Event
+			ev  *pb.EventBatch
 			err error
 		}
 		eventCh := make(chan eventOrErr)
@@ -141,19 +143,23 @@ func handleWS(cfg *Config) http.HandlerFunc {
 					return
 				}
 
-				if res.ev.TimestampNs > 0 {
-					bootTimeOnce.Do(func() {
-						bootTimeOffsetNs = uint64(time.Now().UnixNano()) - res.ev.TimestampNs
-					})
-					res.ev.TimestampNs += bootTimeOffsetNs
+				if res.ev.Events != nil {
+					for _, e := range res.ev.Events {
+						if e.TimestampNs > 0 {
+							bootTimeOnce.Do(func() {
+								bootTimeOffsetNs = uint64(time.Now().UnixNano()) - e.TimestampNs
+							})
+							e.TimestampNs += bootTimeOffsetNs
+						}
+					}
 				}
 
-				jsonBytes, err := marshaler.Marshal(res.ev)
+				binaryBytes, err := proto.Marshal(res.ev)
 				if err != nil {
 					continue
 				}
 
-				if err := conn.WriteMessage(websocket.TextMessage, jsonBytes); err != nil {
+				if err := conn.WriteMessage(websocket.BinaryMessage, binaryBytes); err != nil {
 					slog.Error("WS message write error", "error", err)
 					return
 				}

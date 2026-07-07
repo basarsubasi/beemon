@@ -32,7 +32,7 @@ const (
 type BeemonServiceClient interface {
 	ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error)
 	GetProcessMetadata(ctx context.Context, in *GetProcessMetadataRequest, opts ...grpc.CallOption) (*GetProcessMetadataResponse, error)
-	StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
+	StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[EventBatch], error)
 	GetNamespaceDetails(ctx context.Context, in *GetNamespaceDetailsRequest, opts ...grpc.CallOption) (*GetNamespaceDetailsResponse, error)
 	GetNetworkFlows(ctx context.Context, in *GetNetworkFlowsRequest, opts ...grpc.CallOption) (*GetNetworkFlowsResponse, error)
 }
@@ -65,13 +65,13 @@ func (c *beemonServiceClient) GetProcessMetadata(ctx context.Context, in *GetPro
 	return out, nil
 }
 
-func (c *beemonServiceClient) StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error) {
+func (c *beemonServiceClient) StreamEvents(ctx context.Context, in *StreamEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[EventBatch], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &BeemonService_ServiceDesc.Streams[0], BeemonService_StreamEvents_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[StreamEventsRequest, Event]{ClientStream: stream}
+	x := &grpc.GenericClientStream[StreamEventsRequest, EventBatch]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (c *beemonServiceClient) StreamEvents(ctx context.Context, in *StreamEvents
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type BeemonService_StreamEventsClient = grpc.ServerStreamingClient[Event]
+type BeemonService_StreamEventsClient = grpc.ServerStreamingClient[EventBatch]
 
 func (c *beemonServiceClient) GetNamespaceDetails(ctx context.Context, in *GetNamespaceDetailsRequest, opts ...grpc.CallOption) (*GetNamespaceDetailsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -110,7 +110,7 @@ func (c *beemonServiceClient) GetNetworkFlows(ctx context.Context, in *GetNetwor
 type BeemonServiceServer interface {
 	ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error)
 	GetProcessMetadata(context.Context, *GetProcessMetadataRequest) (*GetProcessMetadataResponse, error)
-	StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error
+	StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[EventBatch]) error
 	GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error)
 	GetNetworkFlows(context.Context, *GetNetworkFlowsRequest) (*GetNetworkFlowsResponse, error)
 	mustEmbedUnimplementedBeemonServiceServer()
@@ -129,7 +129,7 @@ func (UnimplementedBeemonServiceServer) ListProcesses(context.Context, *ListProc
 func (UnimplementedBeemonServiceServer) GetProcessMetadata(context.Context, *GetProcessMetadataRequest) (*GetProcessMetadataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProcessMetadata not implemented")
 }
-func (UnimplementedBeemonServiceServer) StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[Event]) error {
+func (UnimplementedBeemonServiceServer) StreamEvents(*StreamEventsRequest, grpc.ServerStreamingServer[EventBatch]) error {
 	return status.Error(codes.Unimplemented, "method StreamEvents not implemented")
 }
 func (UnimplementedBeemonServiceServer) GetNamespaceDetails(context.Context, *GetNamespaceDetailsRequest) (*GetNamespaceDetailsResponse, error) {
@@ -200,11 +200,11 @@ func _BeemonService_StreamEvents_Handler(srv interface{}, stream grpc.ServerStre
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(BeemonServiceServer).StreamEvents(m, &grpc.GenericServerStream[StreamEventsRequest, Event]{ServerStream: stream})
+	return srv.(BeemonServiceServer).StreamEvents(m, &grpc.GenericServerStream[StreamEventsRequest, EventBatch]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type BeemonService_StreamEventsServer = grpc.ServerStreamingServer[Event]
+type BeemonService_StreamEventsServer = grpc.ServerStreamingServer[EventBatch]
 
 func _BeemonService_GetNamespaceDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetNamespaceDetailsRequest)

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package beemon.v1;
 
-option go_package = "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1";
+option go_package = "github.com/basarsubasi/beemon/webui/bff/gen/go/api/v1;beemonv1";
 
 import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
@@ -20,7 +20,7 @@ service BeemonService {
     };
   }
 
-  rpc StreamEvents(StreamEventsRequest) returns (stream Event) {
+  rpc StreamEvents(StreamEventsRequest) returns (stream EventBatch) {
     option (google.api.http) = {
       get: "/api/v1/processes/{pid}/events"
     };
@@ -152,6 +152,10 @@ message GetNetworkFlowsResponse {
 
 message StreamEventsRequest {
   uint32 pid = 1 [(buf.validate.field).uint32.gt = 0];
+}
+
+message EventBatch {
+  repeated Event events = 1;
 }
 
 message Event {

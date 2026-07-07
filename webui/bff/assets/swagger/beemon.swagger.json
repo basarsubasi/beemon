@@ -100,13 +100,13 @@
               "type": "object",
               "properties": {
                 "result": {
-                  "$ref": "#/definitions/v1Event"
+                  "$ref": "#/definitions/v1EventBatch"
                 },
                 "error": {
                   "$ref": "#/definitions/rpcStatus"
                 }
               },
-              "title": "Stream result of v1Event"
+              "title": "Stream result of v1EventBatch"
             }
           },
           "default": {
@@ -299,17 +299,17 @@
           "type": "integer",
           "format": "int64"
         },
-        "process": {
-          "$ref": "#/definitions/v1ProcessEvent"
-        },
-        "limitChanged": {
-          "$ref": "#/definitions/v1LimitChangedEvent"
-        },
         "syscall": {
           "$ref": "#/definitions/v1SyscallEvent"
         },
         "fileOpen": {
           "$ref": "#/definitions/v1FileOpenEvent"
+        },
+        "networkConnect": {
+          "$ref": "#/definitions/v1NetworkConnectEvent"
+        },
+        "process": {
+          "$ref": "#/definitions/v1ProcessEvent"
         },
         "fileRead": {
           "$ref": "#/definitions/v1FileReadEvent"
@@ -319,9 +319,6 @@
         },
         "fileClose": {
           "$ref": "#/definitions/v1FileCloseEvent"
-        },
-        "networkConnect": {
-          "$ref": "#/definitions/v1NetworkConnectEvent"
         },
         "chroot": {
           "$ref": "#/definitions/v1ChrootEvent"
@@ -391,6 +388,52 @@
         },
         "networkAccept": {
           "$ref": "#/definitions/v1NetworkAcceptEvent"
+        },
+        "signal": {
+          "$ref": "#/definitions/v1SignalEvent"
+        },
+        "fileMeta": {
+          "$ref": "#/definitions/v1FileMetaEvent"
+        },
+        "ioctl": {
+          "$ref": "#/definitions/v1IoctlEvent"
+        },
+        "fcntl": {
+          "$ref": "#/definitions/v1FcntlEvent"
+        },
+        "lseek": {
+          "$ref": "#/definitions/v1LseekEvent"
+        },
+        "socket": {
+          "$ref": "#/definitions/v1SocketEvent"
+        },
+        "socketOpt": {
+          "$ref": "#/definitions/v1SocketOptEvent"
+        }
+      }
+    },
+    "v1EventBatch": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Event"
+          }
+        }
+      }
+    },
+    "v1FcntlEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cmd": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -403,6 +446,22 @@
         }
       }
     },
+    "v1FileMetaEvent": {
+      "type": "object",
+      "properties": {
+        "pathname": {
+          "type": "string"
+        },
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "mode": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "v1FileOpenEvent": {
       "type": "object",
       "properties": {
@@ -412,6 +471,10 @@
         "flags": {
           "type": "integer",
           "format": "int32"
+        },
+        "fd": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -524,22 +587,14 @@
         }
       }
     },
-    "v1LimitChangedEvent": {
+    "v1IoctlEvent": {
       "type": "object",
       "properties": {
-        "memoryLimitBytes": {
-          "type": "string",
-          "format": "uint64"
+        "fd": {
+          "type": "integer",
+          "format": "int32"
         },
-        "cpuQuotaUs": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "cpuPeriodUs": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "pidsLimit": {
+        "cmd": {
           "type": "string",
           "format": "uint64"
         }
@@ -571,6 +626,40 @@
             "type": "number",
             "format": "float"
           }
+        },
+        "hostIoReadBytesPerSec": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Host-wide per-second I/O totals, summed from the eBPF process_io_stats map.\nSame source as per-process io_*_bytes fields, but aggregated across all PIDs\nin the snapshot to give a single dashboard gauge. 0 means the BPF map is cold."
+        },
+        "hostIoWriteBytesPerSec": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "hostNetRxBytesPerSec": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "hostNetTxBytesPerSec": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1LseekEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "offset": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "whence": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -969,6 +1058,57 @@
           "format": "int64"
         },
         "nstype": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SignalEvent": {
+      "type": "object",
+      "properties": {
+        "targetPid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "targetTid": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sig": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SocketEvent": {
+      "type": "object",
+      "properties": {
+        "family": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "protocol": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SocketOptEvent": {
+      "type": "object",
+      "properties": {
+        "fd": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "level": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "optname": {
           "type": "integer",
           "format": "int32"
         }

@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
+	pb "github.com/basarsubasi/beemon/webui/bff/gen/go/api/v1"
 )
 
 //go:embed assets/swagger/*

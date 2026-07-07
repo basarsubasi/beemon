@@ -151,7 +151,11 @@ export interface WSPing {
   timestamp: number;
 }
 
-export type WSMessage = WSPing | BeemonEvent;
+export interface BeemonEventBatch {
+  events?: BeemonEvent[];
+}
+
+export type WSMessage = WSPing | BeemonEventBatch;
 
 export interface NetworkFlow {
   localAddress: string;

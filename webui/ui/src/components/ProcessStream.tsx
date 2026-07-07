@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import type { BeemonEvent, WSMessage } from "../lib/types";
+import type { BeemonEvent, WSPing } from "../lib/types";
+import { EventBatch } from "../lib/proto/api/v1/beemon";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { Activity, PanelLeftOpen, PanelRightOpen, PieChart as PieChartIcon, Network } from "lucide-react";
@@ -195,40 +196,47 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
     const wsUrl = `${protocol}//${window.location.host}/api/v1/processes/${pid}/stream/ws`;
 
     const ws = new WebSocket(wsUrl);
+    ws.binaryType = "arraybuffer";
 
     ws.onopen = () => setIsConnected(true);
 
     ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(event.data) as WSMessage;
-
-        // Ignore Ping
-        if ("type" in msg && msg.type === "ping") {
+        if (typeof event.data === 'string') {
+          const msg = JSON.parse(event.data) as WSPing;
+          if (msg.type === "ping") return;
           return;
         }
 
-        const data = msg as BeemonEvent & { _localTs?: number, _type?: string };
+        const buffer = new Uint8Array(event.data);
+        const batch = EventBatch.decode(buffer);
 
-        // Handle LimitChanged uniquely to update local state
-        if (data.limitChanged) {
-          setLimits({
-            memory: formatLimitBytes(data.limitChanged.memoryLimitBytes),
-            cpu: data.limitChanged.cpuQuotaUs !== "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
-          });
-        }
+        if (batch.events && batch.events.length > 0) {
+          for (const rawData of batch.events) {
+            const data = rawData as unknown as BeemonEvent & { _localTs?: number, _type?: string };
 
-        const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : 'syscall';
+            // Handle LimitChanged uniquely to update local state
+            if (data.limitChanged) {
+              setLimits({
+                memory: formatMemBytes(data.limitChanged.memoryLimitBytes),
+                cpu: data.limitChanged.cpuQuotaUs !== "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
+              });
+            }
 
-        data._localTs = Date.now();
-        data._type = type;
+            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : 'syscall';
 
-        globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
+            data._localTs = Date.now();
+            data._type = type;
 
-        allEventsRef.current.push(data);
-        // Optimize: Mutate array in-place and only trim when it gets 10% larger
-        // This avoids creating 150 new 5000-element arrays per second which causes heavy GC pressure and WS drops.
-        if (allEventsRef.current.length > 5500) {
-          allEventsRef.current.splice(0, allEventsRef.current.length - 5000);
+            globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
+
+            allEventsRef.current.push(data);
+          }
+          // Optimize: Mutate array in-place and only trim when it gets 10% larger
+          // This avoids creating 150 new 5000-element arrays per second which causes heavy GC pressure and WS drops.
+          if (allEventsRef.current.length > 5500) {
+            allEventsRef.current.splice(0, allEventsRef.current.length - 5000);
+          }
         }
       } catch (err) {
         console.error("Failed to parse WS data", err);

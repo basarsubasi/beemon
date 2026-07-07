@@ -8,6 +8,7 @@ use std::env;
 pub struct Config {
     pub grpc_addr: String,
     pub grpc_port: u16,
+    pub uds_path: String,
     pub log_directive: String,
     pub event_limit: usize,
     pub rates_poll_millis: u64,
@@ -18,8 +19,9 @@ impl Default for Config {
         Self {
             grpc_addr: "0.0.0.0".to_string(),
             grpc_port: 50051,
+            uds_path: "/tmp/beemon.sock".to_string(),
             log_directive: "warn".to_string(),
-            event_limit: 150,
+            event_limit: 5000,
             rates_poll_millis: 1000,
         }
     }
@@ -35,6 +37,9 @@ impl Config {
         }
         if let Ok(addr) = env::var("BEEMON_GRPC_ADDR") {
             c.grpc_addr = addr;
+        }
+        if let Ok(path) = env::var("BEEMON_UDS_PATH") {
+            c.uds_path = path;
         }
         if let Ok(l) = env::var("BEEMON_LOG_LEVEL") {
             if !l.is_empty() {
@@ -69,7 +74,7 @@ mod tests {
         assert_eq!(cfg.grpc_addr, "0.0.0.0");
         assert_eq!(cfg.grpc_port, 50051);
         assert_eq!(cfg.rates_poll_millis, 1000);
-        assert_eq!(cfg.event_limit, 150);
+        assert_eq!(cfg.event_limit, 5000);
         assert_eq!(cfg.log_directive, "warn");
     }
 
@@ -119,7 +124,7 @@ mod tests {
         assert_eq!(cfg.grpc_addr, "0.0.0.0"); // default
         assert_eq!(cfg.grpc_port, 8080); // from env
         assert_eq!(cfg.rates_poll_millis, 1000); // default
-        assert_eq!(cfg.event_limit, 150); // default
+        assert_eq!(cfg.event_limit, 5000); // default
         assert_eq!(cfg.log_directive, "warn"); // from env
 
         // Cleanup

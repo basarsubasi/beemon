@@ -94,22 +94,44 @@ async fn async_main(cfg: Config) -> Result<()> {
     };
     ringbuf::spawn(events_ringbuf, registry.clone(), invalidators);
 
-    // --- 5. gRPC server ----------------------------------------------
+    // --- 5. gRPC server (TCP and UDS) --------------------------------
     let bind_addr: std::net::SocketAddr = cfg.bind_addr().parse()?;
-    tracing::info!("gRPC listening on {bind_addr}");
     let svc = BeemonServiceImpl {
         snapshot: snapshot_cache,
         rates: rates_snapshot,
         registry,
         net_flows: net_flows_arc,
         namespace_tree,
-        config: cfg,
+        config: cfg.clone(),
     };
+    
+    // UDS Server
+    let uds_path = cfg.uds_path.clone();
+    let svc_uds = BeemonServiceServer::new(svc.clone());
+    let uds_task = tokio::spawn(async move {
+        tracing::info!("gRPC listening on UDS {}", uds_path);
+        let _ = std::fs::remove_file(&uds_path);
+        let uds = tokio::net::UnixListener::bind(&uds_path).unwrap();
+        let uds_stream = tokio_stream::wrappers::UnixListenerStream::new(uds);
+        Server::builder()
+            .add_service(svc_uds)
+            .serve_with_incoming(uds_stream)
+            .await
+    });
 
-    Server::builder()
-        .add_service(BeemonServiceServer::new(svc))
-        .serve(bind_addr)
-        .await?;
+    // TCP Server
+    let svc_tcp = BeemonServiceServer::new(svc);
+    let tcp_task = tokio::spawn(async move {
+        tracing::info!("gRPC listening on TCP {}", bind_addr);
+        Server::builder()
+            .add_service(svc_tcp)
+            .serve(bind_addr)
+            .await
+    });
+
+    let (uds_res, tcp_res) = tokio::join!(uds_task, tcp_task);
+    uds_res??;
+    tcp_res??;
 
     Ok(())
 }
