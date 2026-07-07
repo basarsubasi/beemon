@@ -53,11 +53,13 @@ export function ProcessDetails() {
 
 
   const sortedNetworkFlows = useMemo(() => {
-    const flows = (Object.values(networkFlowStates) as Array<{ flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>).map(s => {
-      // Annotate visually if it hasn't been seen in the last 2 seconds
-      const isClosed = (Date.now() - s.lastSeenTs) > 2000;
-      return { ...s.flow, isClosed };
-    });
+    const flows = (Object.values(networkFlowStates) as Array<{ flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>)
+      .filter(s => (Date.now() - s.lastSeenTs) <= 5000)
+      .map(s => {
+        // Annotate visually if it hasn't been seen in the last 2 seconds
+        const isClosed = (Date.now() - s.lastSeenTs) > 2000;
+        return { ...s.flow, isClosed };
+      });
     let sortableItems = flows.filter(f => networkSubTab === 'dns' ? !!f.dnsQuery : !f.dnsQuery);
     if (networkSortConfig !== null) {
       sortableItems.sort((a, b) => {
@@ -139,13 +141,11 @@ export function ProcessDetails() {
             const next = { ...prev };
             flowsData.flows?.forEach(f => {
               const key = `${f.localAddress}:${f.localPort}-${f.remoteAddress}:${f.remotePort}-${f.protocol}`;
-              next[key] = { flow: f, lastSeenTs: now };
-            });
-            
-            // Clean up old flows (>5 seconds)
-            Object.keys(next).forEach(key => {
-              if (now - next[key].lastSeenTs > 5000) {
-                delete next[key];
+              const prevFlow = prev[key];
+              if (!prevFlow || prevFlow.flow.txBytes !== f.txBytes || prevFlow.flow.rxBytes !== f.rxBytes) {
+                next[key] = { flow: f, lastSeenTs: now };
+              } else {
+                next[key] = { flow: f, lastSeenTs: prevFlow.lastSeenTs };
               }
             });
             return next;

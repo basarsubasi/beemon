@@ -130,9 +130,9 @@ impl BeemonService for BeemonServiceImpl {
             .map_err(|e| Status::internal(format!("subscribe failed: {e}")))?;
 
         let stream = BroadcastStream::new(sub.rx)
-            .map(|res| match res {
-                Ok(ev) => Ok(ev),
-                Err(e) => Err(Status::unknown(format!("stream lagged: {e}"))),
+            .filter_map(|res| match res {
+                Ok(ev) => Some(Ok(ev)),
+                Err(_) => None, // drop lagged events rather than closing stream
             });
 
         // Drop `guard` lazily when the client disconnects: we wrap the

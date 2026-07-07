@@ -7,6 +7,32 @@ import { Activity, PanelLeftOpen, PanelRightOpen, PieChart as PieChartIcon, Netw
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { StateBadge } from "./StateBadge";
 
+const formatMemBytes = (bytesStr: string | undefined | number) => {
+  if (bytesStr === undefined || bytesStr === null) return "N/A";
+  const bytes = typeof bytesStr === 'string' ? parseInt(bytesStr) : bytesStr;
+  if (isNaN(bytes)) return "Max";
+  if (bytes === 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
+const formatLimitBytes = (bytesStr: string | undefined | number) => {
+  if (bytesStr === undefined || bytesStr === null || bytesStr === "0" || bytesStr === "max" || bytesStr === 0) return "Max";
+  const bytes = typeof bytesStr === 'string' ? parseInt(bytesStr) : bytesStr;
+  if (isNaN(bytes)) return "Max";
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const formatIoBytes = (bytesStr: string | undefined | number) => {
+  if (bytesStr === undefined || bytesStr === null) return "N/A";
+  const bytes = typeof bytesStr === 'string' ? parseInt(bytesStr) : bytesStr;
+  if (isNaN(bytes) || bytes === 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
 export function ProcessStream({ pid, process, infoBarRef }: { pid: number, process?: import("../lib/types").Process, infoBarRef?: React.RefObject<HTMLDivElement | null> }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -186,7 +212,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
         // Handle LimitChanged uniquely to update local state
         if (data.limitChanged) {
           setLimits({
-            memory: formatBytes(data.limitChanged.memoryLimitBytes),
+            memory: formatLimitBytes(data.limitChanged.memoryLimitBytes),
             cpu: data.limitChanged.cpuQuotaUs !== "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
           });
         }
@@ -238,29 +264,11 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
     }
   }, [renderState.totalSyscalls]);
 
-  const formatBytes = (bytesStr: string | undefined) => {
-    if (!bytesStr || bytesStr === "0" || bytesStr === "max") return "Max";
-    const bytes = parseInt(bytesStr);
-    if (!bytes) return "N/A";
-    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  };
 
-  const formatIoBytes = (bytesStr: string | undefined) => {
-    if (!bytesStr || bytesStr === "0") return "N/A";
-    const bytes = parseInt(bytesStr);
-    if (isNaN(bytes)) return "N/A";
-    const gb = bytes / 1024 / 1024 / 1024;
-    if (gb >= 1) return `${gb.toFixed(2)} GB/s`;
-    const mb = bytes / 1024 / 1024;
-    if (mb >= 1) return `${mb.toFixed(1)} MB/s`;
-    const kb = bytes / 1024;
-    if (kb >= 1) return `${kb.toFixed(1)} KB/s`;
-    return `${bytes} B/s`;
-  };
   useEffect(() => {
     if (process) {
       setLimits({
-        memory: formatBytes(process.memoryLimitBytes),
+        memory: formatLimitBytes(process.memoryLimitBytes),
         cpu: process.cpuQuotaUs && process.cpuQuotaUs !== "0" ? `${process.cpuQuotaUs}us` : "Max"
       });
     }
@@ -444,7 +452,7 @@ export function ProcessStream({ pid, process, infoBarRef }: { pid: number, proce
             {process ? <StateBadge state={process.state} className="text-[10px] py-0" /> : <span className="text-zinc-900 dark:text-white">…</span>}
           </div>
           <span className="flex-shrink-0">CPU: <span className="text-zinc-900 dark:text-white">{process ? `${(process.cpuUsagePercent || 0).toFixed(1)}%` : "…"}</span></span>
-          <span className="flex-shrink-0">MEM: <span className="text-zinc-900 dark:text-white">{process ? formatBytes(process.memoryUsageBytes) : "…"}</span></span>
+          <span className="flex-shrink-0">MEM: <span className="text-zinc-900 dark:text-white">{process ? formatMemBytes(process.memoryUsageBytes) : "…"}</span></span>
           <span className="flex-shrink-0 text-zinc-400">|</span>
           <span className="flex-shrink-0">MEM LIM: <span className="text-zinc-900 dark:text-white">{limits.memory}</span></span>
           <span className="flex-shrink-0">CPU LIM: <span className="text-zinc-900 dark:text-white">{limits.cpu}</span></span>

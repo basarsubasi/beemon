@@ -550,7 +550,7 @@ fn test_bpf_captures_remaining_syscalls() {
             libc::ptrace(libc::PTRACE_TRACEME, 0, std::ptr::null_mut::<libc::c_void>(), std::ptr::null_mut::<libc::c_void>());
             
             // Bpf
-            libc::syscall(libc::SYS_bpf, libc::BPF_MAP_CREATE, std::ptr::null_mut::<libc::c_void>(), 0);
+            libc::syscall(libc::SYS_bpf, 0, std::ptr::null_mut::<libc::c_void>(), 0);
             
             // Capset
             libc::syscall(libc::SYS_capset, std::ptr::null_mut::<libc::c_void>(), std::ptr::null_mut::<libc::c_void>());
