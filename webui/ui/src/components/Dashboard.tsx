@@ -290,7 +290,7 @@ export function Dashboard() {
   }, [processes, hostNamespaces]);
 
   const totalMemory = processes.reduce((acc, p) => acc + (parseInt(p.memoryUsageBytes) || 0), 0);
-  const totalCpu = processes.reduce((acc, p) => acc + (p.cpuUsagePercent || 0), 0) / (hostCpuPerCore.length || 1);
+  const totalCpu = hostCpuPerCore.length > 0 ? hostCpuPerCore.reduce((acc, pct) => acc + pct, 0) / hostCpuPerCore.length : 0;
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
