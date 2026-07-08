@@ -14,6 +14,12 @@ import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers, HardDri
 type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit' | 'file_read' | 'file_write' | 'net_rx' | 'net_tx';
 type SortDirection = 'asc' | 'desc';
 
+const getProgressColorClass = (value: number, defaultClass: string = "[&>div>div]:bg-green-500 dark:[&>div>div]:bg-green-400") => {
+  if (value >= 90) return "[&>div>div]:bg-red-500 dark:[&>div>div]:bg-red-400";
+  if (value >= 70) return "[&>div>div]:bg-yellow-500 dark:[&>div>div]:bg-yellow-400";
+  return defaultClass;
+};
+
 export function Dashboard() {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [hostMem, setHostMem] = useState<string>("0");
@@ -258,7 +264,7 @@ export function Dashboard() {
                 {hostCpuPerCore.map((pct, i) => (
                   <div key={i} className="flex items-center gap-2 text-[10px]">
                     <span className="w-7 font-mono text-zinc-500 font-medium">c{i}</span>
-                    <Progress value={pct} className="h-1.5 flex-1 min-w-[80px] [&>div>div]:bg-green-500 dark:[&>div>div]:bg-green-400" />
+                    <Progress value={pct} className={`h-1.5 flex-1 min-w-[80px] ${getProgressColorClass(pct)}`} />
                     <span className="w-7 font-mono text-right text-zinc-500">{pct.toFixed(0)}%</span>
                   </div>
                 ))}
@@ -275,17 +281,20 @@ export function Dashboard() {
                 <p className="text-xl font-mono text-zinc-900 dark:text-white leading-none">{formatBytes(totalMemory.toString())}</p>
                 {hostMem !== "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
               </div>
-              {hostMem !== "0" && (
-                <div className="flex items-center gap-2 text-[10px]">
-                  <Progress 
-                    value={(totalMemory / parseInt(hostMem)) * 100} 
-                    className="h-1.5 flex-1 [&>div>div]:bg-blue-500 dark:[&>div>div]:bg-blue-400" 
-                  />
-                  <span className="w-8 font-mono text-right text-zinc-500">
-                    {((totalMemory / parseInt(hostMem)) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              )}
+              {hostMem !== "0" && (() => {
+                const memPct = (totalMemory / parseInt(hostMem)) * 100;
+                return (
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <Progress 
+                      value={memPct} 
+                      className={`h-1.5 flex-1 ${getProgressColorClass(memPct, "[&>div>div]:bg-blue-500 dark:[&>div>div]:bg-blue-400")}`} 
+                    />
+                    <span className="w-8 font-mono text-right text-zinc-500">
+                      {memPct.toFixed(1)}%
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </Card>
           <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 flex-1 min-w-[220px] flex items-center gap-4 shadow-sm">
@@ -376,24 +385,6 @@ export function Dashboard() {
                   </div>
                 </div>
               </TableHead>
-              <TableHead 
-                className="w-[130px] max-w-[130px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
-                onClick={() => handleSort('memLimit')}
-              >
-                <div className="flex items-center justify-end">Mem Limit {renderSortIcon('memLimit')}</div>
-              </TableHead>
-              <TableHead 
-                className="w-[130px] max-w-[130px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
-                onClick={() => handleSort('cpuLimit')}
-              >
-                <div className="flex items-center justify-end">CPU Limit {renderSortIcon('cpuLimit')}</div>
-              </TableHead>
-              <TableHead 
-                className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
-                onClick={() => handleSort('pidsLimit')}
-              >
-                <div className="flex items-center justify-end">PID Limit {renderSortIcon('pidsLimit')}</div>
-              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -418,12 +409,15 @@ export function Dashboard() {
                 <TableCell className="w-[150px] max-w-[150px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end">
                     <span className="block truncate">{formatBytes(proc.memoryUsageBytes)}</span>
-                    {proc.memoryLimitBytes !== "0" && (
-                      <Progress 
-                        value={(parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100} 
-                        className="h-1.5 w-24"
-                      />
-                    )}
+                    {proc.memoryLimitBytes !== "0" && (() => {
+                      const limitPct = (parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100;
+                      return (
+                        <Progress 
+                          value={limitPct} 
+                          className={`h-1.5 w-24 ${getProgressColorClass(limitPct, "[&>div>div]:bg-blue-500 dark:[&>div>div]:bg-blue-400")}`}
+                        />
+                      );
+                    })()}
                   </div>
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
@@ -438,20 +432,11 @@ export function Dashboard() {
                     <span className="text-purple-500">Tx: {formatIoBytes(proc.netTxBytes)}</span>
                   </div>
                 </TableCell>
-                <TableCell className="w-[130px] max-w-[130px] text-right font-mono text-zinc-500 dark:text-zinc-400 py-4 px-6">
-                  <span className="block truncate text-right">{proc.memoryLimitBytes !== "0" ? formatBytes(proc.memoryLimitBytes) : "Max"}</span>
-                </TableCell>
-                <TableCell className="w-[130px] max-w-[130px] text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
-                  <span className="block truncate text-right">{proc.cpuQuotaUs !== "0" ? `${proc.cpuQuotaUs}us` : "Max"}</span>
-                </TableCell>
-                <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-500 py-4 px-6">
-                  <span className="block truncate text-right">{proc.pidsLimit !== "0" ? proc.pidsLimit : "Max"}</span>
-                </TableCell>
               </TableRow>
             ))}
             {processes.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
+                <TableCell colSpan={7} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
                   No processes found matching your filter.
                 </TableCell>
               </TableRow>
