@@ -41,3 +41,6 @@ lint:
 
 test:
 	$(CARGO) +nightly test
+
+test-bpf:
+	sudo -E $(CARGO) +nightly test -v -- --include-ignored --nocapture

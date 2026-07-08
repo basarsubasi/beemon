@@ -40,7 +40,8 @@ fn test_bpf_captures_file_open_events() {
     // Spawn a child process that opens a file
     let mut child = Command::new("sh")
         .arg("-c")
-        .arg("cat /etc/hostname")
+        .arg("read dummy; cat /etc/hostname")
+        .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to spawn child process");
     
@@ -48,6 +49,11 @@ fn test_bpf_captures_file_open_events() {
     
     // Add the child to the target_pids map
     bpf.add_target_pid(child_pid).expect("Failed to add target pid");
+    
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = writeln!(stdin, "go");
+    }
     
     // Wait for the child to complete
     let _ = child.wait();
@@ -90,8 +96,10 @@ fn test_bpf_captures_process_events() {
     let mut ringbuf = bpf.take_events_ringbuf().expect("Failed to take ringbuf");
     
     // Spawn a child process
-    let mut child = Command::new("sleep")
-        .arg("0.1")
+    let mut child = Command::new("sh")
+        .arg("-c")
+        .arg("read dummy; sleep 0.1")
+        .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to spawn child process");
     
@@ -99,6 +107,11 @@ fn test_bpf_captures_process_events() {
     
     // Add the child to the target_pids map
     bpf.add_target_pid(child_pid).expect("Failed to add target pid");
+    
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = writeln!(stdin, "go");
+    }
     
     // Wait for the child to complete
     let _ = child.wait();
@@ -146,7 +159,8 @@ fn test_bpf_captures_network_events() {
     // Spawn a child process that makes a network connection
     let mut child = Command::new("sh")
         .arg("-c")
-        .arg("curl -s http://example.com > /dev/null || true")
+        .arg("read dummy; curl -s http://example.com > /dev/null || true")
+        .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to spawn child process");
     
@@ -154,6 +168,11 @@ fn test_bpf_captures_network_events() {
     
     // Add the child to the target_pids map
     bpf.add_target_pid(child_pid).expect("Failed to add target pid");
+    
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = writeln!(stdin, "go");
+    }
     
     // Wait for the child to complete (with timeout)
     let _ = child.wait();
@@ -196,13 +215,17 @@ fn test_bpf_multiple_target_pids() {
     let mut ringbuf = bpf.take_events_ringbuf().expect("Failed to take ringbuf");
     
     // Spawn multiple child processes
-    let mut child1 = Command::new("sleep")
-        .arg("0.1")
+    let mut child1 = Command::new("sh")
+        .arg("-c")
+        .arg("read dummy; sleep 0.1")
+        .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to spawn child1");
     
-    let mut child2 = Command::new("sleep")
-        .arg("0.1")
+    let mut child2 = Command::new("sh")
+        .arg("-c")
+        .arg("read dummy; sleep 0.1")
+        .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to spawn child2");
     
@@ -212,6 +235,15 @@ fn test_bpf_multiple_target_pids() {
     // Add both to target_pids
     bpf.add_target_pid(pid1).expect("Failed to add pid1");
     bpf.add_target_pid(pid2).expect("Failed to add pid2");
+    
+    if let Some(mut stdin) = child1.stdin.take() {
+        use std::io::Write;
+        let _ = writeln!(stdin, "go");
+    }
+    if let Some(mut stdin) = child2.stdin.take() {
+        use std::io::Write;
+        let _ = writeln!(stdin, "go");
+    }
     
     // Wait for both to complete
     let _ = child1.wait();
@@ -248,7 +280,7 @@ fn test_bpf_captures_signals() {
     let pid = unsafe { libc::fork() };
     if pid == 0 {
         unsafe {
-            libc::usleep(200_000);
+            libc::sleep(1);
             libc::_exit(0);
         }
     }
@@ -277,7 +309,7 @@ fn test_bpf_captures_socket_operations() {
     let pid = unsafe { libc::fork() };
     if pid == 0 {
         unsafe {
-            libc::usleep(200_000);
+            libc::sleep(1);
             let fd = libc::socket(libc::AF_INET, libc::SOCK_STREAM, 0);
             let optval: libc::c_int = 1;
             libc::setsockopt(
@@ -318,7 +350,7 @@ fn test_bpf_captures_file_metadata() {
     let pid = unsafe { libc::fork() };
     if pid == 0 {
         unsafe {
-            libc::usleep(200_000);
+            libc::sleep(1);
             let path = b"/etc/hostname\0".as_ptr() as *const i8;
             let mut statbuf: libc::stat = std::mem::zeroed();
             libc::stat(path, &mut statbuf);
@@ -350,7 +382,7 @@ fn test_bpf_captures_ioctl_fcntl_lseek() {
     let pid = unsafe { libc::fork() };
     if pid == 0 {
         unsafe {
-            libc::usleep(200_000);
+            libc::sleep(1);
             let path = b"/dev/null\0".as_ptr() as *const i8;
             let fd = libc::open(path, libc::O_RDONLY);
             if fd >= 0 {
@@ -388,7 +420,7 @@ fn test_bpf_captures_misc_syscalls() {
     let pid = unsafe { libc::fork() };
     if pid == 0 {
         unsafe {
-            libc::usleep(200_000);
+            libc::sleep(1);
             
             // pipe
             let mut pipefds = [-1, -1];
@@ -468,7 +500,7 @@ fn test_bpf_captures_remaining_syscalls() {
     let pid = unsafe { libc::fork() };
     if pid == 0 {
         unsafe {
-            libc::usleep(200_000);
+            libc::sleep(1);
             
             // Memory
             let addr = libc::mmap(std::ptr::null_mut(), 4096, libc::PROT_READ | libc::PROT_WRITE, libc::MAP_PRIVATE | libc::MAP_ANONYMOUS, -1, 0);

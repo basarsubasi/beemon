@@ -31,6 +31,7 @@ clean:
 dev: build
 	@echo "Starting Beemon stack..."
 	@echo "NOTE: You may be prompted for your sudo password for the eBPF daemon."
+	sudo -v
 	$(MAKE) -j3 run-daemon run-bff run-ui
 
 run-daemon:
