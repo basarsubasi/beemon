@@ -38,9 +38,11 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
-  const [timeFilter, setTimeFilter] = useState<'all' | '5s' | '1s'>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | '1m' | '30s' | '10s'>('all');
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
   const [isEventExpanded, setIsEventExpanded] = useState(false);
+  const [ioRates, setIoRates] = useState({ rd: 0, wr: 0, rx: 0, tx: 0 });
+  const prevIoRef = useRef<{ts: number, rd: number, wr: number, rx: number, tx: number} | null>(null);
 
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
@@ -72,6 +74,8 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     setNetworkFlowHistory([]);
     setIsPaused(false);
     isPausedRef.current = false;
+    prevIoRef.current = null;
+    setIoRates({ rd: 0, wr: 0, rx: 0, tx: 0 });
   }, [pid]);
 
   useEffect(() => {
@@ -93,14 +97,37 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     return () => clearInterval(interval);
   }, [pid, chartView]);
 
+  useEffect(() => {
+    if (!process) return;
+    const now = Date.now();
+    const rd = typeof process.ioReadBytes === 'string' ? parseInt(process.ioReadBytes) : (process.ioReadBytes || 0);
+    const wr = typeof process.ioWriteBytes === 'string' ? parseInt(process.ioWriteBytes) : (process.ioWriteBytes || 0);
+    const rx = typeof process.netRxBytes === 'string' ? parseInt(process.netRxBytes) : (process.netRxBytes || 0);
+    const tx = typeof process.netTxBytes === 'string' ? parseInt(process.netTxBytes) : (process.netTxBytes || 0);
+
+    if (prevIoRef.current) {
+      const elapsed = (now - prevIoRef.current.ts) / 1000;
+      if (elapsed > 0.1) {
+        setIoRates({
+          rd: Math.max(0, Math.round((rd - prevIoRef.current.rd) / elapsed)),
+          wr: Math.max(0, Math.round((wr - prevIoRef.current.wr) / elapsed)),
+          rx: Math.max(0, Math.round((rx - prevIoRef.current.rx) / elapsed)),
+          tx: Math.max(0, Math.round((tx - prevIoRef.current.tx) / elapsed))
+        });
+      }
+    }
+    prevIoRef.current = { ts: now, rd, wr, rx, tx };
+  }, [process?.ioReadBytes, process?.ioWriteBytes, process?.netRxBytes, process?.netTxBytes]);
+
   // Render loop - decoupled from WebSocket frequency
   const updateRenderState = React.useCallback(() => {
     const lastEvent = allEventsRef.current[allEventsRef.current.length - 1];
     const now = lastEvent && lastEvent._localTs ? lastEvent._localTs : Date.now();
 
     let cutoff = 0;
-    if (timeFilter === '5s') cutoff = now - 5000;
-    if (timeFilter === '1s') cutoff = now - 1000;
+    if (timeFilter === '1m') cutoff = now - 60000;
+    if (timeFilter === '30s') cutoff = now - 30000;
+    if (timeFilter === '10s') cutoff = now - 10000;
 
     const validEvents = timeFilter === 'all'
       ? allEventsRef.current
@@ -459,8 +486,9 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
 
         <div className="flex gap-1 border border-zinc-200 dark:border-zinc-800 rounded-md p-1 bg-white dark:bg-black">
           <button onClick={() => setTimeFilter('all')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === 'all' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>All</button>
-          <button onClick={() => setTimeFilter('5s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '5s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>5s</button>
-          <button onClick={() => setTimeFilter('1s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>1s</button>
+          <button onClick={() => setTimeFilter('1m')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '1m' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>1m</button>
+          <button onClick={() => setTimeFilter('30s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '30s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>30s</button>
+          <button onClick={() => setTimeFilter('10s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '10s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>10s</button>
         </div>
       </div>
       <div className="flex flex-col gap-1 items-end overflow-hidden">
@@ -478,16 +506,16 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
         <div className="flex gap-4 items-start text-xs font-mono text-zinc-500 dark:text-zinc-400">
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">FILE I/O</span>
-            <div className="flex gap-1.5 text-[10px]">
-              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytes) : '0'}</span>
-              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'}</span>
+            <div className="flex gap-2 text-[10px]">
+              <span className="text-blue-500" title="Cumulative (Rate)">R: {process ? formatIoBytes(process.ioReadBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.rd)}/s)</span></span>
+              <span className="text-orange-500" title="Cumulative (Rate)">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.wr)}/s)</span></span>
             </div>
           </div>
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">NET I/O</span>
-            <div className="flex gap-1.5 text-[10px]">
-              <span className="text-green-500">Rx: {process ? formatIoBytes(process.netRxBytes) : '0'}</span>
-              <span className="text-purple-500">Tx: {process ? formatIoBytes(process.netTxBytes) : '0'}</span>
+            <div className="flex gap-2 text-[10px]">
+              <span className="text-green-500" title="Cumulative (Rate)">Rx: {process ? formatIoBytes(process.netRxBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.rx)}/s)</span></span>
+              <span className="text-purple-500" title="Cumulative (Rate)">Tx: {process ? formatIoBytes(process.netTxBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.tx)}/s)</span></span>
             </div>
           </div>
         </div>
