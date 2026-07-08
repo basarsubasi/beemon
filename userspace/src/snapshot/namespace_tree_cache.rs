@@ -101,6 +101,7 @@ mod tests {
             comm: format!("test_{}", pid),
             namespaces,
             cgroup_path: None,
+            managed_by: None,
             loaded_at: Instant::now(),
         }
     }

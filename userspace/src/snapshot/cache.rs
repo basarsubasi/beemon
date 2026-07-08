@@ -64,6 +64,7 @@ mod tests {
             io_write_bytes: 500,
             net_rx_bytes: 2000,
             net_tx_bytes: 1000,
+            managed_by: String::new(),
         });
 
         cache.host_cpu_per_core_percent = vec![25.0, 30.0, 20.0, 35.0];
@@ -103,6 +104,7 @@ mod tests {
                 io_write_bytes: i as u64 * 50,
                 net_rx_bytes: 0,
                 net_tx_bytes: 0,
+                managed_by: String::new(),
             });
         }
 

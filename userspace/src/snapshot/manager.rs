@@ -62,13 +62,17 @@ pub fn detect_manager(pid: u32, cache: &HashMap<u32, (String, u32)>) -> Option<M
             return None;
         };
 
-        let manager = match comm.as_str() {
-            "systemd" if depth == 1 => Some(Manager::Systemd),
-            "containerd" => Some(Manager::Containerd),
-            "dockerd" => Some(Manager::Docker),
-            "podman" => Some(Manager::Podman),
-            "crio" => Some(Manager::Crio),
-            _ => None,
+        let manager = if depth == 0 {
+            None
+        } else {
+            match comm.as_str() {
+                "systemd" if depth == 1 => Some(Manager::Systemd),
+                "containerd" => Some(Manager::Containerd),
+                "dockerd" => Some(Manager::Docker),
+                "podman" => Some(Manager::Podman),
+                "crio" => Some(Manager::Crio),
+                _ => None,
+            }
         };
 
         if manager.is_some() {

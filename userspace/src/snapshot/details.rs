@@ -390,6 +390,7 @@ mod tests {
             io_write_bytes: 0,
             net_rx_bytes: 0,
             net_tx_bytes: 0,
+            managed_by: String::new(),
         }
     }
 
