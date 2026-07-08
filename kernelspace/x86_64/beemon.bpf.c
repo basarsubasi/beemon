@@ -42,7 +42,10 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define EVENT_TYPE_CAPSET      29
 #define EVENT_TYPE_NET_ACCEPT  30
 #define EVENT_TYPE_SIGNAL      31
-#define EVENT_TYPE_FILE_META   32
+#define EVENT_TYPE_STAT        32
+#define EVENT_TYPE_LSTAT       43
+#define EVENT_TYPE_FSTAT       44
+#define EVENT_TYPE_ACCESS      45
 #define EVENT_TYPE_IOCTL       33
 #define EVENT_TYPE_FCNTL       34
 #define EVENT_TYPE_LSEEK       35
@@ -1006,7 +1009,7 @@ int trace_signal_generate(struct trace_event_raw_signal_generate *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_newstat")
 int trace_sys_enter_newstat(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+    RESERVE_EVENT(EVENT_TYPE_STAT)
 const char *pathname = (const char *)ctx->args[0];
     bpf_probe_read_user_str(&e->file_meta.pathname, sizeof(e->file_meta.pathname), pathname);
     e->file_meta.fd = -1;
@@ -1017,7 +1020,7 @@ const char *pathname = (const char *)ctx->args[0];
 
 SEC("tracepoint/syscalls/sys_enter_newlstat")
 int trace_sys_enter_newlstat(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+    RESERVE_EVENT(EVENT_TYPE_LSTAT)
 const char *pathname = (const char *)ctx->args[0];
     bpf_probe_read_user_str(&e->file_meta.pathname, sizeof(e->file_meta.pathname), pathname);
     e->file_meta.fd = -1;
@@ -1028,7 +1031,7 @@ const char *pathname = (const char *)ctx->args[0];
 
 SEC("tracepoint/syscalls/sys_enter_newfstat")
 int trace_sys_enter_newfstat(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+    RESERVE_EVENT(EVENT_TYPE_FSTAT)
 e->file_meta.pathname[0] = 0;
     e->file_meta.fd = (u32)ctx->args[0];
     e->file_meta.mode = 0;
@@ -1038,7 +1041,7 @@ e->file_meta.pathname[0] = 0;
 
 SEC("tracepoint/syscalls/sys_enter_access")
 int trace_sys_enter_access(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_FILE_META)
+    RESERVE_EVENT(EVENT_TYPE_ACCESS)
 const char *pathname = (const char *)ctx->args[0];
     bpf_probe_read_user_str(&e->file_meta.pathname, sizeof(e->file_meta.pathname), pathname);
     e->file_meta.fd = -1;

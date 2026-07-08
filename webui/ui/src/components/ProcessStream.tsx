@@ -268,7 +268,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
               });
             }
 
-            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : data.pipe ? 'pipe' : data.pipe2 ? 'pipe2' : data.getpid ? 'getpid' : data.getuid ? 'getuid' : data.uname ? 'uname' : 'syscall';
+            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.stat ? 'stat' : data.fstat ? 'fstat' : data.lstat ? 'lstat' : data.access ? 'access' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : data.pipe ? 'pipe' : data.pipe2 ? 'pipe2' : data.getpid ? 'getpid' : data.getuid ? 'getuid' : data.uname ? 'uname' : 'syscall';
 
             data._localTs = Date.now();
             data._type = type;
@@ -411,7 +411,10 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
       const label = isSender ? `sent to pid: ${ev.signal.targetPid}` : `received from pid: ${ev.signal.sourcePid || '?'}`;
       return <span className="text-red-400 font-semibold bg-red-950/20 px-1 py-0.5 rounded">kill({label}, sig: {ev.signal.sig})</span>;
     }
-    if (ev.fileMeta) return <span className="text-blue-400">stat(fd: {ev.fileMeta.fd}, pathname: "{ev.fileMeta.pathname}")</span>;
+    if (ev.stat) return <span className="text-blue-400">stat(fd: {ev.stat.fd}, pathname: "{ev.stat.pathname}", mode: {ev.stat.mode})</span>;
+    if (ev.fstat) return <span className="text-blue-400">fstat(fd: {ev.fstat.fd}, mode: {ev.fstat.mode})</span>;
+    if (ev.lstat) return <span className="text-blue-400">lstat(pathname: "{ev.lstat.pathname}", mode: {ev.lstat.mode})</span>;
+    if (ev.access) return <span className="text-blue-400">access(pathname: "{ev.access.pathname}", mode: {ev.access.mode})</span>;
     if (ev.ioctl) return <span className="text-gray-400">ioctl(fd: {ev.ioctl.fd}, cmd: {ev.ioctl.cmd})</span>;
     if (ev.fcntl) return <span className="text-gray-400">fcntl(fd: {ev.fcntl.fd}, cmd: {ev.fcntl.cmd})</span>;
     if (ev.lseek) return <span className="text-gray-400">lseek(fd: {ev.lseek.fd}, offset: {ev.lseek.offset})</span>;
@@ -469,7 +472,10 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     bpf: '#ef4444',
     capset: '#ef4444',
     signal: '#f87171',
-    file_meta: '#60a5fa',
+    stat: '#60a5fa',
+    fstat: '#38bdf8',
+    lstat: '#818cf8',
+    access: '#a78bfa',
     ioctl: '#9ca3af',
     fcntl: '#9ca3af',
     lseek: '#9ca3af',

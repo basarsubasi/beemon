@@ -390,7 +390,7 @@
         "signal": {
           "$ref": "#/definitions/v1SignalEvent"
         },
-        "fileMeta": {
+        "stat": {
           "$ref": "#/definitions/v1FileMetaEvent"
         },
         "ioctl": {
@@ -422,6 +422,15 @@
         },
         "uname": {
           "$ref": "#/definitions/v1UnameEvent"
+        },
+        "fstat": {
+          "$ref": "#/definitions/v1FileMetaEvent"
+        },
+        "lstat": {
+          "$ref": "#/definitions/v1FileMetaEvent"
+        },
+        "access": {
+          "$ref": "#/definitions/v1FileMetaEvent"
         }
       }
     },

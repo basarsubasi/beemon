@@ -1068,7 +1068,7 @@ type Event struct {
 	//	*Event_Capset
 	//	*Event_NetworkAccept
 	//	*Event_Signal
-	//	*Event_FileMeta
+	//	*Event_Stat
 	//	*Event_Ioctl
 	//	*Event_Fcntl
 	//	*Event_Lseek
@@ -1079,6 +1079,9 @@ type Event struct {
 	//	*Event_Getpid
 	//	*Event_Getuid
 	//	*Event_Uname
+	//	*Event_Fstat
+	//	*Event_Lstat
+	//	*Event_Access
 	Event         isEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1405,10 +1408,10 @@ func (x *Event) GetSignal() *SignalEvent {
 	return nil
 }
 
-func (x *Event) GetFileMeta() *FileMetaEvent {
+func (x *Event) GetStat() *FileMetaEvent {
 	if x != nil {
-		if x, ok := x.Event.(*Event_FileMeta); ok {
-			return x.FileMeta
+		if x, ok := x.Event.(*Event_Stat); ok {
+			return x.Stat
 		}
 	}
 	return nil
@@ -1499,6 +1502,33 @@ func (x *Event) GetUname() *UnameEvent {
 	if x != nil {
 		if x, ok := x.Event.(*Event_Uname); ok {
 			return x.Uname
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetFstat() *FileMetaEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Fstat); ok {
+			return x.Fstat
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetLstat() *FileMetaEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Lstat); ok {
+			return x.Lstat
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetAccess() *FileMetaEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Access); ok {
+			return x.Access
 		}
 	}
 	return nil
@@ -1629,8 +1659,8 @@ type Event_Signal struct {
 	Signal *SignalEvent `protobuf:"bytes,33,opt,name=signal,proto3,oneof"`
 }
 
-type Event_FileMeta struct {
-	FileMeta *FileMetaEvent `protobuf:"bytes,34,opt,name=file_meta,json=fileMeta,proto3,oneof"`
+type Event_Stat struct {
+	Stat *FileMetaEvent `protobuf:"bytes,34,opt,name=stat,proto3,oneof"`
 }
 
 type Event_Ioctl struct {
@@ -1671,6 +1701,18 @@ type Event_Getuid struct {
 
 type Event_Uname struct {
 	Uname *UnameEvent `protobuf:"bytes,44,opt,name=uname,proto3,oneof"`
+}
+
+type Event_Fstat struct {
+	Fstat *FileMetaEvent `protobuf:"bytes,45,opt,name=fstat,proto3,oneof"`
+}
+
+type Event_Lstat struct {
+	Lstat *FileMetaEvent `protobuf:"bytes,46,opt,name=lstat,proto3,oneof"`
+}
+
+type Event_Access struct {
+	Access *FileMetaEvent `protobuf:"bytes,47,opt,name=access,proto3,oneof"`
 }
 
 func (*Event_Syscall) isEvent_Event() {}
@@ -1733,7 +1775,7 @@ func (*Event_NetworkAccept) isEvent_Event() {}
 
 func (*Event_Signal) isEvent_Event() {}
 
-func (*Event_FileMeta) isEvent_Event() {}
+func (*Event_Stat) isEvent_Event() {}
 
 func (*Event_Ioctl) isEvent_Event() {}
 
@@ -1754,6 +1796,12 @@ func (*Event_Getpid) isEvent_Event() {}
 func (*Event_Getuid) isEvent_Event() {}
 
 func (*Event_Uname) isEvent_Event() {}
+
+func (*Event_Fstat) isEvent_Event() {}
+
+func (*Event_Lstat) isEvent_Event() {}
+
+func (*Event_Access) isEvent_Event() {}
 
 type ChrootEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -4084,7 +4132,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\"6\n" +
 	"\n" +
 	"EventBatch\x12(\n" +
-	"\x06events\x18\x01 \x03(\v2\x10.beemon.v1.EventR\x06events\"\x99\x11\n" +
+	"\x06events\x18\x01 \x03(\v2\x10.beemon.v1.EventR\x06events\"\xa8\x12\n" +
 	"\x05Event\x12!\n" +
 	"\ftimestamp_ns\x18\x01 \x01(\x04R\vtimestampNs\x12\x10\n" +
 	"\x03pid\x18\x02 \x01(\rR\x03pid\x123\n" +
@@ -4122,8 +4170,8 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x03bpf\x18\x1e \x01(\v2\x13.beemon.v1.BpfEventH\x00R\x03bpf\x120\n" +
 	"\x06capset\x18\x1f \x01(\v2\x16.beemon.v1.CapsetEventH\x00R\x06capset\x12F\n" +
 	"\x0enetwork_accept\x18  \x01(\v2\x1d.beemon.v1.NetworkAcceptEventH\x00R\rnetworkAccept\x120\n" +
-	"\x06signal\x18! \x01(\v2\x16.beemon.v1.SignalEventH\x00R\x06signal\x127\n" +
-	"\tfile_meta\x18\" \x01(\v2\x18.beemon.v1.FileMetaEventH\x00R\bfileMeta\x12-\n" +
+	"\x06signal\x18! \x01(\v2\x16.beemon.v1.SignalEventH\x00R\x06signal\x12.\n" +
+	"\x04stat\x18\" \x01(\v2\x18.beemon.v1.FileMetaEventH\x00R\x04stat\x12-\n" +
 	"\x05ioctl\x18# \x01(\v2\x15.beemon.v1.IoctlEventH\x00R\x05ioctl\x12-\n" +
 	"\x05fcntl\x18$ \x01(\v2\x15.beemon.v1.FcntlEventH\x00R\x05fcntl\x12-\n" +
 	"\x05lseek\x18% \x01(\v2\x15.beemon.v1.LseekEventH\x00R\x05lseek\x120\n" +
@@ -4134,7 +4182,10 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x05pipe2\x18) \x01(\v2\x15.beemon.v1.Pipe2EventH\x00R\x05pipe2\x120\n" +
 	"\x06getpid\x18* \x01(\v2\x16.beemon.v1.GetpidEventH\x00R\x06getpid\x120\n" +
 	"\x06getuid\x18+ \x01(\v2\x16.beemon.v1.GetuidEventH\x00R\x06getuid\x12-\n" +
-	"\x05uname\x18, \x01(\v2\x15.beemon.v1.UnameEventH\x00R\x05unameB\a\n" +
+	"\x05uname\x18, \x01(\v2\x15.beemon.v1.UnameEventH\x00R\x05uname\x120\n" +
+	"\x05fstat\x18- \x01(\v2\x18.beemon.v1.FileMetaEventH\x00R\x05fstat\x120\n" +
+	"\x05lstat\x18. \x01(\v2\x18.beemon.v1.FileMetaEventH\x00R\x05lstat\x122\n" +
+	"\x06access\x18/ \x01(\v2\x18.beemon.v1.FileMetaEventH\x00R\x06accessB\a\n" +
 	"\x05event\"!\n" +
 	"\vChrootEvent\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\"D\n" +
@@ -4401,7 +4452,7 @@ var file_api_v1_beemon_proto_depIdxs = []int32{
 	44, // 35: beemon.v1.Event.capset:type_name -> beemon.v1.CapsetEvent
 	25, // 36: beemon.v1.Event.network_accept:type_name -> beemon.v1.NetworkAcceptEvent
 	45, // 37: beemon.v1.Event.signal:type_name -> beemon.v1.SignalEvent
-	46, // 38: beemon.v1.Event.file_meta:type_name -> beemon.v1.FileMetaEvent
+	46, // 38: beemon.v1.Event.stat:type_name -> beemon.v1.FileMetaEvent
 	47, // 39: beemon.v1.Event.ioctl:type_name -> beemon.v1.IoctlEvent
 	48, // 40: beemon.v1.Event.fcntl:type_name -> beemon.v1.FcntlEvent
 	49, // 41: beemon.v1.Event.lseek:type_name -> beemon.v1.LseekEvent
@@ -4412,21 +4463,24 @@ var file_api_v1_beemon_proto_depIdxs = []int32{
 	54, // 46: beemon.v1.Event.getpid:type_name -> beemon.v1.GetpidEvent
 	55, // 47: beemon.v1.Event.getuid:type_name -> beemon.v1.GetuidEvent
 	56, // 48: beemon.v1.Event.uname:type_name -> beemon.v1.UnameEvent
-	4,  // 49: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
-	2,  // 50: beemon.v1.BeemonService.GetProcessMetadata:input_type -> beemon.v1.GetProcessMetadataRequest
-	12, // 51: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
-	0,  // 52: beemon.v1.BeemonService.GetNamespaceDetails:input_type -> beemon.v1.GetNamespaceDetailsRequest
-	9,  // 53: beemon.v1.BeemonService.GetNetworkFlows:input_type -> beemon.v1.GetNetworkFlowsRequest
-	5,  // 54: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
-	3,  // 55: beemon.v1.BeemonService.GetProcessMetadata:output_type -> beemon.v1.GetProcessMetadataResponse
-	13, // 56: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.EventBatch
-	1,  // 57: beemon.v1.BeemonService.GetNamespaceDetails:output_type -> beemon.v1.GetNamespaceDetailsResponse
-	11, // 58: beemon.v1.BeemonService.GetNetworkFlows:output_type -> beemon.v1.GetNetworkFlowsResponse
-	54, // [54:59] is the sub-list for method output_type
-	49, // [49:54] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	46, // 49: beemon.v1.Event.fstat:type_name -> beemon.v1.FileMetaEvent
+	46, // 50: beemon.v1.Event.lstat:type_name -> beemon.v1.FileMetaEvent
+	46, // 51: beemon.v1.Event.access:type_name -> beemon.v1.FileMetaEvent
+	4,  // 52: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
+	2,  // 53: beemon.v1.BeemonService.GetProcessMetadata:input_type -> beemon.v1.GetProcessMetadataRequest
+	12, // 54: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
+	0,  // 55: beemon.v1.BeemonService.GetNamespaceDetails:input_type -> beemon.v1.GetNamespaceDetailsRequest
+	9,  // 56: beemon.v1.BeemonService.GetNetworkFlows:input_type -> beemon.v1.GetNetworkFlowsRequest
+	5,  // 57: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
+	3,  // 58: beemon.v1.BeemonService.GetProcessMetadata:output_type -> beemon.v1.GetProcessMetadataResponse
+	13, // 59: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.EventBatch
+	1,  // 60: beemon.v1.BeemonService.GetNamespaceDetails:output_type -> beemon.v1.GetNamespaceDetailsResponse
+	11, // 61: beemon.v1.BeemonService.GetNetworkFlows:output_type -> beemon.v1.GetNetworkFlowsResponse
+	57, // [57:62] is the sub-list for method output_type
+	52, // [52:57] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_beemon_proto_init() }
@@ -4465,7 +4519,7 @@ func file_api_v1_beemon_proto_init() {
 		(*Event_Capset)(nil),
 		(*Event_NetworkAccept)(nil),
 		(*Event_Signal)(nil),
-		(*Event_FileMeta)(nil),
+		(*Event_Stat)(nil),
 		(*Event_Ioctl)(nil),
 		(*Event_Fcntl)(nil),
 		(*Event_Lseek)(nil),
@@ -4476,6 +4530,9 @@ func file_api_v1_beemon_proto_init() {
 		(*Event_Getpid)(nil),
 		(*Event_Getuid)(nil),
 		(*Event_Uname)(nil),
+		(*Event_Fstat)(nil),
+		(*Event_Lstat)(nil),
+		(*Event_Access)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

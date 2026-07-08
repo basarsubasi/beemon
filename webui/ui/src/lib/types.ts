@@ -138,7 +138,10 @@ export interface BeemonEvent {
   bpf?: { cmd: number };
   capset?: { targetPid: number };
   signal?: { targetPid: number; targetTid?: number; sig: number; sourcePid?: number };
-  fileMeta?: { pathname: string; fd: number };
+  stat?: { pathname: string; fd: number; mode: number };
+  fstat?: { pathname: string; fd: number; mode: number };
+  lstat?: { pathname: string; fd: number; mode: number };
+  access?: { pathname: string; fd: number; mode: number };
   ioctl?: { fd: number; cmd: string | number };
   fcntl?: { fd: number; cmd: string | number };
   lseek?: { fd: number; offset: string | number };

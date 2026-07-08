@@ -167,7 +167,7 @@ export interface Event {
   capset?: CapsetEvent | undefined;
   networkAccept?: NetworkAcceptEvent | undefined;
   signal?: SignalEvent | undefined;
-  fileMeta?: FileMetaEvent | undefined;
+  stat?: FileMetaEvent | undefined;
   ioctl?: IoctlEvent | undefined;
   fcntl?: FcntlEvent | undefined;
   lseek?: LseekEvent | undefined;
@@ -178,6 +178,9 @@ export interface Event {
   getpid?: GetpidEvent | undefined;
   getuid?: GetuidEvent | undefined;
   uname?: UnameEvent | undefined;
+  fstat?: FileMetaEvent | undefined;
+  lstat?: FileMetaEvent | undefined;
+  access?: FileMetaEvent | undefined;
 }
 
 export interface ChrootEvent {
@@ -1704,7 +1707,7 @@ function createBaseEvent(): Event {
     capset: undefined,
     networkAccept: undefined,
     signal: undefined,
-    fileMeta: undefined,
+    stat: undefined,
     ioctl: undefined,
     fcntl: undefined,
     lseek: undefined,
@@ -1715,6 +1718,9 @@ function createBaseEvent(): Event {
     getpid: undefined,
     getuid: undefined,
     uname: undefined,
+    fstat: undefined,
+    lstat: undefined,
+    access: undefined,
   };
 }
 
@@ -1816,8 +1822,8 @@ export const Event: MessageFns<Event> = {
     if (message.signal !== undefined) {
       SignalEvent.encode(message.signal, writer.uint32(266).fork()).join();
     }
-    if (message.fileMeta !== undefined) {
-      FileMetaEvent.encode(message.fileMeta, writer.uint32(274).fork()).join();
+    if (message.stat !== undefined) {
+      FileMetaEvent.encode(message.stat, writer.uint32(274).fork()).join();
     }
     if (message.ioctl !== undefined) {
       IoctlEvent.encode(message.ioctl, writer.uint32(282).fork()).join();
@@ -1848,6 +1854,15 @@ export const Event: MessageFns<Event> = {
     }
     if (message.uname !== undefined) {
       UnameEvent.encode(message.uname, writer.uint32(354).fork()).join();
+    }
+    if (message.fstat !== undefined) {
+      FileMetaEvent.encode(message.fstat, writer.uint32(362).fork()).join();
+    }
+    if (message.lstat !== undefined) {
+      FileMetaEvent.encode(message.lstat, writer.uint32(370).fork()).join();
+    }
+    if (message.access !== undefined) {
+      FileMetaEvent.encode(message.access, writer.uint32(378).fork()).join();
     }
     return writer;
   },
@@ -2120,7 +2135,7 @@ export const Event: MessageFns<Event> = {
             break;
           }
 
-          message.fileMeta = FileMetaEvent.decode(reader, reader.uint32());
+          message.stat = FileMetaEvent.decode(reader, reader.uint32());
           continue;
         }
         case 35: {
@@ -2201,6 +2216,30 @@ export const Event: MessageFns<Event> = {
           }
 
           message.uname = UnameEvent.decode(reader, reader.uint32());
+          continue;
+        }
+        case 45: {
+          if (tag !== 362) {
+            break;
+          }
+
+          message.fstat = FileMetaEvent.decode(reader, reader.uint32());
+          continue;
+        }
+        case 46: {
+          if (tag !== 370) {
+            break;
+          }
+
+          message.lstat = FileMetaEvent.decode(reader, reader.uint32());
+          continue;
+        }
+        case 47: {
+          if (tag !== 378) {
+            break;
+          }
+
+          message.access = FileMetaEvent.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -2299,8 +2338,8 @@ export const Event: MessageFns<Event> = {
     message.signal = (object.signal !== undefined && object.signal !== null)
       ? SignalEvent.fromPartial(object.signal)
       : undefined;
-    message.fileMeta = (object.fileMeta !== undefined && object.fileMeta !== null)
-      ? FileMetaEvent.fromPartial(object.fileMeta)
+    message.stat = (object.stat !== undefined && object.stat !== null)
+      ? FileMetaEvent.fromPartial(object.stat)
       : undefined;
     message.ioctl = (object.ioctl !== undefined && object.ioctl !== null)
       ? IoctlEvent.fromPartial(object.ioctl)
@@ -2329,6 +2368,15 @@ export const Event: MessageFns<Event> = {
       : undefined;
     message.uname = (object.uname !== undefined && object.uname !== null)
       ? UnameEvent.fromPartial(object.uname)
+      : undefined;
+    message.fstat = (object.fstat !== undefined && object.fstat !== null)
+      ? FileMetaEvent.fromPartial(object.fstat)
+      : undefined;
+    message.lstat = (object.lstat !== undefined && object.lstat !== null)
+      ? FileMetaEvent.fromPartial(object.lstat)
+      : undefined;
+    message.access = (object.access !== undefined && object.access !== null)
+      ? FileMetaEvent.fromPartial(object.access)
       : undefined;
     return message;
   },

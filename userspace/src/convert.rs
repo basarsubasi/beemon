@@ -163,7 +163,22 @@ pub fn convert(e: &EventT) -> Event {
             sig: e.signal.sig,
             source_pid: e.pid,
         }),
-        bpf::EVENT_TYPE_FILE_META => Oneof::FileMeta(FileMetaEvent {
+        bpf::EVENT_TYPE_STAT => Oneof::Stat(FileMetaEvent {
+            pathname: cstr(&e.file_meta.pathname).to_string(),
+            fd: e.file_meta.fd as i32,
+            mode: e.file_meta.mode,
+        }),
+        bpf::EVENT_TYPE_FSTAT => Oneof::Fstat(FileMetaEvent {
+            pathname: cstr(&e.file_meta.pathname).to_string(),
+            fd: e.file_meta.fd as i32,
+            mode: e.file_meta.mode,
+        }),
+        bpf::EVENT_TYPE_LSTAT => Oneof::Lstat(FileMetaEvent {
+            pathname: cstr(&e.file_meta.pathname).to_string(),
+            fd: e.file_meta.fd as i32,
+            mode: e.file_meta.mode,
+        }),
+        bpf::EVENT_TYPE_ACCESS => Oneof::Access(FileMetaEvent {
             pathname: cstr(&e.file_meta.pathname).to_string(),
             fd: e.file_meta.fd as i32,
             mode: e.file_meta.mode,

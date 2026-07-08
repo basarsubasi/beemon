@@ -51,7 +51,6 @@ pub const EVENT_TYPE_BPF: u32 = 28;
 pub const EVENT_TYPE_CAPSET: u32 = 29;
 pub const EVENT_TYPE_NET_ACCEPT: u32 = 30;
 pub const EVENT_TYPE_SIGNAL: u32 = 31;
-pub const EVENT_TYPE_FILE_META: u32 = 32;
 pub const EVENT_TYPE_IOCTL: u32 = 33;
 pub const EVENT_TYPE_FCNTL: u32 = 34;
 pub const EVENT_TYPE_LSEEK: u32 = 35;
@@ -62,6 +61,10 @@ pub const EVENT_TYPE_PIPE2: u32 = 39;
 pub const EVENT_TYPE_GETPID: u32 = 40;
 pub const EVENT_TYPE_GETUID: u32 = 41;
 pub const EVENT_TYPE_UNAME: u32 = 42;
+pub const EVENT_TYPE_STAT: u32 = 32;
+pub const EVENT_TYPE_LSTAT: u32 = 43;
+pub const EVENT_TYPE_FSTAT: u32 = 44;
+pub const EVENT_TYPE_ACCESS: u32 = 45;
 
 // ------------------------------------------------------------------
 // Trace flags written to the `target_pids` BPF hash map values.

@@ -194,7 +194,7 @@ message Event {
     CapsetEvent capset = 31;
     NetworkAcceptEvent network_accept = 32;
     SignalEvent signal = 33;
-    FileMetaEvent file_meta = 34;
+    FileMetaEvent stat = 34;
     IoctlEvent ioctl = 35;
     FcntlEvent fcntl = 36;
     LseekEvent lseek = 37;
@@ -205,6 +205,9 @@ message Event {
     GetpidEvent getpid = 42;
     GetuidEvent getuid = 43;
     UnameEvent uname = 44;
+    FileMetaEvent fstat = 45;
+    FileMetaEvent lstat = 46;
+    FileMetaEvent access = 47;
   }
 }
 

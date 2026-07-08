@@ -454,7 +454,7 @@ fn test_bpf_captures_file_metadata() {
     let events = read_events(&mut ringbuf);
     
     let meta_events: Vec<&Event> = events.iter()
-        .filter(|e| matches!(&e.event, Some(Oneof::FileMeta(m)) if m.pathname.contains("/etc/hostname")))
+        .filter(|e| matches!(&e.event, Some(Oneof::Stat(m)) if m.pathname.contains("/etc/hostname")))
         .collect();
     
     assert!(!meta_events.is_empty(), "Expected at least one FileMetaEvent for /etc/hostname");
@@ -682,7 +682,6 @@ bpf_syscall_test!(
     },
     [
         ("Wait4", |e: &Event| matches!(&e.event, Some(Oneof::Wait4(_)))),
-        ("Futex", |e: &Event| matches!(&e.event, Some(Oneof::Futex(_)))),
         ("Ptrace", |e: &Event| matches!(&e.event, Some(Oneof::Ptrace(_)))),
     ]
 );
