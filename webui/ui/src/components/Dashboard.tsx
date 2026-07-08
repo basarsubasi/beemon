@@ -1,17 +1,18 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Process, ListProcessesResponse } from "../lib/types";
 import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
 import { StateBadge } from "./StateBadge";
+import { ManagerBadge, ALL_MANAGERS } from "./ManagerBadge";
 import { ThemeToggle } from "./ThemeToggle";
 import { Progress } from "./ui/progress";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers, HardDrive } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers, HardDrive, Filter, X } from "lucide-react";
 
-type SortKey = 'pid' | 'name' | 'state' | 'managedBy' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit' | 'file_read' | 'file_write' | 'net_rx' | 'net_tx';
+type SortKey = 'pid' | 'name' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit' | 'file_read' | 'file_write' | 'net_rx' | 'net_tx';
 type SortDirection = 'asc' | 'desc';
 
 const getProgressColorClass = (value: number, defaultClass: string = "[&>div>div]:bg-green-500 dark:[&>div>div]:bg-green-400") => {
@@ -27,6 +28,10 @@ export function Dashboard() {
   const [hostIo, setHostIo] = useState({ read: "0", write: "0", netRx: "0", netTx: "0" });
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
+  const [managerFilter, setManagerFilter] = useState<string[]>([]);
+  const [stateFilter, setStateFilter] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [sortKey, setSortKey] = useState<SortKey>('memory');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem("dashboardTab") || "processes");
@@ -34,6 +39,32 @@ export function Dashboard() {
   const handleTabChange = (val: string) => {
     setActiveTab(val);
     localStorage.setItem("dashboardTab", val);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleManagerFilter = (manager: string) => {
+    setManagerFilter(prev =>
+      prev.includes(manager)
+        ? prev.filter(m => m !== manager)
+        : [...prev, manager]
+    );
+  };
+
+  const toggleStateFilter = (state: string) => {
+    setStateFilter(prev =>
+      prev.includes(state)
+        ? prev.filter(s => s !== state)
+        : [...prev, state]
+    );
   };
 
   const navigate = useNavigate();
@@ -126,12 +157,6 @@ export function Dashboard() {
       if (sortKey === 'name') {
         aVal = a.name.toLowerCase();
         bVal = b.name.toLowerCase();
-      } else if (sortKey === 'state') {
-        aVal = a.state;
-        bVal = b.state;
-      } else if (sortKey === 'managedBy') {
-        aVal = a.managedBy || '';
-        bVal = b.managedBy || '';
       } else if (sortKey === 'memory') {
         aVal = parseInt(a.memoryUsageBytes);
         bVal = parseInt(b.memoryUsageBytes);
@@ -172,7 +197,34 @@ export function Dashboard() {
     return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
-  const sortedProcesses = getSortedProcesses();
+  const availableStates = useMemo(() => {
+    const stateSet = new Set<string>();
+    processes.forEach(p => {
+      if (p.state) stateSet.add(p.state);
+    });
+    return Array.from(stateSet).sort();
+  }, [processes]);
+
+  const sortedProcesses = useMemo(() => {
+    const sorted = getSortedProcesses();
+    return sorted.filter(p => {
+      if (managerFilter.length > 0) {
+        const hasNoManager = managerFilter.includes("__none__");
+        const hasMatchingManager = p.managedBy && managerFilter.includes(p.managedBy);
+        if (hasNoManager && hasMatchingManager) {
+          // Both "no manager" and specific managers selected
+        } else if (hasNoManager && !hasMatchingManager) {
+          // Only "no manager" selected
+          if (p.managedBy) return false;
+        } else if (!hasNoManager && !hasMatchingManager) {
+          // Only specific managers selected, but this process doesn't match
+          return false;
+        }
+      }
+      if (stateFilter.length > 0 && !stateFilter.includes(p.state)) return false;
+      return true;
+    });
+  }, [processes, sortKey, sortDirection, managerFilter, stateFilter]);
 
   const namespaces = useMemo(() => {
     const nsMap = new Map<string, { type: string, inode: string, count: number, isHost: boolean }>();
@@ -325,13 +377,128 @@ export function Dashboard() {
         </TabsList>
 
         <TabsContent value="processes" className="space-y-4 mt-6">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Input 
               placeholder="Filter by name or PID..." 
               className="max-w-md bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 p-6 text-md"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setFilterOpen(prev => !prev)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                  managerFilter.length > 0 || stateFilter.length > 0
+                    ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400"
+                    : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                <Filter className="h-4 w-4" />
+                {(managerFilter.length > 0 || stateFilter.length > 0) && (
+                  <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 text-[10px] px-1.5">
+                    {managerFilter.length + stateFilter.length}
+                  </Badge>
+                )}
+              </button>
+              {filterOpen && (
+                <div className="absolute top-full left-0 mt-1 z-50 min-w-[220px] rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-3 space-y-4">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-2 mb-2">Manager</div>
+                    {ALL_MANAGERS.map(manager => {
+                      const isActive = managerFilter.includes(manager);
+                      return (
+                        <button
+                          key={manager}
+                          onClick={() => toggleManagerFilter(manager)}
+                          className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors text-left ${
+                            isActive
+                              ? "bg-zinc-100 dark:bg-zinc-800"
+                              : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                            isActive
+                              ? "border-blue-500 bg-blue-500 text-white"
+                              : "border-zinc-300 dark:border-zinc-600"
+                          }`}>
+                            {isActive && "✓"}
+                          </div>
+                          <ManagerBadge manager={manager} />
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => toggleManagerFilter("__none__")}
+                      className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors text-left ${
+                        managerFilter.includes("__none__")
+                          ? "bg-zinc-100 dark:bg-zinc-800"
+                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                        managerFilter.includes("__none__")
+                          ? "border-blue-500 bg-blue-500 text-white"
+                          : "border-zinc-300 dark:border-zinc-600"
+                      }`}>
+                        {managerFilter.includes("__none__") && "✓"}
+                      </div>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">no manager</span>
+                    </button>
+                  </div>
+                  <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4 space-y-1">
+                    <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-2 mb-2">State</div>
+                    {availableStates.map(state => {
+                      const isActive = stateFilter.includes(state);
+                      return (
+                        <button
+                          key={state}
+                          onClick={() => toggleStateFilter(state)}
+                          className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors text-left ${
+                            isActive
+                              ? "bg-zinc-100 dark:bg-zinc-800"
+                              : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${
+                            isActive
+                              ? "border-blue-500 bg-blue-500 text-white"
+                              : "border-zinc-300 dark:border-zinc-600"
+                          }`}>
+                            {isActive && "✓"}
+                          </div>
+                          <StateBadge state={state} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(managerFilter.length > 0 || stateFilter.length > 0) && (
+                    <div className="border-t border-zinc-200 dark:border-zinc-800 pt-2">
+                      <button
+                        onClick={() => {
+                          setManagerFilter([]);
+                          setStateFilter([]);
+                        }}
+                        className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                        Clear all filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {managerFilter.filter(m => m !== "__none__").map(manager => (
+              <ManagerBadge key={manager} manager={manager} />
+            ))}
+            {managerFilter.includes("__none__") && (
+              <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-600 dark:text-zinc-400 text-xs italic">
+                no manager
+              </Badge>
+            )}
+            {stateFilter.map(state => (
+              <StateBadge key={state} state={state} />
+            ))}
           </div>
 
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 overflow-hidden shadow-sm dark:shadow-2xl">
@@ -349,18 +516,6 @@ export function Dashboard() {
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center">Name {renderSortIcon('name')}</div>
-              </TableHead>
-              <TableHead 
-                className="w-[140px] max-w-[140px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
-                onClick={() => handleSort('state')}
-              >
-                <div className="flex items-center">State {renderSortIcon('state')}</div>
-              </TableHead>
-              <TableHead 
-                className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
-                onClick={() => handleSort('managedBy')}
-              >
-                <div className="flex items-center">Manager {renderSortIcon('managedBy')}</div>
               </TableHead>
               <TableHead 
                 className="w-[100px] max-w-[100px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
@@ -409,16 +564,6 @@ export function Dashboard() {
                 <TableCell className="w-[200px] max-w-[200px] font-medium text-zinc-900 dark:text-zinc-300 py-4 px-6 group-hover:text-black dark:group-hover:text-white transition-colors">
                   <span className="block truncate" title={proc.name}>{proc.name}</span>
                 </TableCell>
-                <TableCell className="w-[140px] max-w-[140px] py-4 px-6">
-                  <StateBadge state={proc.state} />
-                </TableCell>
-                <TableCell className="w-[120px] max-w-[120px] py-4 px-6">
-                  {proc.managedBy && (
-                    <Badge variant="outline" className="border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-xs">
-                      {proc.managedBy}
-                    </Badge>
-                  )}
-                </TableCell>
                 <TableCell className="w-[100px] max-w-[100px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <span className="block truncate text-right">{(proc.cpuUsagePercent || 0).toFixed(1)}%</span>
                 </TableCell>
@@ -452,7 +597,7 @@ export function Dashboard() {
             ))}
             {processes.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
+                <TableCell colSpan={6} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
                   No processes found matching your filter.
                 </TableCell>
               </TableRow>

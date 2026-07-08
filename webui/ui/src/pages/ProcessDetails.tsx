@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
 import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown, Network } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { ManagerBadge } from "../components/ManagerBadge";
 import type { Process, GetProcessMetadataResponse, BeemonEvent } from "../lib/types";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -204,9 +205,7 @@ export function ProcessDetails() {
               {process ? process.name : "Loading..."} 
               <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 font-mono text-zinc-600 dark:text-zinc-300">PID {pid}</Badge>
               {process?.managedBy && (
-                <Badge variant="outline" className="border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
-                  {process.managedBy}
-                </Badge>
+                <ManagerBadge manager={process.managedBy} />
               )}
               <img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" />
             </h1>
