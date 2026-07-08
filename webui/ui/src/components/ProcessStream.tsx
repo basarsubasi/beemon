@@ -44,6 +44,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterInput, setFilterInput] = useState("");
 
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
@@ -77,6 +78,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     isPausedRef.current = false;
     setSelectedEventTypes([]);
     setSearchQuery("");
+    setFilterInput("");
   }, [pid]);
 
   useEffect(() => {
@@ -119,7 +121,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     if (searchQuery.trim()) {
       try {
         const regex = new RegExp(searchQuery, "i");
-        filteredEvents = filteredEvents.filter(e => regex.test(JSON.stringify(e)));
+        filteredEvents = filteredEvents.filter(e => regex.test(JSON.stringify(e) + ' ' + ((e as any)._searchText || '')));
       } catch (err) {
         // invalid regex, ignore
       }
@@ -246,6 +248,12 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
 
             data._localTs = Date.now();
             data._type = type;
+
+            let _searchText = type;
+            if (type === 'signal') _searchText = 'signal kill';
+            else if (type === 'exec') _searchText = 'exec execve';
+            else if (type === 'open') _searchText = 'open openat';
+            (data as any)._searchText = _searchText;
 
             globalCountsRef.current[type] = (globalCountsRef.current[type] || 0) + 1;
 
@@ -495,6 +503,14 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
             </button>
           </div>
         )}
+        {searchQuery && (
+          <div className="flex items-center gap-1 border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-md px-2 py-0.5 text-xs font-mono max-w-[200px]">
+            <span className="truncate">{searchQuery}</span>
+            <button onClick={() => setSearchQuery("")} className="hover:text-amber-800 dark:hover:text-amber-200 transition-colors ml-1 text-sm font-bold flex-shrink-0">
+              &times;
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-1 items-end overflow-hidden">
         <div className="flex gap-3 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
@@ -556,26 +572,27 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
             </div>
           </div>
           {isFiltersOpen && (
-            <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black flex flex-col gap-3">
+            <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black flex flex-col gap-1.5">
               <div className="relative w-full">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder="Filter events (regex supported, e.g. 'connect.*192\.168')"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={filterInput}
+                  onChange={(e) => setFilterInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(filterInput); }}
                   className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-md py-1.5 pl-8 pr-8 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-shadow text-zinc-900 dark:text-zinc-100"
                 />
-                {searchQuery && (
+                {(searchQuery || filterInput) && (
                   <button 
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => { setSearchQuery(""); setFilterInput(""); }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
                   >
                     <X size={14} />
                   </button>
                 )}
               </div>
-              <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-md p-2 bg-zinc-50/50 dark:bg-zinc-900/20">
+              <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-md p-1.5 bg-zinc-50/50 dark:bg-zinc-900/20">
                 <div className="flex justify-between items-center mb-2 px-1">
                   <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Event Types</span>
                   {selectedEventTypes.length > 0 && (
