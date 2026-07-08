@@ -269,6 +269,25 @@ int trace_signal_deliver(struct trace_event_raw_signal_deliver *ctx) {
     return 0;
 }
 
+SEC("tracepoint/signal/signal_generate")
+int trace_signal_generate(struct trace_event_raw_signal_generate *ctx) {
+    u32 target = (u32)ctx->pid;
+    if (!should_trace_events(target)) return 0;
+    
+    struct event_t *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+    if (!e) return 0;
+    
+    e->pid = bpf_get_current_pid_tgid() >> 32;
+    e->tgid = target;
+    e->type = EVENT_TYPE_SIGNAL;
+    e->ts = bpf_ktime_get_ns();
+    e->signal.target_pid = target;
+    e->signal.target_tid = 0;
+    e->signal.sig = ctx->sig;
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}
+
 // -----------------------------------------------------------------------------
 // FILE METADATA & MISC
 // -----------------------------------------------------------------------------

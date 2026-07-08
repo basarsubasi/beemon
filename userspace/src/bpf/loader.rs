@@ -112,6 +112,7 @@ const PROGRAMS: &[(&str, ProgramKind)] = &[
     ("trace_sys_enter_kill",          ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_kill" }),
     ("trace_sys_enter_tgkill",        ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_tgkill" }),
     ("trace_signal_deliver",          ProgramKind::Tracepoint { category: "signal",   name: "signal_deliver" }),
+    ("trace_signal_generate",         ProgramKind::Tracepoint { category: "signal",   name: "signal_generate" }),
     ("trace_sys_enter_newstat",       ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_newstat" }),
     ("trace_sys_enter_newlstat",      ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_newlstat" }),
     ("trace_sys_enter_newfstat",      ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_newfstat" }),

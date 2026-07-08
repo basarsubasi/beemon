@@ -200,49 +200,18 @@ fn test_bpf_captures_process_events() {
     );
 }
 
-#[test]
-#[ignore] // Requires root and specific kernel
-fn test_bpf_captures_network_events() {
-    let mut bpf = BpfHandle::load_and_attach().expect("Failed to load BPF programs");
-    let mut ringbuf = bpf.take_events_ringbuf().expect("Failed to take ringbuf");
-    
-    // Spawn a child process that makes a network connection
-    let mut child = Command::new("sh")
-        .arg("-c")
-        .arg("read dummy; curl -s http://example.com > /dev/null || true")
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-        .expect("Failed to spawn child process");
-    
-    let child_pid = child.id();
-    
-    // Add the child to the target_pids map
-    bpf.add_target_pid(child_pid).expect("Failed to add target pid");
-    
-    if let Some(mut stdin) = child.stdin.take() {
-        use std::io::Write;
-        let _ = writeln!(stdin, "go");
-    }
-    
-    // Wait for the child to complete (with timeout)
-    let _ = child.wait();
-    
-    // Give the BPF program time to process events
-    thread::sleep(Duration::from_millis(200));
-    
-    // Read events from the ring buffer
-    let events = read_events(&mut ringbuf);
-    
-    // Verify we captured network events
-    let network_events: Vec<&Event> = events
-        .iter()
-        .filter(|e| matches!(e.event, Some(Oneof::NetworkConnect(_))))
-        .collect();
-    
-    // Network events may or may not be captured depending on curl's behavior
-    // and timing, so we just verify the mechanism works
-    println!("Captured {} network events", network_events.len());
-}
+bpf_syscall_test!(
+    test_bpf_captures_network_events,
+    {
+        use std::net::TcpStream;
+        // The tcp_v4_connect kprobe fires when the connection attempt starts,
+        // so we don't need a real server to successfully connect to.
+        let _ = TcpStream::connect("127.0.0.1:53");
+    },
+    [
+        ("NetworkConnect", |e| matches!(e.event, Some(Oneof::NetworkConnect(_))))
+    ]
+);
 
 #[test]
 #[ignore] // Requires root and specific kernel
@@ -349,6 +318,56 @@ fn test_bpf_captures_signals() {
         .collect();
         
     assert!(!signal_events.is_empty(), "Expected at least one SignalEvent with SIGUSR1, got none");
+}
+
+#[test]
+#[ignore]
+fn test_bpf_captures_signal_generate_from_unmonitored_sender() {
+    let mut bpf = BpfHandle::load_and_attach().expect("Failed to load BPF programs");
+    let mut ringbuf = bpf.take_events_ringbuf().expect("Failed to take ringbuf");
+
+    let mut pipes: [libc::c_int; 2] = [0; 2];
+    unsafe { libc::pipe(pipes.as_mut_ptr()); }
+
+    let pid = unsafe { libc::fork() };
+    if pid == 0 {
+        unsafe {
+            libc::close(pipes[1]);
+            let mut buf = [0u8; 1];
+            libc::read(pipes[0], buf.as_mut_ptr() as *mut libc::c_void, 1);
+            libc::close(pipes[0]);
+            
+            libc::sleep(1);
+            libc::_exit(0);
+        }
+    }
+    
+    // Add ONLY the child PID to target_pids.
+    // We intentionally DO NOT add the parent process!
+    bpf.add_target_pid(pid as u32).expect("Failed to add target pid");
+    
+    unsafe {
+        libc::close(pipes[0]);
+        let buf = [0u8; 1];
+        libc::write(pipes[1], buf.as_ptr() as *const libc::c_void, 1);
+        libc::close(pipes[1]);
+    }
+    
+    // Wait briefly to ensure child is sleeping
+    thread::sleep(Duration::from_millis(50));
+    
+    // Send signal from unmonitored parent to monitored child.
+    unsafe { libc::kill(pid, libc::SIGUSR2); }
+    unsafe { libc::waitpid(pid, std::ptr::null_mut(), 0); }
+    
+    thread::sleep(Duration::from_millis(100));
+    let events = read_events(&mut ringbuf);
+    
+    let signal_events: Vec<&Event> = events.iter()
+        .filter(|e| matches!(&e.event, Some(Oneof::Signal(s)) if s.sig == libc::SIGUSR2))
+        .collect();
+        
+    assert!(!signal_events.is_empty(), "Expected SignalEvent with SIGUSR2 from unmonitored sender via signal_generate");
 }
 
 #[test]

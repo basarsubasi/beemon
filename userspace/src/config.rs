@@ -80,7 +80,8 @@ mod tests {
     }
 
     #[test]
-    fn test_from_env_all_vars() {
+    fn test_config_from_env_variations() {
+        // 1. Test all vars
         std::env::set_var("BEEMON_GRPC_ADDR", "127.0.0.1");
         std::env::set_var("BEEMON_GRPC_PORT", "9000");
         std::env::set_var("BEEMON_RATES_POLL_MILLIS", "10");
@@ -94,24 +95,11 @@ mod tests {
         assert_eq!(cfg.event_limit, 200);
         assert_eq!(cfg.log_directive, "debug");
 
-        // Cleanup
+        // 2. Test partial
         std::env::remove_var("BEEMON_GRPC_ADDR");
-        std::env::remove_var("BEEMON_GRPC_PORT");
         std::env::remove_var("BEEMON_RATES_POLL_MILLIS");
         std::env::remove_var("BEEMON_EVENT_LIMIT");
-        std::env::remove_var("BEEMON_LOG_LEVEL");
-    }
-
-    #[test]
-    fn test_from_env_partial() {
-        // Clear all vars first
-        std::env::remove_var("BEEMON_GRPC_ADDR");
-        std::env::remove_var("BEEMON_GRPC_PORT");
-        std::env::remove_var("BEEMON_RATES_POLL_MILLIS");
-        std::env::remove_var("BEEMON_EVENT_LIMIT");
-        std::env::remove_var("BEEMON_LOG_LEVEL");
-
-        // Set only some
+        
         std::env::set_var("BEEMON_GRPC_PORT", "8080");
         std::env::set_var("BEEMON_LOG_LEVEL", "warn");
 
@@ -122,23 +110,18 @@ mod tests {
         assert_eq!(cfg.event_limit, 5000); // default
         assert_eq!(cfg.log_directive, "warn"); // from env
 
-        // Cleanup
-        std::env::remove_var("BEEMON_GRPC_PORT");
+        // 3. Test invalid values
         std::env::remove_var("BEEMON_LOG_LEVEL");
-    }
-
-    #[test]
-    fn test_from_env_invalid_values() {
+        
         std::env::set_var("BEEMON_GRPC_PORT", "not_a_number");
         std::env::set_var("BEEMON_RATES_POLL_MILLIS", "invalid");
 
         let cfg = Config::from_env();
-        // Should fall back to defaults for invalid values
         assert_eq!(cfg.grpc_port, 50051);
         assert_eq!(cfg.rates_poll_millis, 1000);
 
         // Cleanup
         std::env::remove_var("BEEMON_GRPC_PORT");
-        std::env::remove_var("BEEMON_RATES_POLL_SECS");
+        std::env::remove_var("BEEMON_RATES_POLL_MILLIS");
     }
 }

@@ -154,7 +154,6 @@ if res.ev.Events != nil {
 				}
 			}
 
-			slog.Info("WS forwarding batch", "pid", pid, "events", len(res.ev.Events))
 
 			binaryBytes, err := proto.Marshal(res.ev)
 				if err != nil {
@@ -165,7 +164,6 @@ if err := conn.WriteMessage(websocket.BinaryMessage, binaryBytes); err != nil {
 				slog.Error("WS message write error", "error", err)
 				return
 			}
-			slog.Info("WS batch sent", "pid", pid, "bytes", len(binaryBytes))
 			}
 		}
 	}
