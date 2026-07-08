@@ -176,7 +176,6 @@ export interface NetworkFlow {
   txBytes: string;
   rxPackets: string;
   txPackets: string;
-  dnsQuery?: string;
 }
 
 export interface GetNetworkFlowsResponse {

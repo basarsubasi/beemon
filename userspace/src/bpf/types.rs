@@ -409,8 +409,8 @@ impl std::hash::Hash for NetFlowKey {
 
 // ------------------------------------------------------------------
 // `process_net_flow_stat` value (`BPF_MAP_TYPE_HASH`).
-// No internal padding: 4×u64 (32 bytes) + char[256] (256 bytes) = 288,
-// 8-aligned, 288 % 8 == 0, no tail pad.
+// No internal padding: 4×u64 = 32 bytes,
+// 8-aligned, 32 % 8 == 0, no tail pad.
 // ------------------------------------------------------------------
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
@@ -419,9 +419,8 @@ pub struct NetFlowStat {
     pub tx_bytes: u64,
     pub rx_packets: u64,
     pub tx_packets: u64,
-    pub dns_query: [u8; 256],
 }
-// SAFETY: NetFlowStat is 4×u64 + [u8;256] = 288 bytes, no padding.
+// SAFETY: NetFlowStat is 4×u64 = 32 bytes, no padding.
 unsafe impl aya::Pod for NetFlowStat {}
 
 // ------------------------------------------------------------------
@@ -471,8 +470,8 @@ mod tests {
     }
 
     #[test]
-    fn net_flow_stat_size_is_288() {
-        assert_eq!(std::mem::size_of::<NetFlowStat>(), 288);
+    fn net_flow_stat_size_is_32() {
+        assert_eq!(std::mem::size_of::<NetFlowStat>(), 32);
     }
 
     /// EventT size is large (~2700 bytes); we just assert it's in a sane

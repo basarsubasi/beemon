@@ -31,7 +31,6 @@ export function ProcessDetails() {
   const [networkFlowStates, setNetworkFlowStates] = useState<Record<string, { flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>>({});
   const [openFilesState, setOpenFilesState] = useState<Record<number, { fd: number; path: string; type: string; isClosed: boolean }>>({});
 
-  const [networkSubTab, setNetworkSubTab] = useState<'connections' | 'dns'>('connections');
   const [openFilesSortConfig, setOpenFilesSortConfig] = useState<{key: 'fd' | 'type' | 'path', direction: 'asc' | 'desc'} | null>({key: 'fd', direction: 'asc'});
   const [networkSortConfig, setNetworkSortConfig] = useState<{key: 'rxBytes' | 'txBytes' | 'rxPackets' | 'txPackets', direction: 'asc' | 'desc'} | null>({key: 'rxBytes', direction: 'desc'});
   const infoBarRef = useRef<HTMLDivElement>(null);
@@ -61,7 +60,7 @@ export function ProcessDetails() {
         const isClosed = (Date.now() - s.lastSeenTs) > 2000;
         return { ...s.flow, isClosed };
       });
-    let sortableItems = flows.filter(f => networkSubTab === 'dns' ? !!f.dnsQuery : !f.dnsQuery);
+    let sortableItems = [...flows];
     if (networkSortConfig !== null) {
       sortableItems.sort((a, b) => {
         const valA = parseInt(a[networkSortConfig.key as keyof typeof a] as string) || 0;
@@ -72,7 +71,7 @@ export function ProcessDetails() {
       });
     }
     return sortableItems;
-  }, [networkFlowStates, networkSortConfig, networkSubTab]);
+  }, [networkFlowStates, networkSortConfig]);
 
 
   const requestSort = (key: 'fd' | 'type' | 'path') => {
@@ -402,24 +401,6 @@ export function ProcessDetails() {
                   </Table>
                 ) : (
                   <div className="flex flex-col h-full">
-                    <div className="flex gap-2 p-2 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/90 sticky top-0 z-20">
-                      <Button 
-                        variant={networkSubTab === 'connections' ? 'default' : 'ghost'} 
-                        size="sm" 
-                        onClick={() => setNetworkSubTab('connections')}
-                        className="text-xs h-7"
-                      >
-                        Connections
-                      </Button>
-                      <Button 
-                        variant={networkSubTab === 'dns' ? 'default' : 'ghost'} 
-                        size="sm" 
-                        onClick={() => setNetworkSubTab('dns')}
-                        className="text-xs h-7"
-                      >
-                        DNS Queries
-                      </Button>
-                    </div>
                     <div className="flex-1 overflow-auto">
                       <Table>
                         <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
@@ -446,7 +427,7 @@ export function ProcessDetails() {
                                 </TableCell>
                                 <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={`${f.localAddress}:${f.localPort}`}>{f.localAddress}:{f.localPort}</TableCell>
                                 <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={`${f.remoteAddress}:${f.remotePort}`}>
-                                  {networkSubTab === 'dns' ? <span className="text-yellow-600 dark:text-yellow-500 font-bold">{f.dnsQuery}</span> : `${f.remoteAddress}:${f.remotePort}`}
+                                  {`${f.remoteAddress}:${f.remotePort}`}
                                 </TableCell>
                                 <TableCell className="py-2 px-4 font-mono text-[10px] text-green-500 text-right">{f.rxBytes && f.rxBytes !== "0" ? `${(parseInt(f.rxBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
                                 <TableCell className="py-2 px-4 font-mono text-[10px] text-purple-500 text-right">{f.txBytes && f.txBytes !== "0" ? `${(parseInt(f.txBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
@@ -455,7 +436,7 @@ export function ProcessDetails() {
                           ) : (
                             <TableRow className="hover:bg-transparent">
                               <TableCell colSpan={5} className="text-center py-8 text-sm text-zinc-500 italic">
-                                {networkSubTab === 'dns' ? "No DNS queries found" : "No active network flows"}
+                                No active network flows
                               </TableCell>
                             </TableRow>
                           )}

@@ -118,7 +118,6 @@ export interface NetworkFlow {
   txBytes: number;
   rxPackets: number;
   txPackets: number;
-  dnsQuery: string;
 }
 
 export interface GetNetworkFlowsResponse {
@@ -1396,7 +1395,6 @@ function createBaseNetworkFlow(): NetworkFlow {
     txBytes: 0,
     rxPackets: 0,
     txPackets: 0,
-    dnsQuery: "",
   };
 }
 
@@ -1428,9 +1426,6 @@ export const NetworkFlow: MessageFns<NetworkFlow> = {
     }
     if (message.txPackets !== 0) {
       writer.uint32(72).uint64(message.txPackets);
-    }
-    if (message.dnsQuery !== "") {
-      writer.uint32(82).string(message.dnsQuery);
     }
     return writer;
   },
@@ -1514,14 +1509,6 @@ export const NetworkFlow: MessageFns<NetworkFlow> = {
           message.txPackets = longToNumber(reader.uint64());
           continue;
         }
-        case 10: {
-          if (tag !== 82) {
-            break;
-          }
-
-          message.dnsQuery = reader.string();
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1545,7 +1532,6 @@ export const NetworkFlow: MessageFns<NetworkFlow> = {
     message.txBytes = object.txBytes ?? 0;
     message.rxPackets = object.rxPackets ?? 0;
     message.txPackets = object.txPackets ?? 0;
-    message.dnsQuery = object.dnsQuery ?? "";
     return message;
   },
 };

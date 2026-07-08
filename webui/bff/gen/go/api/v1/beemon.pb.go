@@ -804,7 +804,6 @@ type NetworkFlow struct {
 	TxBytes       uint64                 `protobuf:"varint,7,opt,name=tx_bytes,json=txBytes,proto3" json:"tx_bytes,omitempty"`
 	RxPackets     uint64                 `protobuf:"varint,8,opt,name=rx_packets,json=rxPackets,proto3" json:"rx_packets,omitempty"`
 	TxPackets     uint64                 `protobuf:"varint,9,opt,name=tx_packets,json=txPackets,proto3" json:"tx_packets,omitempty"`
-	DnsQuery      string                 `protobuf:"bytes,10,opt,name=dns_query,json=dnsQuery,proto3" json:"dns_query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -900,13 +899,6 @@ func (x *NetworkFlow) GetTxPackets() uint64 {
 		return x.TxPackets
 	}
 	return 0
-}
-
-func (x *NetworkFlow) GetDnsQuery() string {
-	if x != nil {
-		return x.DnsQuery
-	}
-	return ""
 }
 
 type GetNetworkFlowsResponse struct {
@@ -4120,7 +4112,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x05state\x18\x03 \x01(\tR\x05state\x12\x1c\n" +
 	"\tdirection\x18\x04 \x01(\tR\tdirection\"*\n" +
 	"\x16GetNetworkFlowsRequest\x12\x10\n" +
-	"\x03pid\x18\x01 \x01(\rR\x03pid\"\xc6\x02\n" +
+	"\x03pid\x18\x01 \x01(\rR\x03pid\"\xa9\x02\n" +
 	"\vNetworkFlow\x12#\n" +
 	"\rlocal_address\x18\x01 \x01(\tR\flocalAddress\x12%\n" +
 	"\x0eremote_address\x18\x02 \x01(\tR\rremoteAddress\x12\x1d\n" +
@@ -4134,9 +4126,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\n" +
 	"rx_packets\x18\b \x01(\x04R\trxPackets\x12\x1d\n" +
 	"\n" +
-	"tx_packets\x18\t \x01(\x04R\ttxPackets\x12\x1b\n" +
-	"\tdns_query\x18\n" +
-	" \x01(\tR\bdnsQuery\"G\n" +
+	"tx_packets\x18\t \x01(\x04R\ttxPackets\"G\n" +
 	"\x17GetNetworkFlowsResponse\x12,\n" +
 	"\x05flows\x18\x01 \x03(\v2\x16.beemon.v1.NetworkFlowR\x05flows\"0\n" +
 	"\x13StreamEventsRequest\x12\x19\n" +

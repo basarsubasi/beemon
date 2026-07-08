@@ -280,7 +280,6 @@ struct net_flow_stat {
     u64 tx_bytes;
     u64 rx_packets;
     u64 tx_packets;
-    char dns_query[256];
 };
 
 struct net_flow_key _net_flow_key_force_btf __attribute__((unused));
@@ -336,7 +335,7 @@ static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx,
         bpf_map_update_elem(&process_io_stats, &pid, &new_agg, BPF_ANY);
     }
 
-    // ONLY parse connection 5-tuples and DNS if this process is actively being traced
+    // ONLY parse connection 5-tuples if this process is actively being traced
     if (!should_trace(pid)) return;
 
     struct net_flow_key key = {};
@@ -371,21 +370,6 @@ static __always_inline void add_net_io(struct sock *sk, u32 pid, u64 rx, u64 tx,
         new_stat.tx_bytes = tx;
         if (rx) new_stat.rx_packets = 1;
         if (tx) new_stat.tx_packets = 1;
-        
-        // If this is DNS (port 53 UDP), grab payload
-        if ((key.dport == 53 || key.sport == 53) && msg && tx > 0) {
-            // DNS parse. We need msg->msg_iter.iov->iov_base
-            // Just read up to 256 bytes from user buffer
-            struct iov_iter iter = {};
-            bpf_probe_read_kernel(&iter, sizeof(iter), &msg->msg_iter);
-            if (iter.iter_type == 0 /* ITER_IOVEC */) {
-                struct iovec iov = {};
-                bpf_probe_read_kernel(&iov, sizeof(iov), (void *)iter.__iov);
-                if (iov.iov_base) {
-                    bpf_probe_read_user(&new_stat.dns_query, sizeof(new_stat.dns_query), iov.iov_base);
-                }
-            }
-        }
         bpf_map_update_elem(&process_net_flow_stats, &key, &new_stat, BPF_ANY);
     }
 }

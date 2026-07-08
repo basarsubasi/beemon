@@ -838,9 +838,6 @@
         "txPackets": {
           "type": "string",
           "format": "uint64"
-        },
-        "dnsQuery": {
-          "type": "string"
         }
       }
     },

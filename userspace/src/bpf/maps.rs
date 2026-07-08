@@ -199,7 +199,6 @@ mod tests {
             tx_bytes: 0,
             rx_packets: 0,
             tx_packets: 0,
-            dns_query: [0u8; 256],
         };
         assert_eq!(stat.rx_bytes, 0);
         assert_eq!(stat.tx_bytes, 0);
@@ -214,7 +213,6 @@ mod tests {
             tx_bytes: 500,
             rx_packets: 10,
             tx_packets: 5,
-            dns_query: [0u8; 256],
         };
 
         let stat2 = NetFlowStat {
@@ -222,16 +220,13 @@ mod tests {
             tx_bytes: 1500,
             rx_packets: 20,
             tx_packets: 15,
-            dns_query: [0u8; 256],
         };
 
-        // Simulate accumulation
         let total = NetFlowStat {
             rx_bytes: stat1.rx_bytes + stat2.rx_bytes,
             tx_bytes: stat1.tx_bytes + stat2.tx_bytes,
             rx_packets: stat1.rx_packets + stat2.rx_packets,
             tx_packets: stat1.tx_packets + stat2.tx_packets,
-            dns_query: [0u8; 256],
         };
 
         assert_eq!(total.rx_bytes, 3000);

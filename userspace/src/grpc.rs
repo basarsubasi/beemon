@@ -12,7 +12,7 @@ use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
 
 use crate::bpf::maps::OwnedNetFlows;
-use crate::bpf::types::{cstr, NetFlowKey, NetFlowStat};
+use crate::bpf::types::{NetFlowKey, NetFlowStat};
 use crate::config::Config;
 use crate::pb::pb::beemon_service_server::BeemonService;
 use crate::pb::pb::{
@@ -58,9 +58,13 @@ impl BeemonService for BeemonServiceImpl {
         let processes: Vec<Process> = if filter.is_empty() {
             snap.processes.clone()
         } else {
+            let filter_pid = filter.parse::<u32>().ok();
             snap.processes
                 .iter()
-                .filter(|p| p.name.contains(&filter))
+                .filter(|p| {
+                    p.name.contains(&filter)
+                        || filter_pid.map_or(false, |pid| p.pid == pid)
+                })
                 .cloned()
                 .collect()
         };
@@ -196,7 +200,6 @@ fn flow_to_pb(k: &NetFlowKey, v: &NetFlowStat) -> NetworkFlow {
         tx_bytes: v.tx_bytes,
         rx_packets: v.rx_packets,
         tx_packets: v.tx_packets,
-        dns_query: cstr(&v.dns_query).to_string(),
     }
 }
 
@@ -235,5 +238,118 @@ impl tokio_stream::Stream for GuardedStream {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         self.inner.as_mut().poll_next(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pb::pb::Process;
+
+    fn make_process(pid: u32, name: &str) -> Process {
+        Process {
+            pid,
+            name: name.to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn filter_processes(processes: &[Process], filter: &str) -> Vec<Process> {
+        if filter.is_empty() {
+            return processes.to_vec();
+        }
+        let filter_pid = filter.parse::<u32>().ok();
+        processes
+            .iter()
+            .filter(|p| {
+                p.name.contains(filter)
+                    || filter_pid.map_or(false, |pid| p.pid == pid)
+            })
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn filter_empty_returns_all() {
+        let procs = vec![
+            make_process(1, "systemd"),
+            make_process(42, "nginx"),
+        ];
+        let result = filter_processes(&procs, "");
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn filter_by_name_substring() {
+        let procs = vec![
+            make_process(1, "systemd"),
+            make_process(42, "nginx"),
+            make_process(100, "nginx-worker"),
+        ];
+        let result = filter_processes(&procs, "nginx");
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().all(|p| p.name.contains("nginx")));
+    }
+
+    #[test]
+    fn filter_by_pid_exact() {
+        let procs = vec![
+            make_process(1, "systemd"),
+            make_process(42, "nginx"),
+            make_process(100, "worker"),
+        ];
+        let result = filter_processes(&procs, "42");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].pid, 42);
+    }
+
+    #[test]
+    fn filter_by_pid_no_name_match() {
+        let procs = vec![
+            make_process(1234, "bash"),
+            make_process(5678, "top"),
+        ];
+        let result = filter_processes(&procs, "1234");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].pid, 1234);
+        assert_eq!(result[0].name, "bash");
+    }
+
+    #[test]
+    fn filter_pid_and_name_both_match() {
+        let procs = vec![
+            make_process(42, "nginx"),
+            make_process(100, "nginx-worker"),
+        ];
+        let result = filter_processes(&procs, "nginx");
+        assert_eq!(result.len(), 2);
+
+        let result = filter_processes(&procs, "42");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].pid, 42);
+    }
+
+    #[test]
+    fn filter_no_match_returns_empty() {
+        let procs = vec![
+            make_process(1, "systemd"),
+            make_process(42, "nginx"),
+        ];
+        let result = filter_processes(&procs, "nonexistent");
+        assert!(result.is_empty());
+
+        let result = filter_processes(&procs, "9999");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn filter_numeric_string_not_a_pid() {
+        let procs = vec![
+            make_process(1, "process123"),
+            make_process(42, "nginx"),
+        ];
+        let result = filter_processes(&procs, "123");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "process123");
     }
 }
