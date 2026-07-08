@@ -727,7 +727,18 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
                     />
                     <Legend
                       wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
-                      formatter={(value, entry: any) => `${value} (${entry.payload?.value})`}
+                      content={() => (
+                        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+                          {[...renderState.pieData]
+                            .sort((a, b) => b.value - a.value)
+                            .map((entry) => (
+                              <span key={entry.name} className="inline-flex items-center gap-1">
+                                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: SYSCALL_COLORS[entry.name] || '#ffffff' }} />
+                                {entry.name} ({entry.value})
+                              </span>
+                            ))}
+                        </div>
+                      )}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -768,7 +779,21 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '12px', color: '#a1a1aa' }}
-                        formatter={(value, entry: any) => `${value} (${entry.payload?.value} pkts)`}
+                        content={() => {
+                          const colors: Record<string, string> = { TCP: '#c084fc', UDP: '#4ade80', UNKNOWN: '#9ca3af' };
+                          return (
+                            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+                              {[...renderState.networkPieData]
+                                .sort((a, b) => b.value - a.value)
+                                .map((entry) => (
+                                  <span key={entry.name} className="inline-flex items-center gap-1">
+                                    <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: colors[entry.name] || '#ffffff' }} />
+                                    {entry.name} ({entry.value} pkts)
+                                  </span>
+                                ))}
+                            </div>
+                          );
+                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
