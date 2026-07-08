@@ -137,7 +137,7 @@ export interface BeemonEvent {
   ptrace?: { request: string; targetPid: number };
   bpf?: { cmd: number };
   capset?: { targetPid: number };
-  signal?: { targetPid: number; sig: number };
+  signal?: { targetPid: number; targetTid?: number; sig: number; sourcePid?: number };
   fileMeta?: { pathname: string; fd: number };
   ioctl?: { fd: number; cmd: string | number };
   fcntl?: { fd: number; cmd: string | number };

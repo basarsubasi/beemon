@@ -3475,6 +3475,7 @@ type SignalEvent struct {
 	TargetPid     uint32                 `protobuf:"varint,1,opt,name=target_pid,json=targetPid,proto3" json:"target_pid,omitempty"`
 	TargetTid     uint32                 `protobuf:"varint,2,opt,name=target_tid,json=targetTid,proto3" json:"target_tid,omitempty"`
 	Sig           int32                  `protobuf:"varint,3,opt,name=sig,proto3" json:"sig,omitempty"`
+	SourcePid     uint32                 `protobuf:"varint,4,opt,name=source_pid,json=sourcePid,proto3" json:"source_pid,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3526,6 +3527,13 @@ func (x *SignalEvent) GetTargetTid() uint32 {
 func (x *SignalEvent) GetSig() int32 {
 	if x != nil {
 		return x.Sig
+	}
+	return 0
+}
+
+func (x *SignalEvent) GetSourcePid() uint32 {
+	if x != nil {
+		return x.SourcePid
 	}
 	return 0
 }
@@ -4315,13 +4323,15 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x03cmd\x18\x01 \x01(\x05R\x03cmd\",\n" +
 	"\vCapsetEvent\x12\x1d\n" +
 	"\n" +
-	"target_pid\x18\x01 \x01(\rR\ttargetPid\"]\n" +
+	"target_pid\x18\x01 \x01(\rR\ttargetPid\"|\n" +
 	"\vSignalEvent\x12\x1d\n" +
 	"\n" +
 	"target_pid\x18\x01 \x01(\rR\ttargetPid\x12\x1d\n" +
 	"\n" +
 	"target_tid\x18\x02 \x01(\rR\ttargetTid\x12\x10\n" +
-	"\x03sig\x18\x03 \x01(\x05R\x03sig\"O\n" +
+	"\x03sig\x18\x03 \x01(\x05R\x03sig\x12\x1d\n" +
+	"\n" +
+	"source_pid\x18\x04 \x01(\rR\tsourcePid\"O\n" +
 	"\rFileMetaEvent\x12\x1a\n" +
 	"\bpathname\x18\x01 \x01(\tR\bpathname\x12\x0e\n" +
 	"\x02fd\x18\x02 \x01(\x05R\x02fd\x12\x12\n" +

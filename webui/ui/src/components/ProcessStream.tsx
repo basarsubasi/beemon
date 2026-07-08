@@ -362,7 +362,11 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     if (ev.bpf) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">bpf(cmd: {ev.bpf.cmd})</span>;
     if (ev.capset) return <span className="text-red-500 font-bold bg-red-950/50 px-1 py-0.5 rounded">capset(pid: {ev.capset.targetPid})</span>;
 
-    if (ev.signal) return <span className="text-red-400 font-semibold bg-red-950/20 px-1 py-0.5 rounded">kill(pid: {ev.signal.targetPid}, sig: {ev.signal.sig})</span>;
+    if (ev.signal) {
+      const isSender = ev.signal.targetPid !== ev.pid;
+      const label = isSender ? `sent to pid: ${ev.signal.targetPid}` : `received from pid: ${ev.signal.sourcePid || '?'}`;
+      return <span className="text-red-400 font-semibold bg-red-950/20 px-1 py-0.5 rounded">kill({label}, sig: {ev.signal.sig})</span>;
+    }
     if (ev.fileMeta) return <span className="text-blue-400">stat(fd: {ev.fileMeta.fd}, pathname: "{ev.fileMeta.pathname}")</span>;
     if (ev.ioctl) return <span className="text-gray-400">ioctl(fd: {ev.ioctl.fd}, cmd: {ev.ioctl.cmd})</span>;
     if (ev.fcntl) return <span className="text-gray-400">fcntl(fd: {ev.fcntl.fd}, cmd: {ev.fcntl.cmd})</span>;

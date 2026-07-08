@@ -1104,6 +1104,10 @@
         "sig": {
           "type": "integer",
           "format": "int32"
+        },
+        "sourcePid": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },

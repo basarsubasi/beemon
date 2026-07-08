@@ -378,6 +378,7 @@ message SignalEvent {
   uint32 target_pid = 1;
   uint32 target_tid = 2;
   int32 sig = 3;
+  uint32 source_pid = 4;
 }
 
 message FileMetaEvent {

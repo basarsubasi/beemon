@@ -318,6 +318,15 @@ fn test_bpf_captures_signals() {
         .collect();
         
     assert!(!signal_events.is_empty(), "Expected at least one SignalEvent with SIGUSR1, got none");
+    
+    // Verify that the source_pid (sender) is the parent process
+    let parent_pid = std::process::id();
+    for event in signal_events {
+        if let Some(Oneof::Signal(s)) = &event.event {
+            assert_eq!(s.source_pid, parent_pid, "Expected source_pid to be the parent PID");
+            assert_eq!(s.target_pid, pid as u32, "Expected target_pid to be the child PID");
+        }
+    }
 }
 
 #[test]
@@ -368,6 +377,14 @@ fn test_bpf_captures_signal_generate_from_unmonitored_sender() {
         .collect();
         
     assert!(!signal_events.is_empty(), "Expected SignalEvent with SIGUSR2 from unmonitored sender via signal_generate");
+    
+    let parent_pid = std::process::id();
+    for event in signal_events {
+        if let Some(Oneof::Signal(s)) = &event.event {
+            assert_eq!(s.source_pid, parent_pid, "Expected source_pid to be the parent PID even though it was unmonitored");
+            assert_eq!(s.target_pid, pid as u32, "Expected target_pid to be the monitored child PID");
+        }
+    }
 }
 
 #[test]

@@ -165,6 +165,7 @@ pub fn convert(e: &EventT) -> Event {
             target_pid: e.signal.target_pid,
             target_tid: e.signal.target_tid,
             sig: e.signal.sig,
+            source_pid: e.pid,
         }),
         bpf::EVENT_TYPE_FILE_META => Oneof::FileMeta(FileMetaEvent {
             pathname: cstr(&e.file_meta.pathname).to_string(),

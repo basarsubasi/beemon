@@ -348,6 +348,7 @@ export interface SignalEvent {
   targetPid: number;
   targetTid: number;
   sig: number;
+  sourcePid: number;
 }
 
 export interface FileMetaEvent {
@@ -4283,7 +4284,7 @@ export const CapsetEvent: MessageFns<CapsetEvent> = {
 };
 
 function createBaseSignalEvent(): SignalEvent {
-  return { targetPid: 0, targetTid: 0, sig: 0 };
+  return { targetPid: 0, targetTid: 0, sig: 0, sourcePid: 0 };
 }
 
 export const SignalEvent: MessageFns<SignalEvent> = {
@@ -4296,6 +4297,9 @@ export const SignalEvent: MessageFns<SignalEvent> = {
     }
     if (message.sig !== 0) {
       writer.uint32(24).int32(message.sig);
+    }
+    if (message.sourcePid !== 0) {
+      writer.uint32(32).uint32(message.sourcePid);
     }
     return writer;
   },
@@ -4331,6 +4335,14 @@ export const SignalEvent: MessageFns<SignalEvent> = {
           message.sig = reader.int32();
           continue;
         }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.sourcePid = reader.uint32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -4348,6 +4360,7 @@ export const SignalEvent: MessageFns<SignalEvent> = {
     message.targetPid = object.targetPid ?? 0;
     message.targetTid = object.targetTid ?? 0;
     message.sig = object.sig ?? 0;
+    message.sourcePid = object.sourcePid ?? 0;
     return message;
   },
 };
