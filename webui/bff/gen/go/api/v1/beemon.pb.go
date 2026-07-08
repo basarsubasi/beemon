@@ -455,10 +455,12 @@ type Process struct {
 	// Active Network Connections
 	ActiveConnections []*NetworkConnection `protobuf:"bytes,13,rep,name=active_connections,json=activeConnections,proto3" json:"active_connections,omitempty"`
 	// I/O Stats
-	IoReadBytes   uint64 `protobuf:"varint,14,opt,name=io_read_bytes,json=ioReadBytes,proto3" json:"io_read_bytes,omitempty"`
-	IoWriteBytes  uint64 `protobuf:"varint,15,opt,name=io_write_bytes,json=ioWriteBytes,proto3" json:"io_write_bytes,omitempty"`
-	NetRxBytes    uint64 `protobuf:"varint,16,opt,name=net_rx_bytes,json=netRxBytes,proto3" json:"net_rx_bytes,omitempty"`
-	NetTxBytes    uint64 `protobuf:"varint,17,opt,name=net_tx_bytes,json=netTxBytes,proto3" json:"net_tx_bytes,omitempty"`
+	IoReadBytes  uint64 `protobuf:"varint,14,opt,name=io_read_bytes,json=ioReadBytes,proto3" json:"io_read_bytes,omitempty"`
+	IoWriteBytes uint64 `protobuf:"varint,15,opt,name=io_write_bytes,json=ioWriteBytes,proto3" json:"io_write_bytes,omitempty"`
+	NetRxBytes   uint64 `protobuf:"varint,16,opt,name=net_rx_bytes,json=netRxBytes,proto3" json:"net_rx_bytes,omitempty"`
+	NetTxBytes   uint64 `protobuf:"varint,17,opt,name=net_tx_bytes,json=netTxBytes,proto3" json:"net_tx_bytes,omitempty"`
+	// Manager (nearest ancestor process manager: systemd, containerd, dockerd, podman, crio)
+	ManagedBy     string `protobuf:"bytes,18,opt,name=managed_by,json=managedBy,proto3" json:"managed_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -610,6 +612,13 @@ func (x *Process) GetNetTxBytes() uint64 {
 		return x.NetTxBytes
 	}
 	return 0
+}
+
+func (x *Process) GetManagedBy() string {
+	if x != nil {
+		return x.ManagedBy
+	}
+	return ""
 }
 
 type OpenFile struct {
@@ -4072,7 +4081,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x1ahost_io_read_bytes_per_sec\x18\x05 \x01(\x04R\x15hostIoReadBytesPerSec\x12;\n" +
 	"\x1bhost_io_write_bytes_per_sec\x18\x06 \x01(\x04R\x16hostIoWriteBytesPerSec\x127\n" +
 	"\x19host_net_rx_bytes_per_sec\x18\a \x01(\x04R\x14hostNetRxBytesPerSec\x127\n" +
-	"\x19host_net_tx_bytes_per_sec\x18\b \x01(\x04R\x14hostNetTxBytesPerSec\"\xfe\x04\n" +
+	"\x19host_net_tx_bytes_per_sec\x18\b \x01(\x04R\x14hostNetTxBytesPerSec\"\x9d\x05\n" +
 	"\aProcess\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\x12\x12\n" +
 	"\x04ppid\x18\x02 \x01(\rR\x04ppid\x12\x12\n" +
@@ -4098,7 +4107,9 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\fnet_rx_bytes\x18\x10 \x01(\x04R\n" +
 	"netRxBytes\x12 \n" +
 	"\fnet_tx_bytes\x18\x11 \x01(\x04R\n" +
-	"netTxBytes\"B\n" +
+	"netTxBytes\x12\x1d\n" +
+	"\n" +
+	"managed_by\x18\x12 \x01(\tR\tmanagedBy\"B\n" +
 	"\bOpenFile\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\rR\x02fd\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +

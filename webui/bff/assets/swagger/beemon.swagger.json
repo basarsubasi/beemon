@@ -971,6 +971,10 @@
         "netTxBytes": {
           "type": "string",
           "format": "uint64"
+        },
+        "managedBy": {
+          "type": "string",
+          "title": "Manager (nearest ancestor process manager: systemd, containerd, dockerd, podman, crio)"
         }
       }
     },

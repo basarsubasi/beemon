@@ -134,16 +134,16 @@ fn scan_once(
         // Stable fields via proc_cache: ns inodes + cgroup path. Avoids the
         // ~8 readlinks + 1 cgroup read per pid per scan; the cache
         // refreshes at most once every 10s.
-        let (cgroup_path, namespace_strings) = match pc_lock.get_or_load(pid as u32) {
+        let (cgroup_path, namespace_strings, managed_by) = match pc_lock.get_or_load(pid as u32) {
             Some(entry) => {
                 let ns_strings: Vec<String> = entry
                     .namespaces
                     .iter()
                     .map(|(t, inode)| format!("{t}:[{inode}]"))
                     .collect();
-                (entry.cgroup_path.clone(), ns_strings)
+                (entry.cgroup_path.clone(), ns_strings, entry.managed_by.map(|m| m.to_string()))
             }
-            None => (None, Vec::new()),
+            None => (None, Vec::new(), None),
         };
 
         // Cgroup limits shared across all pids in the same path. With the
@@ -176,6 +176,7 @@ fn scan_once(
             io_write_bytes: io.map(|s| s.file_write_bytes).unwrap_or(0),
             net_rx_bytes: io.map(|s| s.net_rx_bytes).unwrap_or(0),
             net_tx_bytes: io.map(|s| s.net_tx_bytes).unwrap_or(0),
+            managed_by: managed_by.unwrap_or_default(),
         };
 
         if pb_proc.pid == 0 {

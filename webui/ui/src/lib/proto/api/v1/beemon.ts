@@ -83,6 +83,8 @@ export interface Process {
   ioWriteBytes: number;
   netRxBytes: number;
   netTxBytes: number;
+  /** Manager (nearest ancestor process manager: systemd, containerd, dockerd, podman, crio) */
+  managedBy: string;
 }
 
 export interface OpenFile {
@@ -935,6 +937,7 @@ function createBaseProcess(): Process {
     ioWriteBytes: 0,
     netRxBytes: 0,
     netTxBytes: 0,
+    managedBy: "",
   };
 }
 
@@ -990,6 +993,9 @@ export const Process: MessageFns<Process> = {
     }
     if (message.netTxBytes !== 0) {
       writer.uint32(136).uint64(message.netTxBytes);
+    }
+    if (message.managedBy !== "") {
+      writer.uint32(146).string(message.managedBy);
     }
     return writer;
   },
@@ -1137,6 +1143,14 @@ export const Process: MessageFns<Process> = {
           message.netTxBytes = longToNumber(reader.uint64());
           continue;
         }
+        case 18: {
+          if (tag !== 146) {
+            break;
+          }
+
+          message.managedBy = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1168,6 +1182,7 @@ export const Process: MessageFns<Process> = {
     message.ioWriteBytes = object.ioWriteBytes ?? 0;
     message.netRxBytes = object.netRxBytes ?? 0;
     message.netTxBytes = object.netTxBytes ?? 0;
+    message.managedBy = object.managedBy ?? "";
     return message;
   },
 };

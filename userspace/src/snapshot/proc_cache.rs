@@ -10,6 +10,7 @@
 //! Cache is held as `Arc<Mutex<ProcCache>>` so both the scanner
 //! (spawn_blocking) and gRPC handlers can access it without re-walking /proc.
 
+use super::manager::{Manager, detect_manager};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::time::{Duration, Instant};
@@ -31,6 +32,9 @@ pub struct ProcCacheEntry {
     /// Cgroup v2 path (relative to `/sys/fs/cgroup/`). None if the process
     /// has no resolvable v2 cgroup (host-level or v1 host).
     pub cgroup_path: Option<String>,
+    /// The nearest ancestor process manager (systemd, containerd, etc.).
+    /// Computed once on first load and preserved across TTL refreshes.
+    pub managed_by: Option<Manager>,
     pub loaded_at: Instant,
 }
 
@@ -57,7 +61,8 @@ impl ProcCache {
             None => true,
         };
         if needs_reload {
-            match load_entry(pid) {
+            let old_managed_by = self.entries.get(&pid).and_then(|e| e.managed_by);
+            match load_entry(pid, old_managed_by, &self.entries) {
                 Some(e) => {
                     self.entries.insert(pid, e);
                 }
@@ -95,18 +100,23 @@ impl ProcCache {
     }
 }
 
-fn load_entry(pid: u32) -> Option<ProcCacheEntry> {
-    // Reuse the light reader for ppid/comm; the fields live in
-    // `/proc/<pid>/ns/` and `/proc/<pid>/cgroup` separately.
+fn load_entry(pid: u32, old_managed_by: Option<Manager>, cache: &HashMap<u32, ProcCacheEntry>) -> Option<ProcCacheEntry> {
     let light = crate::snapshot::procfields::read_light(pid as i32)?;
     let namespaces = read_ns_inodes(pid);
     let cgroup_path = resolve_cgroup_v2_path(pid);
+    let managed_by = old_managed_by.or_else(|| {
+        let parent_cache: HashMap<u32, (String, u32)> = cache.iter()
+            .map(|(k, v)| (*k, (v.comm.clone(), v.ppid)))
+            .collect();
+        detect_manager(pid, &parent_cache)
+    });
     Some(ProcCacheEntry {
         pid,
         ppid: light.ppid as u32,
         comm: light.comm,
         namespaces,
         cgroup_path,
+        managed_by,
         loaded_at: Instant::now(),
     })
 }
@@ -355,6 +365,7 @@ mod tests {
             comm: "test1".to_string(),
             namespaces: HashMap::new(),
             cgroup_path: None,
+            managed_by: None,
             loaded_at: Instant::now(),
         };
         let mut entry2 = entry1.clone();

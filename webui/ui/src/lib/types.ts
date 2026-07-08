@@ -16,6 +16,7 @@ export interface Process {
   ioWriteBytes?: string;
   netRxBytes?: string;
   netTxBytes?: string;
+  managedBy?: string;
 }
 
 export interface NetworkConnection {

@@ -11,7 +11,7 @@ import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ArrowUpDown, ArrowUp, ArrowDown, Cpu, MemoryStick, Box, Layers, HardDrive } from "lucide-react";
 
-type SortKey = 'pid' | 'name' | 'state' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit' | 'file_read' | 'file_write' | 'net_rx' | 'net_tx';
+type SortKey = 'pid' | 'name' | 'state' | 'managedBy' | 'memory' | 'memLimit' | 'pidsLimit' | 'cpu' | 'cpuLimit' | 'file_read' | 'file_write' | 'net_rx' | 'net_tx';
 type SortDirection = 'asc' | 'desc';
 
 const getProgressColorClass = (value: number, defaultClass: string = "[&>div>div]:bg-green-500 dark:[&>div>div]:bg-green-400") => {
@@ -129,6 +129,9 @@ export function Dashboard() {
       } else if (sortKey === 'state') {
         aVal = a.state;
         bVal = b.state;
+      } else if (sortKey === 'managedBy') {
+        aVal = a.managedBy || '';
+        bVal = b.managedBy || '';
       } else if (sortKey === 'memory') {
         aVal = parseInt(a.memoryUsageBytes);
         bVal = parseInt(b.memoryUsageBytes);
@@ -354,6 +357,12 @@ export function Dashboard() {
                 <div className="flex items-center">State {renderSortIcon('state')}</div>
               </TableHead>
               <TableHead 
+                className="w-[120px] max-w-[120px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6"
+                onClick={() => handleSort('managedBy')}
+              >
+                <div className="flex items-center">Manager {renderSortIcon('managedBy')}</div>
+              </TableHead>
+              <TableHead 
                 className="w-[100px] max-w-[100px] text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors py-4 px-6 text-right"
                 onClick={() => handleSort('cpu')}
               >
@@ -403,6 +412,13 @@ export function Dashboard() {
                 <TableCell className="w-[140px] max-w-[140px] py-4 px-6">
                   <StateBadge state={proc.state} />
                 </TableCell>
+                <TableCell className="w-[120px] max-w-[120px] py-4 px-6">
+                  {proc.managedBy && (
+                    <Badge variant="outline" className="border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-xs">
+                      {proc.managedBy}
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell className="w-[100px] max-w-[100px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <span className="block truncate text-right">{(proc.cpuUsagePercent || 0).toFixed(1)}%</span>
                 </TableCell>
@@ -436,7 +452,7 @@ export function Dashboard() {
             ))}
             {processes.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
+                <TableCell colSpan={8} className="h-32 text-center text-zinc-400 dark:text-zinc-500">
                   No processes found matching your filter.
                 </TableCell>
               </TableRow>

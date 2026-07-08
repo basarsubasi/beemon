@@ -114,6 +114,9 @@ message Process {
   uint64 io_write_bytes = 15;
   uint64 net_rx_bytes = 16;
   uint64 net_tx_bytes = 17;
+
+  // Manager (nearest ancestor process manager: systemd, containerd, dockerd, podman, crio)
+  string managed_by = 18;
 }
 
 message OpenFile {

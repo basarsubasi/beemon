@@ -3,6 +3,7 @@ pub mod cgroup;
 pub mod cgroup_tree_cache;
 pub mod details;
 pub mod host;
+pub mod manager;
 pub mod namespace_tree_cache;
 pub mod proc_cache;
 pub mod procfields;
