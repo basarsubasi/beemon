@@ -1,0 +1,6 @@
+/target
+/bin
+*.o
+*.profraw
+*.profdata
+profile.pb.gz

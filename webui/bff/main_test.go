@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1"
+	pb "github.com/basarsubasi/beemon/webui/bff/gen/go/api/v1"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -43,10 +43,12 @@ func (s *mockBeemonServer) StreamEvents(req *pb.StreamEventsRequest, stream pb.B
 			},
 		},
 	}
-	if err := stream.Send(ev1); err != nil {
+	if err := stream.Send(&pb.EventBatch{Events: []*pb.Event{ev1}}); err != nil {
 		return err
 	}
-	
+
+	time.Sleep(10 * time.Millisecond)
+
 	ev2 := &pb.Event{
 		TimestampNs: 2000,
 		Pid:         req.Pid,
@@ -57,7 +59,7 @@ func (s *mockBeemonServer) StreamEvents(req *pb.StreamEventsRequest, stream pb.B
 			},
 		},
 	}
-	if err := stream.Send(ev2); err != nil {
+	if err := stream.Send(&pb.EventBatch{Events: []*pb.Event{ev2}}); err != nil {
 		return err
 	}
 	
@@ -175,43 +177,53 @@ func TestBFF_StreamEvents(t *testing.T) {
 	
 	var ev1 struct {
 		Result struct {
-			TimestampNs string `json:"timestampNs"`
-			Pid         int    `json:"pid"`
-			FileOpen    struct {
-				Filename string `json:"filename"`
-				Flags    int    `json:"flags"`
-			} `json:"fileOpen"`
+			Events []struct {
+				TimestampNs string `json:"timestampNs"`
+				Pid         int    `json:"pid"`
+				FileOpen    struct {
+					Filename string `json:"filename"`
+					Flags    int    `json:"flags"`
+				} `json:"fileOpen"`
+			} `json:"events"`
 		} `json:"result"`
 	}
 
 	if err := decoder.Decode(&ev1); err != nil {
 		t.Fatalf("failed to decode event 1: %v", err)
 	}
-	if ev1.Result.Pid != 100 {
-		t.Errorf("expected pid 100, got %d", ev1.Result.Pid)
+	if len(ev1.Result.Events) == 0 {
+		t.Fatalf("expected events, got none")
 	}
-	if ev1.Result.FileOpen.Filename != "/etc/passwd" {
-		t.Errorf("expected filename /etc/passwd, got %s", ev1.Result.FileOpen.Filename)
+	if ev1.Result.Events[0].Pid != 100 {
+		t.Errorf("expected pid 100, got %d", ev1.Result.Events[0].Pid)
+	}
+	if ev1.Result.Events[0].FileOpen.Filename != "/etc/passwd" {
+		t.Errorf("expected filename /etc/passwd, got %s", ev1.Result.Events[0].FileOpen.Filename)
 	}
 
 	var ev2 struct {
 		Result struct {
-			TimestampNs string `json:"timestampNs"`
-			Pid         int    `json:"pid"`
-			FileRead    struct {
-				Fd    int    `json:"fd"`
-				Count string `json:"count"`
-			} `json:"fileRead"`
+			Events []struct {
+				TimestampNs string `json:"timestampNs"`
+				Pid         int    `json:"pid"`
+				FileRead    struct {
+					Fd    int    `json:"fd"`
+					Count string `json:"count"`
+				} `json:"fileRead"`
+			} `json:"events"`
 		} `json:"result"`
 	}
 
 	if err := decoder.Decode(&ev2); err != nil {
 		t.Fatalf("failed to decode event 2: %v", err)
 	}
-	if ev2.Result.FileRead.Fd != 3 {
-		t.Errorf("expected fd 3, got %d", ev2.Result.FileRead.Fd)
+	if len(ev2.Result.Events) == 0 {
+		t.Fatalf("expected events, got none")
 	}
-	if ev2.Result.FileRead.Count != "1024" {
-		t.Errorf("expected count 1024, got %s", ev2.Result.FileRead.Count)
+	if ev2.Result.Events[0].FileRead.Fd != 3 {
+		t.Errorf("expected fd 3, got %d", ev2.Result.Events[0].FileRead.Fd)
+	}
+	if ev2.Result.Events[0].FileRead.Count != "1024" {
+		t.Errorf("expected count 1024, got %s", ev2.Result.Events[0].FileRead.Count)
 	}
 }

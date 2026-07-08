@@ -1,7 +1,12 @@
-# Beemon
+# beemon
 
 Beemon is a lightweight, real-time Linux process monitoring tool powered by eBPF.
 It allows you to inspect running processes and monitor their low-level kernel activities—such as file I/O, network connections, process creation, and namespace isolation events—live from a web interface.
+
+
+
+[<img width="1500" height="1500" alt="Image" src="https://github.com/user-attachments/assets/8cec8d38-7ecc-489a-88b5-27f33c43bcf7" />
+](https://github.com/user-attachments/assets/0b27b0e8-e25a-44fe-a354-441fab42d49a)
 
 ## What it does
 
@@ -36,7 +41,7 @@ Beemon is designed to run on both **x86_64** and **arm64** (e.g., Raspberry Pi) 
 
 > [!WARNING]
 > **Not CO-RE Compatible:** This project does **not** use CO-RE (Compile Once - Run Everywhere) relocations because the target environments lack BTF debug information (`/sys/kernel/btf/vmlinux`). 
-> The struct offsets are hardcoded at compile time. This specific build is designed exactly for **6.18 arm64** and **6.12 amd64** Linux kernels. Running it on different kernel versions may cause it to fail to load or read incorrect data unless you generate a new `vmlinux.h` for your kernel and recompile.
+> The struct offsets are hardcoded at compile time. This specific build is designed exactly for **6.18 arm64** and **6.18 amd64** Linux kernels. Running it on different kernel versions may cause it to fail to load or read incorrect data unless you generate a new `vmlinux.h` for your kernel and recompile.
 
 ## Directory Structure
 

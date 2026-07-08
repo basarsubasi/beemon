@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package beemon.v1;
 
-option go_package = "github.com/basarsubasi/beemon/protobuf/gen/go/api/v1;beemonv1";
+option go_package = "github.com/basarsubasi/beemon/webui/bff/gen/go/api/v1;beemonv1";
 
 import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
@@ -14,7 +14,13 @@ service BeemonService {
     };
   }
 
-  rpc StreamEvents(StreamEventsRequest) returns (stream Event) {
+  rpc GetProcessMetadata(GetProcessMetadataRequest) returns (GetProcessMetadataResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/processes/{pid}/metadata"
+    };
+  }
+
+  rpc StreamEvents(StreamEventsRequest) returns (stream EventBatch) {
     option (google.api.http) = {
       get: "/api/v1/processes/{pid}/events"
     };
@@ -23,6 +29,12 @@ service BeemonService {
   rpc GetNamespaceDetails(GetNamespaceDetailsRequest) returns (GetNamespaceDetailsResponse) {
     option (google.api.http) = {
       get: "/api/v1/namespaces/{ns_type}/{ns_inode}"
+    };
+  }
+
+  rpc GetNetworkFlows(GetNetworkFlowsRequest) returns (GetNetworkFlowsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/processes/{pid}/network_flows"
     };
   }
 }
@@ -43,6 +55,17 @@ message GetNamespaceDetailsResponse {
   string user_maps = 7;
 }
 
+message GetProcessMetadataRequest {
+  uint32 pid = 1 [(buf.validate.field).uint32.gt = 0];
+}
+
+message GetProcessMetadataResponse {
+  Process process = 1;
+  Process parent = 2;
+  repeated Process children = 3;
+  repeated string host_namespaces = 4;
+}
+
 message ListProcessesRequest {
   string filter_name = 1;
 }
@@ -51,6 +74,14 @@ message ListProcessesResponse {
   repeated Process processes = 1;
   uint64 host_memory_total_bytes = 2;
   repeated string host_namespaces = 3;
+  repeated float host_cpu_per_core_percent = 4;
+  // Host-wide per-second I/O totals, summed from the eBPF process_io_stats map.
+  // Same source as per-process io_*_bytes fields, but aggregated across all PIDs
+  // in the snapshot to give a single dashboard gauge. 0 means the BPF map is cold.
+  uint64 host_io_read_bytes_per_sec  = 5;
+  uint64 host_io_write_bytes_per_sec = 6;
+  uint64 host_net_rx_bytes_per_sec   = 7;
+  uint64 host_net_tx_bytes_per_sec   = 8;
 }
 
 message Process {
@@ -71,10 +102,62 @@ message Process {
 
   // Namespaces
   repeated string namespaces = 11;
+
+  // Open Files
+  repeated OpenFile open_files = 12;
+
+  // Active Network Connections
+  repeated NetworkConnection active_connections = 13;
+
+  // I/O Stats
+  uint64 io_read_bytes = 14;
+  uint64 io_write_bytes = 15;
+  uint64 net_rx_bytes = 16;
+  uint64 net_tx_bytes = 17;
+
+  // Manager (nearest ancestor process manager: systemd, containerd, dockerd, podman, crio)
+  string managed_by = 18;
+}
+
+message OpenFile {
+  uint32 fd = 1;
+  string path = 2;
+  string type = 3; // e.g., "socket", "pipe", "regular", "directory", "char", "fifo", "other"
+}
+
+message NetworkConnection {
+  string local_address = 1;
+  string remote_address = 2;
+  string state = 3; // e.g. "ESTABLISHED", "LISTEN", etc.
+  string direction = 4; // "inbound" or "outbound"
+}
+
+message GetNetworkFlowsRequest {
+  uint32 pid = 1;
+}
+
+message NetworkFlow {
+  string local_address = 1;
+  string remote_address = 2;
+  uint32 local_port = 3;
+  uint32 remote_port = 4;
+  string protocol = 5; // "TCP", "UDP"
+  uint64 rx_bytes = 6;
+  uint64 tx_bytes = 7;
+  uint64 rx_packets = 8;
+  uint64 tx_packets = 9;
+}
+
+message GetNetworkFlowsResponse {
+  repeated NetworkFlow flows = 1;
 }
 
 message StreamEventsRequest {
   uint32 pid = 1 [(buf.validate.field).uint32.gt = 0];
+}
+
+message EventBatch {
+  repeated Event events = 1;
 }
 
 message Event {
@@ -82,18 +165,51 @@ message Event {
   uint32 pid = 2;
   
   oneof event {
-    ProcessEvent process = 4;
-    LimitChangedEvent limit_changed = 5;
-    SyscallEvent syscall = 6;
-    FileOpenEvent file_open = 7;
-    FileReadEvent file_read = 8;
-    FileWriteEvent file_write = 9;
-    FileCloseEvent file_close = 10;
-    NetworkConnectEvent network_connect = 11;
-    ChrootEvent chroot = 12;
-    PivotRootEvent pivot_root = 13;
-    SetnsEvent setns = 14;
-    UnshareEvent unshare = 15;
+    SyscallEvent syscall = 3;
+    FileOpenEvent file_open = 4;
+    NetworkConnectEvent network_connect = 5;
+    ProcessEvent process = 6;
+    FileReadEvent file_read = 7;
+    FileWriteEvent file_write = 8;
+    FileCloseEvent file_close = 9;
+    ChrootEvent chroot = 10;
+    PivotRootEvent pivot_root = 11;
+    SetnsEvent setns = 12;
+    UnshareEvent unshare = 13;
+    Wait4Event wait4 = 14;
+    MmapEvent mmap = 15;
+    MunmapEvent munmap = 16;
+    MprotectEvent mprotect = 17;
+    BrkEvent brk = 18;
+    AcceptEvent accept = 19;
+    BindEvent bind = 20;
+    SendtoEvent sendto = 21;
+    RecvfromEvent recvfrom = 22;
+    UnlinkatEvent unlinkat = 23;
+    RenameEvent rename = 24;
+    // reserved 25 for removed futex event
+    EpollWaitEvent epoll_wait = 26;
+    SelectEvent select = 27;
+    PollEvent poll = 28;
+    PtraceEvent ptrace = 29;
+    BpfEvent bpf = 30;
+    CapsetEvent capset = 31;
+    NetworkAcceptEvent network_accept = 32;
+    SignalEvent signal = 33;
+    FileMetaEvent stat = 34;
+    IoctlEvent ioctl = 35;
+    FcntlEvent fcntl = 36;
+    LseekEvent lseek = 37;
+    SocketEvent socket = 38;
+    SocketOptEvent socket_opt = 39;
+    PipeEvent pipe = 40;
+    Pipe2Event pipe2 = 41;
+    GetpidEvent getpid = 42;
+    GetuidEvent getuid = 43;
+    UnameEvent uname = 44;
+    FileMetaEvent fstat = 45;
+    FileMetaEvent lstat = 46;
+    FileMetaEvent access = 47;
   }
 }
 
@@ -137,9 +253,18 @@ message SyscallEvent {
 message FileOpenEvent {
   string filename = 1;
   int32 flags = 2;
+  uint32 fd = 3;
 }
 
 message NetworkConnectEvent {
+  uint32 saddr = 1;
+  uint32 daddr = 2;
+  uint32 sport = 3;
+  uint32 dport = 4;
+  uint32 family = 5;
+}
+
+message NetworkAcceptEvent {
   uint32 saddr = 1;
   uint32 daddr = 2;
   uint32 sport = 3;
@@ -164,3 +289,138 @@ message LimitChangedEvent {
   uint64 cpu_period_us = 3;
   uint64 pids_limit = 4;
 }
+
+message Wait4Event {
+  uint32 pid = 1;
+  int32 options = 2;
+}
+
+message MmapEvent {
+  uint64 addr = 1;
+  uint64 len = 2;
+  int32 prot = 3;
+  int32 flags = 4;
+  int32 fd = 5;
+  uint64 offset = 6;
+}
+
+message MunmapEvent {
+  uint64 addr = 1;
+  uint64 len = 2;
+}
+
+message MprotectEvent {
+  uint64 start = 1;
+  uint64 len = 2;
+  int32 prot = 3;
+}
+
+message BrkEvent {
+  uint64 brk = 1;
+}
+
+message AcceptEvent {
+  int32 fd = 1;
+}
+
+message BindEvent {
+  int32 fd = 1;
+}
+
+message SendtoEvent {
+  int32 fd = 1;
+  uint64 len = 2;
+}
+
+message RecvfromEvent {
+  int32 fd = 1;
+  uint64 len = 2;
+}
+
+message UnlinkatEvent {
+  int32 dfd = 1;
+  string pathname = 2;
+}
+
+message RenameEvent {
+  string oldname = 1;
+  string newname = 2;
+}
+
+
+message EpollWaitEvent {
+  int32 epfd = 1;
+  int32 maxevents = 2;
+}
+
+message SelectEvent {
+  int32 nfds = 1;
+}
+
+message PollEvent {
+  int32 nfds = 1;
+}
+
+message PtraceEvent {
+  int64 request = 1;
+  uint32 target_pid = 2;
+}
+
+message BpfEvent {
+  int32 cmd = 1;
+}
+
+message CapsetEvent {
+  uint32 target_pid = 1;
+}
+
+message SignalEvent {
+  uint32 target_pid = 1;
+  uint32 target_tid = 2;
+  int32 sig = 3;
+  uint32 source_pid = 4;
+}
+
+message FileMetaEvent {
+  string pathname = 1;
+  int32 fd = 2;
+  int32 mode = 3;
+}
+
+message IoctlEvent {
+  int32 fd = 1;
+  uint64 cmd = 2;
+}
+
+message FcntlEvent {
+  int32 fd = 1;
+  int32 cmd = 2;
+}
+
+message LseekEvent {
+  int32 fd = 1;
+  uint64 offset = 2;
+  int32 whence = 3;
+}
+
+message SocketEvent {
+  int32 family = 1;
+  int32 type = 2;
+  int32 protocol = 3;
+}
+
+message SocketOptEvent {
+  int32 fd = 1;
+  int32 level = 2;
+  int32 optname = 3;
+}
+
+message PipeEvent {}
+
+message Pipe2Event {}
+
+message GetpidEvent {}
+
+message GetuidEvent {}
+
+message UnameEvent {}

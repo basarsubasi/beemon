@@ -12,7 +12,7 @@ type Config struct {
 
 func LoadConfig() *Config {
 	cfg := &Config{
-		GRPCEndpoint: "localhost:50051",
+		GRPCEndpoint: "127.0.0.1:50051",
 		HTTPPort:     8080,
 	}
 

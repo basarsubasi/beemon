@@ -7,6 +7,12 @@ services:
     pid: host
     volumes:
       - /sys/kernel/debug:/sys/kernel/debug:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    ports:
+      - "6060:6060"
+    environment:
+      - BEEMON_LOG_LEVEL=warn
+      - BEEMON_EVENT_LIMIT=150
     restart: unless-stopped
 
   bff:
@@ -24,7 +30,7 @@ services:
       context: .
       dockerfile: Dockerfile.ui
     ports:
-      - "3000:80"
+      - "${BEEMON_UI_PORT:-3000}:80"
     depends_on:
       - bff
     restart: unless-stopped

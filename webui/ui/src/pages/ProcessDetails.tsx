@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
-import { ArrowLeft, Users, Box, Terminal } from "lucide-react";
+import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown, Network } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
-import type { Process, ListProcessesResponse } from "../lib/types";
+import { ManagerBadge } from "../components/ManagerBadge";
+import type { Process, GetProcessMetadataResponse, BeemonEvent } from "../lib/types";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
 
 export function ProcessDetails() {
   const { pid } = useParams();
@@ -15,53 +25,188 @@ export function ProcessDetails() {
   const [children, setChildren] = useState<Process[]>([]);
   const [parentProcess, setParentProcess] = useState<Process | null>(null);
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
+  const [sidePanelExpanded, setSidePanelExpanded] = useState(false);
+  const [sidePanelWide, setSidePanelWide] = useState(false);
+  const [sidePanelTab, setSidePanelTab] = useState<'files' | 'network'>('files');
+  const [networkFlowStates, setNetworkFlowStates] = useState<Record<string, { flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>>({});
+  const [openFilesState, setOpenFilesState] = useState<Record<number, { fd: number; path: string; type: string; isClosed: boolean }>>({});
+
+  const [openFilesSortConfig, setOpenFilesSortConfig] = useState<{key: 'fd' | 'type' | 'path', direction: 'asc' | 'desc'} | null>({key: 'fd', direction: 'asc'});
+  const [networkSortConfig, setNetworkSortConfig] = useState<{key: 'rxBytes' | 'txBytes' | 'rxPackets' | 'txPackets', direction: 'asc' | 'desc'} | null>({key: 'rxBytes', direction: 'desc'});
+  const infoBarRef = useRef<HTMLDivElement>(null);
+
+  const sortedOpenFiles = useMemo(() => {
+    let sortableItems = Object.values(openFilesState);
+    if (openFilesSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[openFilesSortConfig.key] < b[openFilesSortConfig.key]) {
+          return openFilesSortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (a[openFilesSortConfig.key] > b[openFilesSortConfig.key]) {
+          return openFilesSortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [openFilesState, openFilesSortConfig]);
+
+
+  const sortedNetworkFlows = useMemo(() => {
+    const flows = (Object.values(networkFlowStates) as Array<{ flow: import("../lib/types").NetworkFlow, lastSeenTs: number }>)
+      .filter(s => (Date.now() - s.lastSeenTs) <= 5000)
+      .map(s => {
+        // Annotate visually if it hasn't been seen in the last 2 seconds
+        const isClosed = (Date.now() - s.lastSeenTs) > 2000;
+        return { ...s.flow, isClosed };
+      });
+    let sortableItems = [...flows];
+    if (networkSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const valA = parseInt(a[networkSortConfig.key as keyof typeof a] as string) || 0;
+        const valB = parseInt(b[networkSortConfig.key as keyof typeof b] as string) || 0;
+        if (valA < valB) return networkSortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return networkSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [networkFlowStates, networkSortConfig]);
+
+
+  const requestSort = (key: 'fd' | 'type' | 'path') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (openFilesSortConfig && openFilesSortConfig.key === key && openFilesSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setOpenFilesSortConfig({ key, direction });
+  };
+
+  const requestNetworkSort = (key: 'rxBytes' | 'txBytes' | 'rxPackets' | 'txPackets') => {
+    let direction: 'desc' | 'asc' = 'desc';
+    if (networkSortConfig && networkSortConfig.key === key && networkSortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setNetworkSortConfig({ key, direction });
+  };
+
+  const STDIO_NAMES: Record<number, string> = { 0: 'stdin', 1: 'stdout', 2: 'stderr' };
+
+  const getDisplayPath = (fd: number, path: string): string => {
+    if (fd in STDIO_NAMES) {
+      // Strip " (deleted)" suffix for standard streams — they are not real files
+      return path.replace(/ \(deleted\)$/, '');
+    }
+    return path;
+  };
 
   useEffect(() => {
     if (!pid) return;
     
-    const fetchProcesses = async () => {
+    setOpenFilesState({});
+    setNetworkFlowStates({});
+
+    const fetchMetadata = async () => {
       try {
-        const res = await fetch(`/api/v1/processes`);
-        const data = (await res.json()) as ListProcessesResponse;
-        if (!data.processes) return;
-        
-        setHostNamespaces(data.hostNamespaces || []);
-        const target = data.processes.find(p => p.pid.toString() === pid);
-        if (target) {
-          setProcess(target);
-          setChildren(data.processes.filter(p => p.ppid === target.pid));
-          setParentProcess(data.processes.find(p => p.pid === target.ppid) || null);
+        const metaRes = await fetch(`/api/v1/processes/${pid}/metadata`);
+        const data = (await metaRes.json()) as GetProcessMetadataResponse;
+        if (data.process) {
+          setHostNamespaces(data.hostNamespaces || []);
+          setProcess(data.process);
+          setChildren(data.children || []);
+          setParentProcess(data.parent || null);
+          
+          const filesMap: Record<number, { fd: number; path: string; type: string; isClosed: boolean }> = {};
+          data.process.openFiles?.forEach(f => {
+            filesMap[f.fd] = { fd: f.fd, path: f.path, type: f.type, isClosed: false };
+          });
+          setOpenFilesState(filesMap);
         }
       } catch (err) {
-        console.error("Failed to fetch process:", err);
+        console.error("Failed to fetch process metadata:", err);
+      }
+    };
+
+    const fetchFlows = async () => {
+      try {
+        const flowsRes = await fetch(`/api/v1/processes/${pid}/network_flows`);
+        if (flowsRes.ok) {
+          const flowsData = await flowsRes.json() as import("../lib/types").GetNetworkFlowsResponse;
+          const now = Date.now();
+          const flowsMap: Record<string, { flow: import("../lib/types").NetworkFlow, lastSeenTs: number }> = {};
+          flowsData.flows?.forEach(f => {
+            const key = `${f.localAddress}:${f.localPort}-${f.remoteAddress}:${f.remotePort}-${f.protocol}`;
+            flowsMap[key] = { flow: f, lastSeenTs: now };
+          });
+          setNetworkFlowStates(flowsMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch network flows:", err);
       }
     };
     
-    fetchProcesses();
-    const interval = setInterval(fetchProcesses, 2000);
-    return () => clearInterval(interval);
+    fetchMetadata();
+    fetchFlows();
+    
+    const metaInterval = setInterval(fetchMetadata, 5000);
+    const flowsInterval = setInterval(fetchFlows, 500);
+
+    return () => {
+        clearInterval(metaInterval);
+        clearInterval(flowsInterval);
+    };
   }, [pid]);
+
+  const handleStreamEvent = (ev: BeemonEvent) => {
+    if (ev.fileOpen && ev.fileOpen.fd !== undefined) {
+      const fd = ev.fileOpen.fd;
+      setOpenFilesState(prev => ({
+        ...prev,
+        [fd]: {
+          fd: fd,
+          path: ev.fileOpen!.filename,
+          type: 'regular',
+          isClosed: false
+        }
+      }));
+    } else if (ev.fileClose) {
+      const fd = ev.fileClose.fd;
+      setOpenFilesState(prev => {
+        if (!prev[fd]) return prev;
+        return {
+          ...prev,
+          [fd]: { ...prev[fd], isClosed: true }
+        };
+      });
+    }
+  };
 
   if (!pid) return <div>No PID provided</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="px-4 pt-8 pb-24 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-4 mb-2">
-        <Link 
-          to="/" 
+        <button 
+          onClick={() => navigate(-1)} 
           className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center justify-center p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800"
         >
-          <ArrowLeft size={20} />
-        </Link>
+          <ArrowLeft size={24} />
+        </button>
         <div className="flex-1 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
               {process ? process.name : "Loading..."} 
               <Badge variant="outline" className="border-zinc-300 dark:border-zinc-700 font-mono text-zinc-600 dark:text-zinc-300">PID {pid}</Badge>
+              {process?.managedBy && (
+                <ManagerBadge manager={process.managedBy} />
+              )}
+              <Link to="/"><img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" /></Link>
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Live Process Tracing & Resource Monitoring</p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
       
@@ -71,11 +216,12 @@ export function ProcessDetails() {
             <Box size={18} className="text-purple-500"/> Namespaces
           </h2>
           <div className="flex flex-wrap gap-2">
-            {process?.namespaces?.map(ns => {
+            {[...(process?.namespaces || [])].sort().map(ns => {
                 const inodeMatch = ns.match(/\[(\d+)\]/);
                 const type = ns.split(":")[0];
                 const inode = inodeMatch ? inodeMatch[1] : '';
-                const isHost = hostNamespaces.includes(ns);
+                const actualNs = ns.replace('_for_children', '');
+                const isHost = hostNamespaces.includes(ns) || hostNamespaces.includes(actualNs);
                 
                 return (
                   <Badge 
@@ -145,8 +291,163 @@ export function ProcessDetails() {
         </Card>
       </div>
 
-      <div className="h-[700px]">
-        <ProcessStream pid={parseInt(pid)} process={process || undefined} />
+      {/* Infobar - decoupled into its own full-width row */}
+      <div ref={infoBarRef} className="w-full" />
+
+      <div className="relative transition-all duration-300">
+        {/* Side Panel - overlays on top of the event stream when expanded */}
+        <div className="absolute left-0 top-0 bottom-0 z-20 flex items-start" style={{ paddingBottom: '24px' }}>
+          {!sidePanelExpanded ? (
+            <Button 
+              variant="outline" 
+              className="h-[500px] px-2 py-4 flex flex-col items-center justify-start gap-4 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 shadow-sm transition-colors"
+              onClick={() => { setSidePanelExpanded(true); }}
+              title="Show Process Resources"
+            >
+              <PanelLeftOpen size={18} className="text-zinc-500" />
+              <div className="flex items-center gap-3 text-zinc-500 font-medium tracking-widest mt-4" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                PROCESS I/O
+                <div className="flex items-center gap-1 mt-2">
+                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-green-100/50 text-green-700 dark:bg-green-900/30 dark:text-green-400">{Object.keys(networkFlowStates).length}</Badge>
+                  <Badge variant="secondary" className="px-1 text-[10px] transform rotate-90 flex gap-1 items-center bg-blue-100/50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{Object.keys(openFilesState).length}</Badge>
+                </div>
+              </div>
+            </Button>
+          ) : (
+            <Card className={`${sidePanelWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
+              <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="flex gap-4 items-center">
+                  <h2 
+                    className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'files' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    onClick={() => setSidePanelTab('files')}
+                  >
+                    <FileText size={16} className={sidePanelTab === 'files' ? "text-blue-500" : ""} /> Files
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{Object.keys(openFilesState).length}</Badge>
+                  </h2>
+                  <h2 
+                    className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'network' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    onClick={() => setSidePanelTab('network')}
+                  >
+                    <Network size={16} className={sidePanelTab === 'network' ? "text-green-500" : ""} /> Network
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px]">{Object.keys(networkFlowStates).length}</Badge>
+                  </h2>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => setSidePanelWide(!sidePanelWide)} title={sidePanelWide ? "Collapse Width" : "Expand Table Width"}>
+                    {sidePanelWide ? <X size={14} /> : <Maximize2 size={14} />}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => { setSidePanelExpanded(false); setSidePanelWide(false); }} title="Close Panel">
+                    <PanelLeftOpen size={14} className="transform rotate-180" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto custom-scrollbar">
+                {sidePanelTab === 'files' ? (
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
+                      <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                        <TableHead className="w-[80px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('fd')}>
+                          <div className="flex items-center gap-1">FD {openFilesSortConfig?.key === 'fd' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                        <TableHead className="w-[100px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('type')}>
+                          <div className="flex items-center gap-1">Type {openFilesSortConfig?.key === 'type' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                        <TableHead className="text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestSort('path')}>
+                          <div className="flex items-center gap-1">Path {openFilesSortConfig?.key === 'path' ? (openFilesSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedOpenFiles.length ? (
+                        sortedOpenFiles.map(f => (
+                          <TableRow key={f.fd} className="border-zinc-200 dark:border-zinc-800/50 border-b last:border-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-default transition-colors">
+                            <TableCell className="font-mono text-xs py-2 px-4">
+                              {f.fd}
+                              {f.fd in STDIO_NAMES && (
+                                <span className="ml-1.5 text-[9px] text-zinc-400 dark:text-zinc-500 font-sans">{STDIO_NAMES[f.fd]}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 px-4">
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 border-zinc-300 dark:border-zinc-700 whitespace-nowrap">
+                                {f.type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[800px]' : 'max-w-[200px]'}`} title={getDisplayPath(f.fd, f.path)}>
+                              <div className="flex items-center gap-2">
+                                <span className={`truncate block max-w-xs md:max-w-md ${f.isClosed ? 'text-zinc-400 line-through' : ''}`} title={getDisplayPath(f.fd, f.path)}>
+                                  {getDisplayPath(f.fd, f.path)}
+                                </span>
+                                {f.isClosed && (
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1 border-zinc-200 dark:border-zinc-800 text-zinc-500">closed</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={3} className="text-center py-8 text-sm text-zinc-500 italic">
+                            No open files
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 overflow-auto">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
+                      <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                        <TableHead className="w-[50px] text-xs h-8 py-1 select-none">Proto</TableHead>
+                        <TableHead className="text-xs h-8 py-1 select-none">Local</TableHead>
+                        <TableHead className="text-xs h-8 py-1 select-none">Remote</TableHead>
+                        <TableHead className="w-[80px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestNetworkSort('rxBytes')}>
+                          <div className="flex items-center gap-1 justify-end">Rx {networkSortConfig?.key === 'rxBytes' ? (networkSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                        <TableHead className="w-[80px] text-xs h-8 py-1 cursor-pointer select-none hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onClick={() => requestNetworkSort('txBytes')}>
+                          <div className="flex items-center gap-1 justify-end">Tx {networkSortConfig?.key === 'txBytes' ? (networkSortConfig.direction === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>) : <ArrowUpDown size={12} className="text-zinc-300 dark:text-zinc-700"/>}</div>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                        <TableBody>
+                          {sortedNetworkFlows.length ? (
+                            sortedNetworkFlows.map((f, i) => (
+                              <TableRow key={i} className="border-zinc-200 dark:border-zinc-800/50 border-b last:border-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-default transition-colors">
+                                <TableCell className="py-2 px-4">
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 border-zinc-300 dark:border-zinc-700">
+                                    {f.protocol}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={`${f.localAddress}:${f.localPort}`}>{f.localAddress}:{f.localPort}</TableCell>
+                                <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={`${f.remoteAddress}:${f.remotePort}`}>
+                                  {`${f.remoteAddress}:${f.remotePort}`}
+                                </TableCell>
+                                <TableCell className="py-2 px-4 font-mono text-[10px] text-green-500 text-right">{f.rxBytes && f.rxBytes !== "0" ? `${(parseInt(f.rxBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
+                                <TableCell className="py-2 px-4 font-mono text-[10px] text-purple-500 text-right">{f.txBytes && f.txBytes !== "0" ? `${(parseInt(f.txBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow className="hover:bg-transparent">
+                              <TableCell colSpan={5} className="text-center py-8 text-sm text-zinc-500 italic">
+                                No active network flows
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Event Stream - always takes full width, with left padding for the button */}
+        <div className={`${sidePanelExpanded && !sidePanelWide ? 'pl-[470px]' : 'pl-[52px]'} transition-all duration-300`}>
+          <ProcessStream pid={parseInt(pid)} process={process || undefined} infoBarRef={infoBarRef} onEvent={handleStreamEvent} />
+        </div>
       </div>
     </div>
   );
