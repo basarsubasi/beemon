@@ -242,52 +242,63 @@ export function Dashboard() {
         </div>
         
         <div className="flex flex-wrap items-start gap-4">
-          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
-            <div className="p-3 bg-blue-50 dark:bg-zinc-900 rounded-full">
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 flex-1 min-w-[250px] flex items-center gap-6 shadow-sm">
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full">
+                <Cpu className="text-green-600 dark:text-green-400 h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-1">Total CPU</p>
+                <p className="text-xl font-mono text-zinc-900 dark:text-white leading-none">{totalCpu.toFixed(1)}%</p>
+              </div>
+            </div>
+            
+            {hostCpuPerCore.length > 0 && (
+              <div className={`flex-1 grid gap-x-4 gap-y-1.5 ${hostCpuPerCore.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {hostCpuPerCore.map((pct, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[10px]">
+                    <span className="w-7 font-mono text-zinc-500 font-medium">c{i}</span>
+                    <Progress value={pct} className="h-1.5 flex-1 min-w-[80px] [&>div>div]:bg-green-500 dark:[&>div>div]:bg-green-400" />
+                    <span className="w-7 font-mono text-right text-zinc-500">{pct.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 flex-1 min-w-[220px] flex items-center gap-4 shadow-sm">
+            <div className="p-3 bg-blue-50 dark:bg-zinc-900 rounded-full shrink-0">
               <MemoryStick className="text-blue-500 dark:text-blue-400 h-6 w-6" />
             </div>
-            <div>
-              <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total Memory</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-xl font-mono text-zinc-900 dark:text-white">{formatBytes(totalMemory.toString())}</p>
+            <div className="flex-1">
+              <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Total Memory</p>
+              <div className="flex items-baseline gap-2 mb-1.5">
+                <p className="text-xl font-mono text-zinc-900 dark:text-white leading-none">{formatBytes(totalMemory.toString())}</p>
                 {hostMem !== "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
               </div>
-            </div>
-          </Card>
-          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[250px] flex items-start gap-4 shadow-sm">
-            <div className="p-3 bg-green-50 dark:bg-zinc-900 rounded-full shrink-0 mt-1">
-              <Cpu className="text-green-600 dark:text-green-400 h-6 w-6" />
-            </div>
-            <div className="flex-1 min-w-[150px]">
-              <div className="flex justify-between items-baseline mb-3">
-                <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Total CPU</p>
-                <p className="text-xl font-mono text-zinc-900 dark:text-white">{totalCpu.toFixed(1)}%</p>
-              </div>
-              
-              {hostCpuPerCore.length > 0 && (
-                <div className={`grid gap-x-4 gap-y-1.5 mt-2 ${hostCpuPerCore.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {hostCpuPerCore.map((pct, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <span className="w-7 font-mono text-zinc-500">c{i}</span>
-                      <Progress value={pct} className="h-1.5 flex-1 min-w-[40px]" />
-                      <span className="w-7 font-mono text-right text-zinc-500">{pct.toFixed(0)}%</span>
-                    </div>
-                  ))}
+              {hostMem !== "0" && (
+                <div className="flex items-center gap-2 text-[10px]">
+                  <Progress 
+                    value={(totalMemory / parseInt(hostMem)) * 100} 
+                    className="h-1.5 flex-1 [&>div>div]:bg-blue-500 dark:[&>div>div]:bg-blue-400" 
+                  />
+                  <span className="w-8 font-mono text-right text-zinc-500">
+                    {((totalMemory / parseInt(hostMem)) * 100).toFixed(1)}%
+                  </span>
                 </div>
               )}
             </div>
           </Card>
-          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 min-w-[200px] flex items-center gap-4 shadow-sm">
-            <div className="p-3 bg-purple-50 dark:bg-zinc-900 rounded-full shrink-0">
-              <HardDrive className="text-purple-600 dark:text-purple-400 h-6 w-6" />
+          <Card className="bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 p-4 flex-1 min-w-[220px] flex items-center gap-4 shadow-sm">
+            <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-full shrink-0">
+              <HardDrive className="text-zinc-900 dark:text-white h-6 w-6" />
             </div>
             <div className="flex-1">
               <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Total I/O</p>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-mono">
-                <span className="text-blue-500 dark:text-blue-400">R: {formatBytes(hostIo.read)}/s</span>
-                <span className="text-orange-500 dark:text-orange-400">W: {formatBytes(hostIo.write)}/s</span>
-                <span className="text-green-500 dark:text-green-400">Rx: {formatBytes(hostIo.netRx)}/s</span>
-                <span className="text-purple-600 dark:text-purple-400">Tx: {formatBytes(hostIo.netTx)}/s</span>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-mono">
+                <span className="text-blue-500 dark:text-blue-400 w-[95px] inline-block whitespace-nowrap">R: {formatBytes(hostIo.read)}/s</span>
+                <span className="text-orange-500 dark:text-orange-400 w-[95px] inline-block whitespace-nowrap">W: {formatBytes(hostIo.write)}/s</span>
+                <span className="text-green-500 dark:text-green-400 w-[95px] inline-block whitespace-nowrap">Rx: {formatBytes(hostIo.netRx)}/s</span>
+                <span className="text-purple-600 dark:text-purple-400 w-[95px] inline-block whitespace-nowrap">Tx: {formatBytes(hostIo.netTx)}/s</span>
               </div>
             </div>
           </Card>
