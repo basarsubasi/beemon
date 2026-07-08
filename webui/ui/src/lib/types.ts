@@ -144,6 +144,11 @@ export interface BeemonEvent {
   lseek?: { fd: number; offset: string | number };
   socket?: { family: number; type: number; protocol: number };
   socketOpt?: { fd: number; level: number; optname: number; optval?: string; optlen?: number };
+  pipe?: {};
+  pipe2?: {};
+  getpid?: {};
+  getuid?: {};
+  uname?: {};
 }
 
 export interface WSPing {

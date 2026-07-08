@@ -57,6 +57,11 @@ pub const EVENT_TYPE_FCNTL: u32 = 34;
 pub const EVENT_TYPE_LSEEK: u32 = 35;
 pub const EVENT_TYPE_SOCKET: u32 = 36;
 pub const EVENT_TYPE_SOCKOPT: u32 = 37;
+pub const EVENT_TYPE_PIPE: u32 = 38;
+pub const EVENT_TYPE_PIPE2: u32 = 39;
+pub const EVENT_TYPE_GETPID: u32 = 40;
+pub const EVENT_TYPE_GETUID: u32 = 41;
+pub const EVENT_TYPE_UNAME: u32 = 42;
 
 // ------------------------------------------------------------------
 // Trace flags written to the `target_pids` BPF hash map values.
@@ -581,6 +586,13 @@ mod tests {
         assert_eq!(EVENT_TYPE_MMAP, 13);
         assert_eq!(EVENT_TYPE_MUNMAP, 14);
         assert_eq!(EVENT_TYPE_MPROTECT, 15);
+        assert_eq!(EVENT_TYPE_SOCKET, 36);
+        assert_eq!(EVENT_TYPE_SOCKOPT, 37);
+        assert_eq!(EVENT_TYPE_PIPE, 38);
+        assert_eq!(EVENT_TYPE_PIPE2, 39);
+        assert_eq!(EVENT_TYPE_GETPID, 40);
+        assert_eq!(EVENT_TYPE_GETUID, 41);
+        assert_eq!(EVENT_TYPE_UNAME, 42);
         assert_eq!(EVENT_TYPE_BRK, 16);
         assert_eq!(EVENT_TYPE_ACCEPT, 17);
         assert_eq!(EVENT_TYPE_BIND, 18);

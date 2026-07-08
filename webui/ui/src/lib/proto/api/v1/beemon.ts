@@ -171,6 +171,11 @@ export interface Event {
   lseek?: LseekEvent | undefined;
   socket?: SocketEvent | undefined;
   socketOpt?: SocketOptEvent | undefined;
+  pipe?: PipeEvent | undefined;
+  pipe2?: Pipe2Event | undefined;
+  getpid?: GetpidEvent | undefined;
+  getuid?: GetuidEvent | undefined;
+  uname?: UnameEvent | undefined;
 }
 
 export interface ChrootEvent {
@@ -377,6 +382,21 @@ export interface SocketOptEvent {
   fd: number;
   level: number;
   optname: number;
+}
+
+export interface PipeEvent {
+}
+
+export interface Pipe2Event {
+}
+
+export interface GetpidEvent {
+}
+
+export interface GetuidEvent {
+}
+
+export interface UnameEvent {
 }
 
 function createBaseGetNamespaceDetailsRequest(): GetNamespaceDetailsRequest {
@@ -1694,6 +1714,11 @@ function createBaseEvent(): Event {
     lseek: undefined,
     socket: undefined,
     socketOpt: undefined,
+    pipe: undefined,
+    pipe2: undefined,
+    getpid: undefined,
+    getuid: undefined,
+    uname: undefined,
   };
 }
 
@@ -1815,6 +1840,21 @@ export const Event: MessageFns<Event> = {
     }
     if (message.socketOpt !== undefined) {
       SocketOptEvent.encode(message.socketOpt, writer.uint32(314).fork()).join();
+    }
+    if (message.pipe !== undefined) {
+      PipeEvent.encode(message.pipe, writer.uint32(322).fork()).join();
+    }
+    if (message.pipe2 !== undefined) {
+      Pipe2Event.encode(message.pipe2, writer.uint32(330).fork()).join();
+    }
+    if (message.getpid !== undefined) {
+      GetpidEvent.encode(message.getpid, writer.uint32(338).fork()).join();
+    }
+    if (message.getuid !== undefined) {
+      GetuidEvent.encode(message.getuid, writer.uint32(346).fork()).join();
+    }
+    if (message.uname !== undefined) {
+      UnameEvent.encode(message.uname, writer.uint32(354).fork()).join();
     }
     return writer;
   },
@@ -2138,6 +2178,46 @@ export const Event: MessageFns<Event> = {
           message.socketOpt = SocketOptEvent.decode(reader, reader.uint32());
           continue;
         }
+        case 40: {
+          if (tag !== 322) {
+            break;
+          }
+
+          message.pipe = PipeEvent.decode(reader, reader.uint32());
+          continue;
+        }
+        case 41: {
+          if (tag !== 330) {
+            break;
+          }
+
+          message.pipe2 = Pipe2Event.decode(reader, reader.uint32());
+          continue;
+        }
+        case 42: {
+          if (tag !== 338) {
+            break;
+          }
+
+          message.getpid = GetpidEvent.decode(reader, reader.uint32());
+          continue;
+        }
+        case 43: {
+          if (tag !== 346) {
+            break;
+          }
+
+          message.getuid = GetuidEvent.decode(reader, reader.uint32());
+          continue;
+        }
+        case 44: {
+          if (tag !== 354) {
+            break;
+          }
+
+          message.uname = UnameEvent.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2254,6 +2334,19 @@ export const Event: MessageFns<Event> = {
       : undefined;
     message.socketOpt = (object.socketOpt !== undefined && object.socketOpt !== null)
       ? SocketOptEvent.fromPartial(object.socketOpt)
+      : undefined;
+    message.pipe = (object.pipe !== undefined && object.pipe !== null) ? PipeEvent.fromPartial(object.pipe) : undefined;
+    message.pipe2 = (object.pipe2 !== undefined && object.pipe2 !== null)
+      ? Pipe2Event.fromPartial(object.pipe2)
+      : undefined;
+    message.getpid = (object.getpid !== undefined && object.getpid !== null)
+      ? GetpidEvent.fromPartial(object.getpid)
+      : undefined;
+    message.getuid = (object.getuid !== undefined && object.getuid !== null)
+      ? GetuidEvent.fromPartial(object.getuid)
+      : undefined;
+    message.uname = (object.uname !== undefined && object.uname !== null)
+      ? UnameEvent.fromPartial(object.uname)
       : undefined;
     return message;
   },
@@ -4651,6 +4744,176 @@ export const SocketOptEvent: MessageFns<SocketOptEvent> = {
     message.fd = object.fd ?? 0;
     message.level = object.level ?? 0;
     message.optname = object.optname ?? 0;
+    return message;
+  },
+};
+
+function createBasePipeEvent(): PipeEvent {
+  return {};
+}
+
+export const PipeEvent: MessageFns<PipeEvent> = {
+  encode(_: PipeEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PipeEvent {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePipeEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create<I extends Exact<DeepPartial<PipeEvent>, I>>(base?: I): PipeEvent {
+    return PipeEvent.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PipeEvent>, I>>(_: I): PipeEvent {
+    const message = createBasePipeEvent();
+    return message;
+  },
+};
+
+function createBasePipe2Event(): Pipe2Event {
+  return {};
+}
+
+export const Pipe2Event: MessageFns<Pipe2Event> = {
+  encode(_: Pipe2Event, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Pipe2Event {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePipe2Event();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create<I extends Exact<DeepPartial<Pipe2Event>, I>>(base?: I): Pipe2Event {
+    return Pipe2Event.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Pipe2Event>, I>>(_: I): Pipe2Event {
+    const message = createBasePipe2Event();
+    return message;
+  },
+};
+
+function createBaseGetpidEvent(): GetpidEvent {
+  return {};
+}
+
+export const GetpidEvent: MessageFns<GetpidEvent> = {
+  encode(_: GetpidEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetpidEvent {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetpidEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create<I extends Exact<DeepPartial<GetpidEvent>, I>>(base?: I): GetpidEvent {
+    return GetpidEvent.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetpidEvent>, I>>(_: I): GetpidEvent {
+    const message = createBaseGetpidEvent();
+    return message;
+  },
+};
+
+function createBaseGetuidEvent(): GetuidEvent {
+  return {};
+}
+
+export const GetuidEvent: MessageFns<GetuidEvent> = {
+  encode(_: GetuidEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetuidEvent {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetuidEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create<I extends Exact<DeepPartial<GetuidEvent>, I>>(base?: I): GetuidEvent {
+    return GetuidEvent.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetuidEvent>, I>>(_: I): GetuidEvent {
+    const message = createBaseGetuidEvent();
+    return message;
+  },
+};
+
+function createBaseUnameEvent(): UnameEvent {
+  return {};
+}
+
+export const UnameEvent: MessageFns<UnameEvent> = {
+  encode(_: UnameEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UnameEvent {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUnameEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create<I extends Exact<DeepPartial<UnameEvent>, I>>(base?: I): UnameEvent {
+    return UnameEvent.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UnameEvent>, I>>(_: I): UnameEvent {
+    const message = createBaseUnameEvent();
     return message;
   },
 };

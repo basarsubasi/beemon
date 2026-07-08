@@ -51,6 +51,11 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define EVENT_TYPE_LSEEK       35
 #define EVENT_TYPE_SOCKET      36
 #define EVENT_TYPE_SOCKOPT     37
+#define EVENT_TYPE_PIPE        38
+#define EVENT_TYPE_PIPE2       39
+#define EVENT_TYPE_GETPID      40
+#define EVENT_TYPE_GETUID      41
+#define EVENT_TYPE_UNAME       42
 
 struct event_t {
     u32 pid;
@@ -399,16 +404,14 @@ e->sockopt.fd = (int)ctx->args[0];
 
 SEC("tracepoint/syscalls/sys_enter_pipe")
 int trace_sys_enter_pipe(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
-e->syscall.syscall_id = (u32)ctx->id;
+    RESERVE_EVENT(EVENT_TYPE_PIPE)
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_enter_pipe2")
 int trace_sys_enter_pipe2(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
-e->syscall.syscall_id = (u32)ctx->id;
+    RESERVE_EVENT(EVENT_TYPE_PIPE2)
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
@@ -419,24 +422,21 @@ e->syscall.syscall_id = (u32)ctx->id;
 
 SEC("tracepoint/syscalls/sys_enter_getpid")
 int trace_sys_enter_getpid(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
-e->syscall.syscall_id = (u32)ctx->id;
+    RESERVE_EVENT(EVENT_TYPE_GETPID)
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_enter_getuid")
 int trace_sys_enter_getuid(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
-e->syscall.syscall_id = (u32)ctx->id;
+    RESERVE_EVENT(EVENT_TYPE_GETUID)
     bpf_ringbuf_submit(e, 0);
     return 0;
 }
 
 SEC("tracepoint/syscalls/sys_enter_newuname")
 int trace_sys_enter_newuname(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_SYSCALL)
-e->syscall.syscall_id = (u32)ctx->id;
+    RESERVE_EVENT(EVENT_TYPE_UNAME)
     bpf_ringbuf_submit(e, 0);
     return 0;
 }

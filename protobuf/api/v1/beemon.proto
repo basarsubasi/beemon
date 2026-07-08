@@ -200,6 +200,11 @@ message Event {
     LseekEvent lseek = 37;
     SocketEvent socket = 38;
     SocketOptEvent socket_opt = 39;
+    PipeEvent pipe = 40;
+    Pipe2Event pipe2 = 41;
+    GetpidEvent getpid = 42;
+    GetuidEvent getuid = 43;
+    UnameEvent uname = 44;
   }
 }
 
@@ -409,3 +414,12 @@ message SocketOptEvent {
   int32 optname = 3;
 }
 
+message PipeEvent {}
+
+message Pipe2Event {}
+
+message GetpidEvent {}
+
+message GetuidEvent {}
+
+message UnameEvent {}

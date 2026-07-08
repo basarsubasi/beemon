@@ -12,7 +12,7 @@ use crate::pb::pb::{
     PivotRootEvent, PollEvent, ProcessEvent, PtraceEvent, RecvfromEvent, RenameEvent,
     SelectEvent, SendtoEvent, SetnsEvent, SyscallEvent, UnlinkatEvent, UnshareEvent,
     Wait4Event, SignalEvent, FileMetaEvent, IoctlEvent, FcntlEvent, LseekEvent,
-    SocketEvent, SocketOptEvent,
+    SocketEvent, SocketOptEvent, PipeEvent, Pipe2Event, GetpidEvent, GetuidEvent, UnameEvent,
 };
 
 use crate::bpf::types::{self as bpf, cstr, EventT};
@@ -25,6 +25,11 @@ pub fn convert(e: &EventT) -> Event {
         bpf::EVENT_TYPE_SYSCALL => Oneof::Syscall(SyscallEvent {
             syscall_id: e.syscall.syscall_id,
         }),
+        bpf::EVENT_TYPE_PIPE => Oneof::Pipe(PipeEvent {}),
+        bpf::EVENT_TYPE_PIPE2 => Oneof::Pipe2(Pipe2Event {}),
+        bpf::EVENT_TYPE_GETPID => Oneof::Getpid(GetpidEvent {}),
+        bpf::EVENT_TYPE_GETUID => Oneof::Getuid(GetuidEvent {}),
+        bpf::EVENT_TYPE_UNAME => Oneof::Uname(UnameEvent {}),
         bpf::EVENT_TYPE_FILE_OPEN => Oneof::FileOpen(FileOpenEvent {
             filename: cstr(&e.file.filename).to_string(),
             flags: e.file.flags,

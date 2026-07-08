@@ -1075,6 +1075,11 @@ type Event struct {
 	//	*Event_Lseek
 	//	*Event_Socket
 	//	*Event_SocketOpt
+	//	*Event_Pipe
+	//	*Event_Pipe2
+	//	*Event_Getpid
+	//	*Event_Getuid
+	//	*Event_Uname
 	Event         isEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1464,6 +1469,51 @@ func (x *Event) GetSocketOpt() *SocketOptEvent {
 	return nil
 }
 
+func (x *Event) GetPipe() *PipeEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Pipe); ok {
+			return x.Pipe
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetPipe2() *Pipe2Event {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Pipe2); ok {
+			return x.Pipe2
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetGetpid() *GetpidEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Getpid); ok {
+			return x.Getpid
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetGetuid() *GetuidEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Getuid); ok {
+			return x.Getuid
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetUname() *UnameEvent {
+	if x != nil {
+		if x, ok := x.Event.(*Event_Uname); ok {
+			return x.Uname
+		}
+	}
+	return nil
+}
+
 type isEvent_Event interface {
 	isEvent_Event()
 }
@@ -1616,6 +1666,26 @@ type Event_SocketOpt struct {
 	SocketOpt *SocketOptEvent `protobuf:"bytes,39,opt,name=socket_opt,json=socketOpt,proto3,oneof"`
 }
 
+type Event_Pipe struct {
+	Pipe *PipeEvent `protobuf:"bytes,40,opt,name=pipe,proto3,oneof"`
+}
+
+type Event_Pipe2 struct {
+	Pipe2 *Pipe2Event `protobuf:"bytes,41,opt,name=pipe2,proto3,oneof"`
+}
+
+type Event_Getpid struct {
+	Getpid *GetpidEvent `protobuf:"bytes,42,opt,name=getpid,proto3,oneof"`
+}
+
+type Event_Getuid struct {
+	Getuid *GetuidEvent `protobuf:"bytes,43,opt,name=getuid,proto3,oneof"`
+}
+
+type Event_Uname struct {
+	Uname *UnameEvent `protobuf:"bytes,44,opt,name=uname,proto3,oneof"`
+}
+
 func (*Event_Syscall) isEvent_Event() {}
 
 func (*Event_FileOpen) isEvent_Event() {}
@@ -1689,6 +1759,16 @@ func (*Event_Lseek) isEvent_Event() {}
 func (*Event_Socket) isEvent_Event() {}
 
 func (*Event_SocketOpt) isEvent_Event() {}
+
+func (*Event_Pipe) isEvent_Event() {}
+
+func (*Event_Pipe2) isEvent_Event() {}
+
+func (*Event_Getpid) isEvent_Event() {}
+
+func (*Event_Getuid) isEvent_Event() {}
+
+func (*Event_Uname) isEvent_Event() {}
 
 type ChrootEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -3794,6 +3874,186 @@ func (x *SocketOptEvent) GetOptname() int32 {
 	return 0
 }
 
+type PipeEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PipeEvent) Reset() {
+	*x = PipeEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PipeEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PipeEvent) ProtoMessage() {}
+
+func (x *PipeEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PipeEvent.ProtoReflect.Descriptor instead.
+func (*PipeEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{53}
+}
+
+type Pipe2Event struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Pipe2Event) Reset() {
+	*x = Pipe2Event{}
+	mi := &file_api_v1_beemon_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Pipe2Event) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Pipe2Event) ProtoMessage() {}
+
+func (x *Pipe2Event) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Pipe2Event.ProtoReflect.Descriptor instead.
+func (*Pipe2Event) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{54}
+}
+
+type GetpidEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetpidEvent) Reset() {
+	*x = GetpidEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetpidEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetpidEvent) ProtoMessage() {}
+
+func (x *GetpidEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetpidEvent.ProtoReflect.Descriptor instead.
+func (*GetpidEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{55}
+}
+
+type GetuidEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetuidEvent) Reset() {
+	*x = GetuidEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetuidEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetuidEvent) ProtoMessage() {}
+
+func (x *GetuidEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetuidEvent.ProtoReflect.Descriptor instead.
+func (*GetuidEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{56}
+}
+
+type UnameEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnameEvent) Reset() {
+	*x = UnameEvent{}
+	mi := &file_api_v1_beemon_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnameEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnameEvent) ProtoMessage() {}
+
+func (x *UnameEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_beemon_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnameEvent.ProtoReflect.Descriptor instead.
+func (*UnameEvent) Descriptor() ([]byte, []int) {
+	return file_api_v1_beemon_proto_rawDescGZIP(), []int{57}
+}
+
 var File_api_v1_beemon_proto protoreflect.FileDescriptor
 
 const file_api_v1_beemon_proto_rawDesc = "" +
@@ -3891,7 +4151,7 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x03pid\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x03pid\"6\n" +
 	"\n" +
 	"EventBatch\x12(\n" +
-	"\x06events\x18\x01 \x03(\v2\x10.beemon.v1.EventR\x06events\"\xda\x0f\n" +
+	"\x06events\x18\x01 \x03(\v2\x10.beemon.v1.EventR\x06events\"\xc8\x11\n" +
 	"\x05Event\x12!\n" +
 	"\ftimestamp_ns\x18\x01 \x01(\x04R\vtimestampNs\x12\x10\n" +
 	"\x03pid\x18\x02 \x01(\rR\x03pid\x123\n" +
@@ -3937,7 +4197,12 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x05lseek\x18% \x01(\v2\x15.beemon.v1.LseekEventH\x00R\x05lseek\x120\n" +
 	"\x06socket\x18& \x01(\v2\x16.beemon.v1.SocketEventH\x00R\x06socket\x12:\n" +
 	"\n" +
-	"socket_opt\x18' \x01(\v2\x19.beemon.v1.SocketOptEventH\x00R\tsocketOptB\a\n" +
+	"socket_opt\x18' \x01(\v2\x19.beemon.v1.SocketOptEventH\x00R\tsocketOpt\x12*\n" +
+	"\x04pipe\x18( \x01(\v2\x14.beemon.v1.PipeEventH\x00R\x04pipe\x12-\n" +
+	"\x05pipe2\x18) \x01(\v2\x15.beemon.v1.Pipe2EventH\x00R\x05pipe2\x120\n" +
+	"\x06getpid\x18* \x01(\v2\x16.beemon.v1.GetpidEventH\x00R\x06getpid\x120\n" +
+	"\x06getuid\x18+ \x01(\v2\x16.beemon.v1.GetuidEventH\x00R\x06getuid\x12-\n" +
+	"\x05uname\x18, \x01(\v2\x15.beemon.v1.UnameEventH\x00R\x05unameB\a\n" +
 	"\x05event\"!\n" +
 	"\vChrootEvent\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\"D\n" +
@@ -4081,7 +4346,14 @@ const file_api_v1_beemon_proto_rawDesc = "" +
 	"\x0eSocketOptEvent\x12\x0e\n" +
 	"\x02fd\x18\x01 \x01(\x05R\x02fd\x12\x14\n" +
 	"\x05level\x18\x02 \x01(\x05R\x05level\x12\x18\n" +
-	"\aoptname\x18\x03 \x01(\x05R\aoptname2\x9f\x05\n" +
+	"\aoptname\x18\x03 \x01(\x05R\aoptname\"\v\n" +
+	"\tPipeEvent\"\f\n" +
+	"\n" +
+	"Pipe2Event\"\r\n" +
+	"\vGetpidEvent\"\r\n" +
+	"\vGetuidEvent\"\f\n" +
+	"\n" +
+	"UnameEvent2\x9f\x05\n" +
 	"\rBeemonService\x12m\n" +
 	"\rListProcesses\x12\x1f.beemon.v1.ListProcessesRequest\x1a .beemon.v1.ListProcessesResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/processes\x12\x8b\x01\n" +
 	"\x12GetProcessMetadata\x12$.beemon.v1.GetProcessMetadataRequest\x1a%.beemon.v1.GetProcessMetadataResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/processes/{pid}/metadata\x12o\n" +
@@ -4101,7 +4373,7 @@ func file_api_v1_beemon_proto_rawDescGZIP() []byte {
 	return file_api_v1_beemon_proto_rawDescData
 }
 
-var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
+var file_api_v1_beemon_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
 var file_api_v1_beemon_proto_goTypes = []any{
 	(*GetNamespaceDetailsRequest)(nil),  // 0: beemon.v1.GetNamespaceDetailsRequest
 	(*GetNamespaceDetailsResponse)(nil), // 1: beemon.v1.GetNamespaceDetailsResponse
@@ -4156,6 +4428,11 @@ var file_api_v1_beemon_proto_goTypes = []any{
 	(*LseekEvent)(nil),                  // 50: beemon.v1.LseekEvent
 	(*SocketEvent)(nil),                 // 51: beemon.v1.SocketEvent
 	(*SocketOptEvent)(nil),              // 52: beemon.v1.SocketOptEvent
+	(*PipeEvent)(nil),                   // 53: beemon.v1.PipeEvent
+	(*Pipe2Event)(nil),                  // 54: beemon.v1.Pipe2Event
+	(*GetpidEvent)(nil),                 // 55: beemon.v1.GetpidEvent
+	(*GetuidEvent)(nil),                 // 56: beemon.v1.GetuidEvent
+	(*UnameEvent)(nil),                  // 57: beemon.v1.UnameEvent
 }
 var file_api_v1_beemon_proto_depIdxs = []int32{
 	6,  // 0: beemon.v1.GetProcessMetadataResponse.process:type_name -> beemon.v1.Process
@@ -4203,21 +4480,26 @@ var file_api_v1_beemon_proto_depIdxs = []int32{
 	50, // 42: beemon.v1.Event.lseek:type_name -> beemon.v1.LseekEvent
 	51, // 43: beemon.v1.Event.socket:type_name -> beemon.v1.SocketEvent
 	52, // 44: beemon.v1.Event.socket_opt:type_name -> beemon.v1.SocketOptEvent
-	4,  // 45: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
-	2,  // 46: beemon.v1.BeemonService.GetProcessMetadata:input_type -> beemon.v1.GetProcessMetadataRequest
-	12, // 47: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
-	0,  // 48: beemon.v1.BeemonService.GetNamespaceDetails:input_type -> beemon.v1.GetNamespaceDetailsRequest
-	9,  // 49: beemon.v1.BeemonService.GetNetworkFlows:input_type -> beemon.v1.GetNetworkFlowsRequest
-	5,  // 50: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
-	3,  // 51: beemon.v1.BeemonService.GetProcessMetadata:output_type -> beemon.v1.GetProcessMetadataResponse
-	13, // 52: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.EventBatch
-	1,  // 53: beemon.v1.BeemonService.GetNamespaceDetails:output_type -> beemon.v1.GetNamespaceDetailsResponse
-	11, // 54: beemon.v1.BeemonService.GetNetworkFlows:output_type -> beemon.v1.GetNetworkFlowsResponse
-	50, // [50:55] is the sub-list for method output_type
-	45, // [45:50] is the sub-list for method input_type
-	45, // [45:45] is the sub-list for extension type_name
-	45, // [45:45] is the sub-list for extension extendee
-	0,  // [0:45] is the sub-list for field type_name
+	53, // 45: beemon.v1.Event.pipe:type_name -> beemon.v1.PipeEvent
+	54, // 46: beemon.v1.Event.pipe2:type_name -> beemon.v1.Pipe2Event
+	55, // 47: beemon.v1.Event.getpid:type_name -> beemon.v1.GetpidEvent
+	56, // 48: beemon.v1.Event.getuid:type_name -> beemon.v1.GetuidEvent
+	57, // 49: beemon.v1.Event.uname:type_name -> beemon.v1.UnameEvent
+	4,  // 50: beemon.v1.BeemonService.ListProcesses:input_type -> beemon.v1.ListProcessesRequest
+	2,  // 51: beemon.v1.BeemonService.GetProcessMetadata:input_type -> beemon.v1.GetProcessMetadataRequest
+	12, // 52: beemon.v1.BeemonService.StreamEvents:input_type -> beemon.v1.StreamEventsRequest
+	0,  // 53: beemon.v1.BeemonService.GetNamespaceDetails:input_type -> beemon.v1.GetNamespaceDetailsRequest
+	9,  // 54: beemon.v1.BeemonService.GetNetworkFlows:input_type -> beemon.v1.GetNetworkFlowsRequest
+	5,  // 55: beemon.v1.BeemonService.ListProcesses:output_type -> beemon.v1.ListProcessesResponse
+	3,  // 56: beemon.v1.BeemonService.GetProcessMetadata:output_type -> beemon.v1.GetProcessMetadataResponse
+	13, // 57: beemon.v1.BeemonService.StreamEvents:output_type -> beemon.v1.EventBatch
+	1,  // 58: beemon.v1.BeemonService.GetNamespaceDetails:output_type -> beemon.v1.GetNamespaceDetailsResponse
+	11, // 59: beemon.v1.BeemonService.GetNetworkFlows:output_type -> beemon.v1.GetNetworkFlowsResponse
+	55, // [55:60] is the sub-list for method output_type
+	50, // [50:55] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_beemon_proto_init() }
@@ -4263,6 +4545,11 @@ func file_api_v1_beemon_proto_init() {
 		(*Event_Lseek)(nil),
 		(*Event_Socket)(nil),
 		(*Event_SocketOpt)(nil),
+		(*Event_Pipe)(nil),
+		(*Event_Pipe2)(nil),
+		(*Event_Getpid)(nil),
+		(*Event_Getuid)(nil),
+		(*Event_Uname)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -4270,7 +4557,7 @@ func file_api_v1_beemon_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_beemon_proto_rawDesc), len(file_api_v1_beemon_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   53,
+			NumMessages:   58,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -223,7 +223,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
               });
             }
 
-            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : 'syscall';
+            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : data.pipe ? 'pipe' : data.pipe2 ? 'pipe2' : data.getpid ? 'getpid' : data.getuid ? 'getuid' : data.uname ? 'uname' : 'syscall';
 
             data._localTs = Date.now();
             data._type = type;
@@ -369,6 +369,13 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     if (ev.lseek) return <span className="text-gray-400">lseek(fd: {ev.lseek.fd}, offset: {ev.lseek.offset})</span>;
     if (ev.socket) return <span className="text-purple-400">socket(family: {ev.socket.family}, type: {ev.socket.type})</span>;
     if (ev.socketOpt) return <span className="text-purple-400">sockopt(fd: {ev.socketOpt.fd}, level: {ev.socketOpt.level}, optname: {ev.socketOpt.optname})</span>;
+    
+    if (ev.pipe) return <span className="text-gray-400">pipe()</span>;
+    if (ev.pipe2) return <span className="text-gray-400">pipe2()</span>;
+    if (ev.getpid) return <span className="text-gray-400">getpid()</span>;
+    if (ev.getuid) return <span className="text-gray-400">getuid()</span>;
+    if (ev.uname) return <span className="text-gray-400">uname()</span>;
+
     return <span className="text-gray-600">syscall({ev.syscall?.syscallId})</span>;
   };
 
@@ -382,42 +389,37 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
   };
 
   const SYSCALL_COLORS: Record<string, string> = {
-    open: '#60a5fa', // text-blue-400
-    read: '#9ca3af', // text-gray-400
-    write: '#4ade80', // text-green-400
-    close: '#6b7280', // text-gray-500
-    connect: '#c084fc', // text-purple-400
-    exec: '#facc15', // text-yellow-400
-    exit: '#f87171', // text-red-400
-    fork: '#facc15', // text-yellow-400
-    chroot: '#ef4444', // text-red-500
-    pivot_root: '#ef4444', // text-red-500
-    setns: '#f97316', // text-orange-500
-    unshare: '#f97316', // text-orange-500
 
+    open: '#60a5fa',
+    read: '#9ca3af',
+    write: '#4ade80',
+    close: '#6b7280',
+    connect: '#c084fc',
+    exec: '#facc15',
+    exit: '#f87171',
+    fork: '#facc15',
+    chroot: '#ef4444',
+    pivot_root: '#ef4444',
+    setns: '#f97316',
+    unshare: '#f97316',
     wait4: '#9ca3af',
-    mmap: '#f472b6', // text-pink-400
+    mmap: '#f472b6',
     munmap: '#f472b6',
     mprotect: '#f472b6',
     brk: '#f472b6',
-
     accept: '#c084fc',
     bind: '#c084fc',
     sendto: '#c084fc',
     recvfrom: '#c084fc',
-
-    unlinkat: '#f87171',
-    rename: '#60a5fa',
-
-    futex: '#2dd4bf', // text-teal-400
-    epoll_wait: '#2dd4bf',
-    select: '#2dd4bf',
-    poll: '#2dd4bf',
-
+    unlinkat: '#6b7280',
+    rename: '#6b7280',
+    futex: '#6b7280',
+    epoll_wait: '#6b7280',
+    select: '#6b7280',
+    poll: '#6b7280',
     ptrace: '#ef4444',
     bpf: '#ef4444',
     capset: '#ef4444',
-
     signal: '#f87171',
     file_meta: '#60a5fa',
     ioctl: '#9ca3af',
@@ -425,8 +427,12 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     lseek: '#9ca3af',
     socket: '#c084fc',
     sockopt: '#c084fc',
-
-    syscall: '#4b5563', // text-gray-600
+    pipe: '#9ca3af',
+    pipe2: '#9ca3af',
+    getpid: '#9ca3af',
+    getuid: '#9ca3af',
+    uname: '#9ca3af',
+    syscall: '#4b5563',
   };
 
   const infoBar = (
