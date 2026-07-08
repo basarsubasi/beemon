@@ -46,6 +46,7 @@ pub fn read_proc_info(pid: u32) -> Option<ProcInfo> {
 pub fn detect_manager(pid: u32, cache: &HashMap<u32, (String, u32)>) -> Option<Manager> {
     let mut current_pid = pid;
     let mut visited = std::collections::HashSet::new();
+    let mut depth = 0u32;
 
     loop {
         if current_pid == 0 || visited.contains(&current_pid) {
@@ -62,7 +63,7 @@ pub fn detect_manager(pid: u32, cache: &HashMap<u32, (String, u32)>) -> Option<M
         };
 
         let manager = match comm.as_str() {
-            "systemd" => Some(Manager::Systemd),
+            "systemd" if depth == 1 => Some(Manager::Systemd),
             "containerd" => Some(Manager::Containerd),
             "dockerd" => Some(Manager::Docker),
             "podman" => Some(Manager::Podman),
@@ -78,6 +79,7 @@ pub fn detect_manager(pid: u32, cache: &HashMap<u32, (String, u32)>) -> Option<M
             return None;
         }
 
+        depth += 1;
         current_pid = ppid;
     }
 }
