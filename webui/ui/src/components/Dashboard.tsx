@@ -566,7 +566,7 @@ export function Dashboard() {
                   <span className="block truncate" title={String(proc.pid)}>{proc.pid}</span>
                 </TableCell>
                 <TableCell className="w-[240px] max-w-[240px] font-medium text-zinc-900 dark:text-zinc-300 py-4 px-6 group-hover:text-black dark:group-hover:text-white transition-colors">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
+                  <div className="flex items-center gap-2 overflow-hidden">
                     <span className="block truncate" title={proc.name}>{proc.name}</span>
                     {proc.managedBy && <ManagerBadge manager={proc.managedBy} className="flex-shrink-0" />}
                   </div>
