@@ -8,6 +8,7 @@ pub enum Manager {
     Docker,
     Podman,
     Crio,
+    Conmon,
 }
 
 impl Manager {
@@ -18,6 +19,7 @@ impl Manager {
             Manager::Docker => "dockerd",
             Manager::Podman => "podman",
             Manager::Crio => "crio",
+            Manager::Conmon => "conmon",
         }
     }
 }
@@ -67,10 +69,11 @@ pub fn detect_manager(pid: u32, cache: &HashMap<u32, (String, u32)>) -> Option<M
         } else {
             match comm.as_str() {
                 "systemd" if depth == 1 => Some(Manager::Systemd),
-                "containerd" => Some(Manager::Containerd),
+                "containerd" | "containerd-shim" => Some(Manager::Containerd),
                 "dockerd" => Some(Manager::Docker),
                 "podman" => Some(Manager::Podman),
                 "crio" => Some(Manager::Crio),
+                "conmon" => Some(Manager::Conmon),
                 _ => None,
             }
         };
