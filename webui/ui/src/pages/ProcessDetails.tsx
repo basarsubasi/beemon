@@ -103,6 +103,9 @@ export function ProcessDetails() {
   useEffect(() => {
     if (!pid) return;
     
+    setOpenFilesState({});
+    setNetworkFlowStates({});
+
     const fetchMetadata = async () => {
       try {
         const metaRes = await fetch(`/api/v1/processes/${pid}/metadata`);
@@ -113,18 +116,11 @@ export function ProcessDetails() {
           setChildren(data.children || []);
           setParentProcess(data.parent || null);
           
-          // Initialize openFilesState only on first fetch or missing files
-          setOpenFilesState(prev => {
-            const next = { ...prev };
-            let changed = false;
-            data.process!.openFiles?.forEach(f => {
-              if (!next[f.fd]) {
-                next[f.fd] = { fd: f.fd, path: f.path, type: f.type, isClosed: false };
-                changed = true;
-              }
-            });
-            return changed ? next : prev;
+          const filesMap: Record<number, { fd: number; path: string; type: string; isClosed: boolean }> = {};
+          data.process.openFiles?.forEach(f => {
+            filesMap[f.fd] = { fd: f.fd, path: f.path, type: f.type, isClosed: false };
           });
+          setOpenFilesState(filesMap);
         }
       } catch (err) {
         console.error("Failed to fetch process metadata:", err);
@@ -137,14 +133,12 @@ export function ProcessDetails() {
         if (flowsRes.ok) {
           const flowsData = await flowsRes.json() as import("../lib/types").GetNetworkFlowsResponse;
           const now = Date.now();
-          setNetworkFlowStates(prev => {
-            const next = { ...prev };
-            flowsData.flows?.forEach(f => {
-              const key = `${f.localAddress}:${f.localPort}-${f.remoteAddress}:${f.remotePort}-${f.protocol}`;
-              next[key] = { flow: f, lastSeenTs: now };
-            });
-            return next;
+          const flowsMap: Record<string, { flow: import("../lib/types").NetworkFlow, lastSeenTs: number }> = {};
+          flowsData.flows?.forEach(f => {
+            const key = `${f.localAddress}:${f.localPort}-${f.remoteAddress}:${f.remotePort}-${f.protocol}`;
+            flowsMap[key] = { flow: f, lastSeenTs: now };
           });
+          setNetworkFlowStates(flowsMap);
         }
       } catch (err) {
         console.error("Failed to fetch network flows:", err);
