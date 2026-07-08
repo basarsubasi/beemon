@@ -43,4 +43,4 @@ test:
 	$(CARGO) +nightly test
 
 test-bpf:
-	sudo -E $(CARGO) +nightly test -v -- --include-ignored --nocapture
+	sudo -E env "PATH=$$PATH" $(CARGO) +nightly test -v -- --include-ignored --nocapture
