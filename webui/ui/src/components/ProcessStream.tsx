@@ -4,7 +4,7 @@ import type { BeemonEvent, WSPing } from "../lib/types";
 import { EventBatch } from "../lib/proto/api/v1/beemon";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { Activity, PanelLeftOpen, PanelRightOpen, PieChart as PieChartIcon, Network } from "lucide-react";
+import { Activity, PanelLeftOpen, PanelRightOpen, PieChart as PieChartIcon, Network, Filter, Search, X } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { StateBadge } from "./StateBadge";
 
@@ -42,6 +42,9 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
   const [isEventExpanded, setIsEventExpanded] = useState(false);
   const [ioRates, setIoRates] = useState({ rd: 0, wr: 0, rx: 0, tx: 0 });
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const prevIoRef = useRef<{ts: number, rd: number, wr: number, rx: number, tx: number} | null>(null);
 
   const [renderState, setRenderState] = useState({
@@ -76,6 +79,8 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     isPausedRef.current = false;
     prevIoRef.current = null;
     setIoRates({ rd: 0, wr: 0, rx: 0, tx: 0 });
+    setSelectedEventTypes([]);
+    setSearchQuery("");
   }, [pid]);
 
   useEffect(() => {
@@ -133,7 +138,20 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
       ? allEventsRef.current
       : allEventsRef.current.filter(e => e._localTs && e._localTs >= cutoff);
 
-    const displayedEvents = validEvents.slice(-500);
+    let filteredEvents = selectedEventTypes.length > 0
+      ? validEvents.filter(e => e._type && selectedEventTypes.includes(e._type))
+      : validEvents;
+
+    if (searchQuery.trim()) {
+      try {
+        const regex = new RegExp(searchQuery, "i");
+        filteredEvents = filteredEvents.filter(e => regex.test(JSON.stringify(e)));
+      } catch (err) {
+        // invalid regex, ignore
+      }
+    }
+
+    const displayedEvents = filteredEvents.slice(-500);
 
     let currentPieData: { name: string, value: number }[];
 
@@ -202,7 +220,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     const fileIoPieData: { name: string, value: number }[] = [];
 
     setRenderState({ displayedEvents, pieData: currentPieData, totalSyscalls, networkPieData, totalNetworkEvents: packetsReceived + packetsSent, packetsSent, packetsReceived, fileIoPieData, totalFileIoEvents: 0 });
-  }, [timeFilter, chartView, networkFlowHistory]);
+  }, [timeFilter, chartView, networkFlowHistory, selectedEventTypes, searchQuery]);
 
   useEffect(() => {
     updateRenderState(); // Instant update when timeFilter changes
@@ -489,6 +507,14 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
           <button onClick={() => setTimeFilter('30s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '30s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>30s</button>
           <button onClick={() => setTimeFilter('10s')} className={`px-2 py-0.5 text-xs rounded-sm font-medium transition-colors ${timeFilter === '10s' ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>10s</button>
         </div>
+        {selectedEventTypes.length > 0 && (
+          <div className="flex items-center gap-1 border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-md px-2 py-0.5 text-xs font-medium">
+            <span>{selectedEventTypes.length} event type{selectedEventTypes.length > 1 ? 's' : ''}</span>
+            <button onClick={() => setSelectedEventTypes([])} className="hover:text-blue-800 dark:hover:text-blue-200 transition-colors ml-1 text-sm font-bold">
+              &times;
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-1 items-end overflow-hidden">
         <div className="flex gap-3 items-center text-xs font-mono text-zinc-500 dark:text-zinc-400">
@@ -532,14 +558,77 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               <Activity size={14} className="text-green-500" /> Event Stream
             </h3>
-            <button
-              onClick={() => setIsEventExpanded(!isEventExpanded)}
-              className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-              title={isEventExpanded ? "Show Pie Chart" : "Expand Event Box"}
-            >
-              {isEventExpanded ? <PanelRightOpen size={18} /> : <PanelLeftOpen size={18} />}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                className={`p-1 rounded transition-colors ${isFiltersOpen ? 'text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
+                title="Toggle Filters"
+              >
+                <Filter size={18} />
+              </button>
+              <button
+                onClick={() => setIsEventExpanded(!isEventExpanded)}
+                className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                title={isEventExpanded ? "Show Pie Chart" : "Expand Event Box"}
+              >
+                {isEventExpanded ? <PanelRightOpen size={18} /> : <PanelLeftOpen size={18} />}
+              </button>
+            </div>
           </div>
+          {isFiltersOpen && (
+            <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black flex flex-col gap-3">
+              <div className="relative w-full">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Filter events (regex supported, e.g. 'connect.*192\.168')"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-md py-1.5 pl-8 pr-8 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-shadow text-zinc-900 dark:text-zinc-100"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-md p-2 bg-zinc-50/50 dark:bg-zinc-900/20">
+                <div className="flex justify-between items-center mb-2 px-1">
+                  <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Event Types</span>
+                  {selectedEventTypes.length > 0 && (
+                    <button 
+                      onClick={() => setSelectedEventTypes([])}
+                      className="text-[10px] text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 underline"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto custom-scrollbar">
+                  {Object.keys(SYSCALL_COLORS).filter(t => t !== 'syscall').sort().map(type => (
+                    <label key={type} className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800/80 px-2 py-1 rounded transition-colors select-none">
+                      <input 
+                        type="checkbox"
+                        className="rounded-sm border-zinc-300 dark:border-zinc-700 text-blue-500 focus:ring-blue-500 bg-white dark:bg-zinc-900 w-3 h-3 cursor-pointer"
+                        checked={selectedEventTypes.includes(type)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedEventTypes([...selectedEventTypes, type]);
+                          } else {
+                            setSelectedEventTypes(selectedEventTypes.filter(t => t !== type));
+                          }
+                        }}
+                      />
+                      <span className="text-zinc-700 dark:text-zinc-300">{type}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto custom-scrollbar p-4 font-mono text-xs">
             {renderState.displayedEvents.map((ev, i) => (
               <div key={i} className="mb-1 opacity-90 hover:opacity-100 transition-opacity">
@@ -612,7 +701,18 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
                       isAnimationActive={false}
                     >
                       {renderState.pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={SYSCALL_COLORS[entry.name] || '#ffffff'} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={SYSCALL_COLORS[entry.name] || '#ffffff'} 
+                          onClick={() => {
+                            if (selectedEventTypes.includes(entry.name)) {
+                              setSelectedEventTypes(selectedEventTypes.filter(t => t !== entry.name));
+                            } else {
+                              setSelectedEventTypes([...selectedEventTypes, entry.name]);
+                            }
+                          }}
+                          className={`cursor-pointer transition-opacity ${selectedEventTypes.length > 0 && !selectedEventTypes.includes(entry.name) ? 'opacity-30' : 'hover:opacity-80'}`}
+                        />
                       ))}
                     </Pie>
                     <RechartsTooltip
