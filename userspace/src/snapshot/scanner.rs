@@ -7,8 +7,8 @@
 //! Output: writes [`SnapshotCache`] into an `Arc<RwLock<SnapshotCache>>`
 //! consumed by `ListProcesses` and `GetProcessMetadata`.
 //!
-//! Results get io_*/net_* byte counters from the cached [`RateSnapshot`]
-//! (BPF map cumulative, populated by the 5s rates poller).
+//! Results get io_*/net_* byte counters as per-second rates from the cached
+//! [`RateSnapshot`] (populated by the 5s rates poller).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -153,10 +153,7 @@ fn scan_once(
                 (l.memory_limit_bytes, l.cpu_quota_us, l.cpu_period_us, l.pids_limit)
             });
 
-        // Per-pid io/net byte counters: cumulative, from the cached BPF map
-        // snapshot. Cold pids (not in target_pids) yield zero entries — which
-        // the proto documents as "0 means the BPF map is cold".
-        let io = rates.cumulative_io.get(&(pid as u32));
+        let io = rates.per_pid_rates.get(&(pid as u32));
 
         let pb_proc = Process {
             pid: pid as u32,

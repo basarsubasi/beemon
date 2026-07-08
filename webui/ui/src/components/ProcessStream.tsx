@@ -41,11 +41,9 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
   const [timeFilter, setTimeFilter] = useState<'all' | '1m' | '30s' | '10s'>('all');
   const [limits, setLimits] = useState({ memory: "Max", cpu: "Max" });
   const [isEventExpanded, setIsEventExpanded] = useState(false);
-  const [ioRates, setIoRates] = useState({ rd: 0, wr: 0, rx: 0, tx: 0 });
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const prevIoRef = useRef<{ts: number, rd: number, wr: number, rx: number, tx: number} | null>(null);
 
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
@@ -77,8 +75,6 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     setNetworkFlowHistory([]);
     setIsPaused(false);
     isPausedRef.current = false;
-    prevIoRef.current = null;
-    setIoRates({ rd: 0, wr: 0, rx: 0, tx: 0 });
     setSelectedEventTypes([]);
     setSearchQuery("");
   }, [pid]);
@@ -101,28 +97,6 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     }, 3000);
     return () => clearInterval(interval);
   }, [pid, chartView]);
-
-  useEffect(() => {
-    if (!process) return;
-    const now = Date.now();
-    const rd = typeof process.ioReadBytes === 'string' ? parseInt(process.ioReadBytes) : (process.ioReadBytes || 0);
-    const wr = typeof process.ioWriteBytes === 'string' ? parseInt(process.ioWriteBytes) : (process.ioWriteBytes || 0);
-    const rx = typeof process.netRxBytes === 'string' ? parseInt(process.netRxBytes) : (process.netRxBytes || 0);
-    const tx = typeof process.netTxBytes === 'string' ? parseInt(process.netTxBytes) : (process.netTxBytes || 0);
-
-    if (prevIoRef.current) {
-      const elapsed = (now - prevIoRef.current.ts) / 1000;
-      if (elapsed > 0.1) {
-        setIoRates({
-          rd: Math.max(0, Math.round((rd - prevIoRef.current.rd) / elapsed)),
-          wr: Math.max(0, Math.round((wr - prevIoRef.current.wr) / elapsed)),
-          rx: Math.max(0, Math.round((rx - prevIoRef.current.rx) / elapsed)),
-          tx: Math.max(0, Math.round((tx - prevIoRef.current.tx) / elapsed))
-        });
-      }
-    }
-    prevIoRef.current = { ts: now, rd, wr, rx, tx };
-  }, [process?.ioReadBytes, process?.ioWriteBytes, process?.netRxBytes, process?.netTxBytes]);
 
   // Render loop - decoupled from WebSocket frequency
   const updateRenderState = React.useCallback(() => {
@@ -538,15 +512,15 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">FILE I/O</span>
             <div className="flex gap-2 text-[10px]">
-              <span className="text-blue-500" title="Cumulative (Rate)">R: {process ? formatIoBytes(process.ioReadBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.rd)}/s)</span></span>
-              <span className="text-orange-500" title="Cumulative (Rate)">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.wr)}/s)</span></span>
+              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytes) : '0'}/s</span>
+              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'}/s</span>
             </div>
           </div>
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">NET I/O</span>
             <div className="flex gap-2 text-[10px]">
-              <span className="text-green-500" title="Cumulative (Rate)">Rx: {process ? formatIoBytes(process.netRxBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.rx)}/s)</span></span>
-              <span className="text-purple-500" title="Cumulative (Rate)">Tx: {process ? formatIoBytes(process.netTxBytes) : '0'} <span className="opacity-70">({formatIoBytes(ioRates.tx)}/s)</span></span>
+              <span className="text-green-500">Rx: {process ? formatIoBytes(process.netRxBytes) : '0'}/s</span>
+              <span className="text-purple-500">Tx: {process ? formatIoBytes(process.netTxBytes) : '0'}/s</span>
             </div>
           </div>
         </div>

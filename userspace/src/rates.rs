@@ -1,6 +1,7 @@
 //! 5-second rates poller. Reads the BPF `process_io_stats` LRU_PERCPU_HASH
 //! and `process_net_flow_stats` HASH maps, then publishes:
-//!   - per-pid cumulative `IoStat` (for filling `Process.io_*_bytes` /
+//!   - per-pid cumulative `IoStat` (retained for delta computation),
+//!   - per-pid per-second rates (for filling `Process.io_*_bytes` /
 //!     `net_*_bytes` in the scanner's cache),
 //!   - host-wide host_*_per_sec rates (computed from successive deltas),
 //!   - per-pid cumulative flow lists (consumed by `GetNetworkFlows`).
@@ -23,11 +24,9 @@ use crate::bpf::types::{IoStat, NetFlowKey, NetFlowStat};
 /// service (`ListProcesses`, `GetNetworkFlows`) and the scanner task.
 #[derive(Clone, Debug, Default)]
 pub struct RateSnapshot {
-    /// Per-pid cumulative byte counters (summed across CPUs).
     pub cumulative_io: HashMap<u32, IoStat>,
-    /// Host-wide per-second rates (the `host_*_per_sec` proto fields).
+    pub per_pid_rates: HashMap<u32, IoStat>,
     pub host_rates: HostIoRates,
-    /// Per-pid cumulative flow stats (the BPF map values verbatim).
     pub flows: HashMap<u32, Vec<(NetFlowKey, NetFlowStat)>>,
 }
 
@@ -67,12 +66,13 @@ pub fn spawn(maps: Arc<BpfStateMaps>, snapshot: Arc<RwLock<RateSnapshot>>, perio
             .unwrap_or_default();
 
             let now = Instant::now();
-            let (rates, host_rates) = compute_rates(&prev_io, &new_io, prev_at, now);
+            let (rates, per_pid_rates, host_rates) = compute_rates(&prev_io, &new_io, prev_at, now);
             prev_io = new_io;
             prev_at = Some(now);
 
             let snap = RateSnapshot {
                 cumulative_io: rates,
+                per_pid_rates,
                 host_rates,
                 flows: new_flows,
             };
@@ -122,39 +122,47 @@ fn compute_rates(
     new_io: &HashMap<u32, IoStat>,
     prev_at: Option<Instant>,
     now: Instant,
-) -> (HashMap<u32, IoStat>, HostIoRates) {
+) -> (HashMap<u32, IoStat>, HashMap<u32, IoStat>, HostIoRates) {
     let cumulative: HashMap<u32, IoStat> = new_io
         .iter()
         .map(|(pid, stat)| (*pid, *stat))
         .collect();
 
-    let host_rates = if let Some(prev_at) = prev_at {
+    let (per_pid_rates, host_rates) = if let Some(prev_at) = prev_at {
         let elapsed = now.duration_since(prev_at).as_secs_f32().max(0.0001);
         let (mut rd, mut wr, mut rx, mut tx) = (0u64, 0u64, 0u64, 0u64);
+        let mut pid_rates: HashMap<u32, IoStat> = HashMap::new();
         for (pid, new) in new_io {
-            // Delta vs previous cumulative for this pid. If the pid wasn't
-            // seen before (or was evicted from the LRU map), the current
-            // cumulative value is the entire delta — BPF map reads reset per-LRU-evict.
             let prev = prev_io.get(pid).copied().unwrap_or_default();
-            // u64 saturating delta; the BPF map only ever increases these counters.
-            rd += new.file_read_bytes.saturating_sub(prev.file_read_bytes);
-            wr += new.file_write_bytes.saturating_sub(prev.file_write_bytes);
-            rx += new.net_rx_bytes.saturating_sub(prev.net_rx_bytes);
-            tx += new.net_tx_bytes.saturating_sub(prev.net_tx_bytes);
+            let d_rd = new.file_read_bytes.saturating_sub(prev.file_read_bytes);
+            let d_wr = new.file_write_bytes.saturating_sub(prev.file_write_bytes);
+            let d_rx = new.net_rx_bytes.saturating_sub(prev.net_rx_bytes);
+            let d_tx = new.net_tx_bytes.saturating_sub(prev.net_tx_bytes);
+            rd += d_rd;
+            wr += d_wr;
+            rx += d_rx;
+            tx += d_tx;
+            pid_rates.insert(*pid, IoStat {
+                file_read_bytes: (d_rd as f32 / elapsed) as u64,
+                file_write_bytes: (d_wr as f32 / elapsed) as u64,
+                net_rx_bytes: (d_rx as f32 / elapsed) as u64,
+                net_tx_bytes: (d_tx as f32 / elapsed) as u64,
+            });
         }
-        HostIoRates {
-            io_read_bytes_per_sec: (rd as f32 / elapsed) as u64,
-            io_write_bytes_per_sec: (wr as f32 / elapsed) as u64,
-            net_rx_bytes_per_sec: (rx as f32 / elapsed) as u64,
-            net_tx_bytes_per_sec: (tx as f32 / elapsed) as u64,
-        }
+        (
+            pid_rates,
+            HostIoRates {
+                io_read_bytes_per_sec: (rd as f32 / elapsed) as u64,
+                io_write_bytes_per_sec: (wr as f32 / elapsed) as u64,
+                net_rx_bytes_per_sec: (rx as f32 / elapsed) as u64,
+                net_tx_bytes_per_sec: (tx as f32 / elapsed) as u64,
+            },
+        )
     } else {
-        // First sample — no delta yet. The proto documents `0 means the BPF
-        // map is cold`, so this is the legitimate cold-warmup value too.
-        HostIoRates::default()
+        (HashMap::new(), HostIoRates::default())
     };
 
-    (cumulative, host_rates)
+    (cumulative, per_pid_rates, host_rates)
 }
 
 #[cfg(test)]
@@ -192,15 +200,15 @@ mod tests {
         });
 
         let now = Instant::now();
-        let (cumulative, rates) = compute_rates(&prev_io, &new_io, None, now);
+        let (cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, None, now);
 
-        // First sample should have zero rates
         assert_eq!(rates.io_read_bytes_per_sec, 0);
         assert_eq!(rates.io_write_bytes_per_sec, 0);
         assert_eq!(rates.net_rx_bytes_per_sec, 0);
         assert_eq!(rates.net_tx_bytes_per_sec, 0);
 
-        // But cumulative should have the values
+        assert!(per_pid_rates.is_empty());
+
         assert_eq!(cumulative.len(), 1);
         let stat = cumulative.get(&1234).unwrap();
         assert_eq!(stat.file_read_bytes, 1000);
@@ -219,24 +227,28 @@ mod tests {
 
         let mut new_io = HashMap::new();
         new_io.insert(1234, IoStat {
-            file_read_bytes: 2000,  // +1000
-            file_write_bytes: 1500, // +1000
-            net_rx_bytes: 4000,     // +2000
-            net_tx_bytes: 3000,     // +2000
+            file_read_bytes: 2000,
+            file_write_bytes: 1500,
+            net_rx_bytes: 4000,
+            net_tx_bytes: 3000,
         });
 
         let prev_at = Instant::now();
-        let now = prev_at + Duration::from_secs(1); // 1 second elapsed
+        let now = prev_at + Duration::from_secs(1);
 
-        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // Rates should be delta / elapsed_time
         assert_eq!(rates.io_read_bytes_per_sec, 1000);
         assert_eq!(rates.io_write_bytes_per_sec, 1000);
         assert_eq!(rates.net_rx_bytes_per_sec, 2000);
         assert_eq!(rates.net_tx_bytes_per_sec, 2000);
 
-        // Cumulative should have new values
+        let pid_stat = per_pid_rates.get(&1234).unwrap();
+        assert_eq!(pid_stat.file_read_bytes, 1000);
+        assert_eq!(pid_stat.file_write_bytes, 1000);
+        assert_eq!(pid_stat.net_rx_bytes, 2000);
+        assert_eq!(pid_stat.net_tx_bytes, 2000);
+
         let stat = cumulative.get(&1234).unwrap();
         assert_eq!(stat.file_read_bytes, 2000);
     }
@@ -259,30 +271,33 @@ mod tests {
 
         let mut new_io = HashMap::new();
         new_io.insert(1234, IoStat {
-            file_read_bytes: 2000,  // +1000
-            file_write_bytes: 1500, // +1000
-            net_rx_bytes: 4000,     // +2000
-            net_tx_bytes: 3000,     // +2000
+            file_read_bytes: 2000,
+            file_write_bytes: 1500,
+            net_rx_bytes: 4000,
+            net_tx_bytes: 3000,
         });
         new_io.insert(5678, IoStat {
-            file_read_bytes: 3000,  // +1000
-            file_write_bytes: 2000, // +1000
-            net_rx_bytes: 6000,     // +2000
-            net_tx_bytes: 4000,     // +2000
+            file_read_bytes: 3000,
+            file_write_bytes: 2000,
+            net_rx_bytes: 6000,
+            net_tx_bytes: 4000,
         });
 
         let prev_at = Instant::now();
         let now = prev_at + Duration::from_secs(1);
 
-        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // Host rates should sum deltas from all PIDs
-        assert_eq!(rates.io_read_bytes_per_sec, 2000);  // 1000 + 1000
-        assert_eq!(rates.io_write_bytes_per_sec, 2000); // 1000 + 1000
-        assert_eq!(rates.net_rx_bytes_per_sec, 4000);   // 2000 + 2000
-        assert_eq!(rates.net_tx_bytes_per_sec, 4000);   // 2000 + 2000
+        assert_eq!(rates.io_read_bytes_per_sec, 2000);
+        assert_eq!(rates.io_write_bytes_per_sec, 2000);
+        assert_eq!(rates.net_rx_bytes_per_sec, 4000);
+        assert_eq!(rates.net_tx_bytes_per_sec, 4000);
 
-        // Both PIDs should be in cumulative
+        let pid1234 = per_pid_rates.get(&1234).unwrap();
+        assert_eq!(pid1234.file_read_bytes, 1000);
+        let pid5678 = per_pid_rates.get(&5678).unwrap();
+        assert_eq!(pid5678.file_read_bytes, 1000);
+
         assert_eq!(cumulative.len(), 2);
     }
 
@@ -300,13 +315,15 @@ mod tests {
         let prev_at = Instant::now();
         let now = prev_at + Duration::from_secs(1);
 
-        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // New PID's entire cumulative is treated as delta
         assert_eq!(rates.io_read_bytes_per_sec, 1000);
         assert_eq!(rates.io_write_bytes_per_sec, 500);
         assert_eq!(rates.net_rx_bytes_per_sec, 2000);
         assert_eq!(rates.net_tx_bytes_per_sec, 1000);
+
+        let pid_stat = per_pid_rates.get(&1234).unwrap();
+        assert_eq!(pid_stat.file_read_bytes, 1000);
 
         assert_eq!(cumulative.len(), 1);
     }
@@ -321,26 +338,24 @@ mod tests {
             net_tx_bytes: 1000,
         });
 
-        let new_io = HashMap::new(); // PID 1234 disappeared
+        let new_io = HashMap::new();
 
         let prev_at = Instant::now();
         let now = prev_at + Duration::from_secs(1);
 
-        let (cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // No new data, so rates should be zero
         assert_eq!(rates.io_read_bytes_per_sec, 0);
         assert_eq!(rates.io_write_bytes_per_sec, 0);
         assert_eq!(rates.net_rx_bytes_per_sec, 0);
         assert_eq!(rates.net_tx_bytes_per_sec, 0);
 
-        // Cumulative should be empty
+        assert!(per_pid_rates.is_empty());
         assert!(cumulative.is_empty());
     }
 
     #[test]
     fn test_compute_rates_saturating_subtraction() {
-        // Test that we handle counter wraparound or LRU eviction correctly
         let mut prev_io = HashMap::new();
         prev_io.insert(1234, IoStat {
             file_read_bytes: 5000,
@@ -351,7 +366,7 @@ mod tests {
 
         let mut new_io = HashMap::new();
         new_io.insert(1234, IoStat {
-            file_read_bytes: 1000,  // Less than prev (counter reset)
+            file_read_bytes: 1000,
             file_write_bytes: 500,
             net_rx_bytes: 2000,
             net_tx_bytes: 1000,
@@ -360,9 +375,8 @@ mod tests {
         let prev_at = Instant::now();
         let now = prev_at + Duration::from_secs(1);
 
-        let (_cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (_cumulative, _per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // Saturating subtraction should give 0, not underflow
         assert_eq!(rates.io_read_bytes_per_sec, 0);
         assert_eq!(rates.io_write_bytes_per_sec, 0);
         assert_eq!(rates.net_rx_bytes_per_sec, 0);
@@ -388,15 +402,18 @@ mod tests {
         });
 
         let prev_at = Instant::now();
-        let now = prev_at + Duration::from_millis(500); // 0.5 seconds
+        let now = prev_at + Duration::from_millis(500);
 
-        let (_cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (_cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // Rates should be doubled (same delta in half the time)
         assert_eq!(rates.io_read_bytes_per_sec, 2000);
         assert_eq!(rates.io_write_bytes_per_sec, 1000);
         assert_eq!(rates.net_rx_bytes_per_sec, 4000);
         assert_eq!(rates.net_tx_bytes_per_sec, 2000);
+
+        let pid_stat = per_pid_rates.get(&1234).unwrap();
+        assert_eq!(pid_stat.file_read_bytes, 2000);
+        assert_eq!(pid_stat.file_write_bytes, 1000);
     }
 
     #[test]
@@ -418,12 +435,10 @@ mod tests {
         });
 
         let prev_at = Instant::now();
-        let now = prev_at + Duration::from_micros(1); // Very small elapsed
+        let now = prev_at + Duration::from_micros(1);
 
-        let (_cumulative, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+        let (_cumulative, _per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
 
-        // Should not panic or produce infinity; the max(0.0001) guard kicks in
-        // With elapsed clamped to 0.0001s, rates would be huge but finite
         assert!(rates.io_read_bytes_per_sec > 0);
         assert!(rates.io_write_bytes_per_sec > 0);
     }
