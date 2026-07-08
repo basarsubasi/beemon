@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { ProcessStream } from "../components/ProcessStream";
 import { ArrowLeft, Users, Box, Terminal, FileText, Maximize2, X, PanelLeftOpen, ArrowUp, ArrowDown, ArrowUpDown, Network } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -200,7 +200,7 @@ export function ProcessDetails() {
               {process?.managedBy && (
                 <ManagerBadge manager={process.managedBy} />
               )}
-              <img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" />
+              <Link to="/"><img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" /></Link>
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Live Process Tracing & Resource Monitoring</p>
           </div>

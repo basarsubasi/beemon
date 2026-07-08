@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Box, Layers, Maximize2, Minimize2 } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import type { NamespaceDetailsResponse, Process, ListProcessesResponse } from "../lib/types";
@@ -362,7 +362,7 @@ export function NamespaceDetails() {
              ) : (
                <Badge variant="outline" className="border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 text-sm px-3 py-1">Isolated Scope</Badge>
              )}
-             <img src="/logo.png" alt="Beemon Logo" className="h-10 w-auto object-contain" />
+              <Link to="/"><img src="/logo.png" alt="Beemon Logo" className="h-10 w-auto object-contain" /></Link>
              <ThemeToggle />
           </div>
         </div>
