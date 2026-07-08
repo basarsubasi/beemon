@@ -102,7 +102,7 @@ const PROGRAMS: &[(&str, ProgramKind)] = &[
     ("trace_sys_enter_rename",        ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_rename" }),
     ("trace_sys_enter_renameat",      ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_renameat" }),
     ("trace_sys_enter_renameat2",     ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_renameat2" }),
-    ("trace_sys_enter_futex",         ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_futex" }),
+
     ("trace_sys_enter_epoll_wait",    ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_epoll_wait" }),
     ("trace_sys_enter_select",        ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_select" }),
     ("trace_sys_enter_poll",          ProgramKind::Tracepoint { category: "syscalls", name: "sys_enter_poll" }),

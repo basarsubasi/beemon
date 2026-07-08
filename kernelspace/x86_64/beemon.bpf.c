@@ -885,15 +885,6 @@ const char *oldname = (const char *)ctx->args[1];
 // IPC / SYNCHRONIZATION
 // -----------------------------------------------------------------------------
 
-SEC("tracepoint/syscalls/sys_enter_futex")
-int trace_sys_enter_futex(struct trace_event_raw_sys_enter *ctx) {
-    RESERVE_EVENT(EVENT_TYPE_FUTEX)
-e->futex.uaddr = (u64)ctx->args[0];
-    e->futex.op = (int)ctx->args[1];
-    e->futex.val = (u32)ctx->args[2];
-    bpf_ringbuf_submit(e, 0);
-    return 0;
-}
 
 SEC("tracepoint/syscalls/sys_enter_epoll_wait")
 int trace_sys_enter_epoll_wait(struct trace_event_raw_sys_enter *ctx) {

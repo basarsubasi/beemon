@@ -7,7 +7,7 @@
 use crate::pb::pb::event::Event as Oneof;
 use crate::pb::pb::{
     AcceptEvent, BindEvent, BrkEvent, BpfEvent, CapsetEvent, ChrootEvent, EpollWaitEvent, Event,
-    FutexEvent, FileCloseEvent, FileOpenEvent, FileReadEvent, FileWriteEvent,
+    FileCloseEvent, FileOpenEvent, FileReadEvent, FileWriteEvent,
     MmapEvent, MprotectEvent, MunmapEvent, NetworkAcceptEvent, NetworkConnectEvent,
     PivotRootEvent, PollEvent, ProcessEvent, PtraceEvent, RecvfromEvent, RenameEvent,
     SelectEvent, SendtoEvent, SetnsEvent, SyscallEvent, UnlinkatEvent, UnshareEvent,
@@ -138,11 +138,7 @@ pub fn convert(e: &EventT) -> Event {
             oldname: cstr(&e.rename.oldname).to_string(),
             newname: cstr(&e.rename.newname).to_string(),
         }),
-        bpf::EVENT_TYPE_FUTEX => Oneof::Futex(FutexEvent {
-            uaddr: e.futex.uaddr,
-            op: e.futex.op,
-            val: e.futex.val,
-        }),
+
         bpf::EVENT_TYPE_EPOLL_WAIT => Oneof::EpollWait(EpollWaitEvent {
             epfd: e.epoll_wait.epfd,
             maxevents: e.epoll_wait.maxevents,
@@ -688,23 +684,6 @@ mod tests {
                 assert_eq!(r.newname, "/tmp/new");
             }
             other => panic!("expected Rename, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn event_type_futex_uaddr_op_val() {
-        let mut e = make_event(29, bpf::EVENT_TYPE_FUTEX, 38);
-        e.futex.uaddr = 0x7000000;
-        e.futex.op = 1;
-        e.futex.val = 0;
-        let pb = convert(&e);
-        match pb.event.unwrap() {
-            Oneof::Futex(f) => {
-                assert_eq!(f.uaddr, 0x7000000);
-                assert_eq!(f.op, 1);
-                assert_eq!(f.val, 0);
-            }
-            other => panic!("expected Futex, got {other:?}"),
         }
     }
 

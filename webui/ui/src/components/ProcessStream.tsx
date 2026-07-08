@@ -89,7 +89,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
           setNetworkFlowHistory(prev => {
             const now = Date.now();
             const next = [...prev, {ts: now, flows: data.flows || []}];
-            return next.filter(h => now - h.ts <= 6000); // keep last 6 seconds
+            return next.filter(h => now - h.ts <= 62000); // keep last 62 seconds
           });
         }
       } catch (err) {}
@@ -250,7 +250,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
               });
             }
 
-            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.futex ? 'futex' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : data.pipe ? 'pipe' : data.pipe2 ? 'pipe2' : data.getpid ? 'getpid' : data.getuid ? 'getuid' : data.uname ? 'uname' : 'syscall';
+            const type = data.fileOpen ? 'open' : data.fileRead ? 'read' : data.fileWrite ? 'write' : data.fileClose ? 'close' : data.networkConnect ? 'connect' : data.process ? (data.process.isExec ? 'exec' : data.process.isExit ? 'exit' : 'fork') : data.chroot ? 'chroot' : data.pivotRoot ? 'pivot_root' : data.setns ? 'setns' : data.unshare ? 'unshare' : data.wait4 ? 'wait4' : data.mmap ? 'mmap' : data.munmap ? 'munmap' : data.mprotect ? 'mprotect' : data.brk ? 'brk' : data.accept ? 'accept' : data.bind ? 'bind' : data.sendto ? 'sendto' : data.recvfrom ? 'recvfrom' : data.unlinkat ? 'unlinkat' : data.rename ? 'rename' : data.epollWait ? 'epoll_wait' : data.select ? 'select' : data.poll ? 'poll' : data.ptrace ? 'ptrace' : data.bpf ? 'bpf' : data.capset ? 'capset' : data.signal ? 'signal' : data.fileMeta ? 'file_meta' : data.ioctl ? 'ioctl' : data.fcntl ? 'fcntl' : data.lseek ? 'lseek' : data.socket ? 'socket' : data.socketOpt ? 'sockopt' : data.pipe ? 'pipe' : data.pipe2 ? 'pipe2' : data.getpid ? 'getpid' : data.getuid ? 'getuid' : data.uname ? 'uname' : 'syscall';
 
             data._localTs = Date.now();
             data._type = type;
@@ -261,9 +261,8 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
             onEvent?.(data);
           }
           // Optimize: Mutate array in-place and only trim when it gets 10% larger
-          // This avoids creating 150 new 5000-element arrays per second which causes heavy GC pressure and WS drops.
-          if (allEventsRef.current.length > 5500) {
-            allEventsRef.current.splice(0, allEventsRef.current.length - 5000);
+          if (allEventsRef.current.length > 55000) {
+            allEventsRef.current.splice(0, allEventsRef.current.length - 50000);
           }
         }
       } catch (err) {
@@ -380,7 +379,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     if (ev.unlinkat) return <span className="text-red-400">unlinkat(dfd: {ev.unlinkat.dfd}, "{ev.unlinkat.pathname}")</span>;
     if (ev.rename) return <span className="text-blue-400">rename("{ev.rename.oldname}", "{ev.rename.newname}")</span>;
 
-    if (ev.futex) return <span className="text-teal-400">futex(uaddr: {ev.futex.uaddr}, op: {ev.futex.op}, val: {ev.futex.val})</span>;
+
     if (ev.epollWait) return <span className="text-teal-400">epoll_wait(epfd: {ev.epollWait.epfd}, maxevents: {ev.epollWait.maxevents})</span>;
     if (ev.select) return <span className="text-teal-400">select(nfds: {ev.select.nfds})</span>;
     if (ev.poll) return <span className="text-teal-400">poll(nfds: {ev.poll.nfds})</span>;
@@ -444,7 +443,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     recvfrom: '#c084fc',
     unlinkat: '#6b7280',
     rename: '#6b7280',
-    futex: '#6b7280',
+
     epoll_wait: '#6b7280',
     select: '#6b7280',
     poll: '#6b7280',

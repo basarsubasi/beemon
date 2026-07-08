@@ -365,11 +365,9 @@
         "rename": {
           "$ref": "#/definitions/v1RenameEvent"
         },
-        "futex": {
-          "$ref": "#/definitions/v1FutexEvent"
-        },
         "epollWait": {
-          "$ref": "#/definitions/v1EpollWaitEvent"
+          "$ref": "#/definitions/v1EpollWaitEvent",
+          "title": "reserved 25 for removed futex event"
         },
         "select": {
           "$ref": "#/definitions/v1SelectEvent"
@@ -520,23 +518,6 @@
         "data": {
           "type": "string",
           "format": "byte"
-        }
-      }
-    },
-    "v1FutexEvent": {
-      "type": "object",
-      "properties": {
-        "uaddr": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "op": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "val": {
-          "type": "integer",
-          "format": "int64"
         }
       }
     },

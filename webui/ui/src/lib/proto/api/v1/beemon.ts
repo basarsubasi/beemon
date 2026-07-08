@@ -155,8 +155,10 @@ export interface Event {
   sendto?: SendtoEvent | undefined;
   recvfrom?: RecvfromEvent | undefined;
   unlinkat?: UnlinkatEvent | undefined;
-  rename?: RenameEvent | undefined;
-  futex?: FutexEvent | undefined;
+  rename?:
+    | RenameEvent
+    | undefined;
+  /** reserved 25 for removed futex event */
   epollWait?: EpollWaitEvent | undefined;
   select?: SelectEvent | undefined;
   poll?: PollEvent | undefined;
@@ -310,12 +312,6 @@ export interface UnlinkatEvent {
 export interface RenameEvent {
   oldname: string;
   newname: string;
-}
-
-export interface FutexEvent {
-  uaddr: number;
-  op: number;
-  val: number;
 }
 
 export interface EpollWaitEvent {
@@ -1700,7 +1696,6 @@ function createBaseEvent(): Event {
     recvfrom: undefined,
     unlinkat: undefined,
     rename: undefined,
-    futex: undefined,
     epollWait: undefined,
     select: undefined,
     poll: undefined,
@@ -1796,9 +1791,6 @@ export const Event: MessageFns<Event> = {
     }
     if (message.rename !== undefined) {
       RenameEvent.encode(message.rename, writer.uint32(194).fork()).join();
-    }
-    if (message.futex !== undefined) {
-      FutexEvent.encode(message.futex, writer.uint32(202).fork()).join();
     }
     if (message.epollWait !== undefined) {
       EpollWaitEvent.encode(message.epollWait, writer.uint32(210).fork()).join();
@@ -2059,14 +2051,6 @@ export const Event: MessageFns<Event> = {
           message.rename = RenameEvent.decode(reader, reader.uint32());
           continue;
         }
-        case 25: {
-          if (tag !== 202) {
-            break;
-          }
-
-          message.futex = FutexEvent.decode(reader, reader.uint32());
-          continue;
-        }
         case 26: {
           if (tag !== 210) {
             break;
@@ -2294,9 +2278,6 @@ export const Event: MessageFns<Event> = {
       : undefined;
     message.rename = (object.rename !== undefined && object.rename !== null)
       ? RenameEvent.fromPartial(object.rename)
-      : undefined;
-    message.futex = (object.futex !== undefined && object.futex !== null)
-      ? FutexEvent.fromPartial(object.futex)
       : undefined;
     message.epollWait = (object.epollWait !== undefined && object.epollWait !== null)
       ? EpollWaitEvent.fromPartial(object.epollWait)
@@ -3909,76 +3890,6 @@ export const RenameEvent: MessageFns<RenameEvent> = {
     const message = createBaseRenameEvent();
     message.oldname = object.oldname ?? "";
     message.newname = object.newname ?? "";
-    return message;
-  },
-};
-
-function createBaseFutexEvent(): FutexEvent {
-  return { uaddr: 0, op: 0, val: 0 };
-}
-
-export const FutexEvent: MessageFns<FutexEvent> = {
-  encode(message: FutexEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.uaddr !== 0) {
-      writer.uint32(8).uint64(message.uaddr);
-    }
-    if (message.op !== 0) {
-      writer.uint32(16).int32(message.op);
-    }
-    if (message.val !== 0) {
-      writer.uint32(24).uint32(message.val);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): FutexEvent {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseFutexEvent();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.uaddr = longToNumber(reader.uint64());
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.op = reader.int32();
-          continue;
-        }
-        case 3: {
-          if (tag !== 24) {
-            break;
-          }
-
-          message.val = reader.uint32();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-
-  create<I extends Exact<DeepPartial<FutexEvent>, I>>(base?: I): FutexEvent {
-    return FutexEvent.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<FutexEvent>, I>>(object: I): FutexEvent {
-    const message = createBaseFutexEvent();
-    message.uaddr = object.uaddr ?? 0;
-    message.op = object.op ?? 0;
-    message.val = object.val ?? 0;
     return message;
   },
 };

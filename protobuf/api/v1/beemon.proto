@@ -185,7 +185,7 @@ message Event {
     RecvfromEvent recvfrom = 22;
     UnlinkatEvent unlinkat = 23;
     RenameEvent rename = 24;
-    FutexEvent futex = 25;
+    // reserved 25 for removed futex event
     EpollWaitEvent epoll_wait = 26;
     SelectEvent select = 27;
     PollEvent poll = 28;
@@ -342,11 +342,6 @@ message RenameEvent {
   string newname = 2;
 }
 
-message FutexEvent {
-  uint64 uaddr = 1;
-  int32 op = 2;
-  uint32 val = 3;
-}
 
 message EpollWaitEvent {
   int32 epfd = 1;
