@@ -99,8 +99,8 @@ export function Dashboard() {
           });
         } else {
           setHostIo({
-            read: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioReadBytes || "0") || 0), 0).toString(),
-            write: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioWriteBytes || "0") || 0), 0).toString(),
+            read: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioReadBytesPerSec || "0") || 0), 0).toString(),
+            write: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioWriteBytesPerSec || "0") || 0), 0).toString(),
             netRx: (data.processes || []).reduce((a, p) => a + (parseInt(p.netRxBytes || "0") || 0), 0).toString(),
             netTx: (data.processes || []).reduce((a, p) => a + (parseInt(p.netTxBytes || "0") || 0), 0).toString(),
           });
@@ -173,11 +173,11 @@ export function Dashboard() {
         aVal = a.cpuQuotaUs === "0" ? Infinity : parseInt(a.cpuQuotaUs);
         bVal = b.cpuQuotaUs === "0" ? Infinity : parseInt(b.cpuQuotaUs);
       } else if (sortKey === 'file_read') {
-        aVal = parseInt(a.ioReadBytes || '0');
-        bVal = parseInt(b.ioReadBytes || '0');
+        aVal = parseInt(a.ioReadBytesPerSec || '0');
+        bVal = parseInt(b.ioReadBytesPerSec || '0');
       } else if (sortKey === 'file_write') {
-        aVal = parseInt(a.ioWriteBytes || '0');
-        bVal = parseInt(b.ioWriteBytes || '0');
+        aVal = parseInt(a.ioWriteBytesPerSec || '0');
+        bVal = parseInt(b.ioWriteBytesPerSec || '0');
       } else if (sortKey === 'net_rx') {
         aVal = parseInt(a.netRxBytes || '0');
         bVal = parseInt(b.netRxBytes || '0');
@@ -590,8 +590,8 @@ export function Dashboard() {
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end text-[10px]">
-                    <span className="text-blue-500">R: {formatIoBytes(proc.ioReadBytes)}</span>
-                    <span className="text-orange-500">W: {formatIoBytes(proc.ioWriteBytes)}</span>
+                    <span className="text-blue-500">R: {formatIoBytes(proc.ioReadBytesPerSec)}</span>
+                    <span className="text-orange-500">W: {formatIoBytes(proc.ioWriteBytesPerSec)}</span>
                   </div>
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">

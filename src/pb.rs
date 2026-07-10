@@ -92,9 +92,9 @@ pub struct Process {
     #[prost(message, repeated, tag = "13")]
     pub active_connections: Vec<NetworkConnection>,
     #[prost(uint64, tag = "14")]
-    pub io_read_bytes: u64,
+    pub io_read_bytes_per_sec: u64,
     #[prost(uint64, tag = "15")]
-    pub io_write_bytes: u64,
+    pub io_write_bytes_per_sec: u64,
     #[prost(uint64, tag = "16")]
     pub net_rx_bytes: u64,
     #[prost(uint64, tag = "17")]

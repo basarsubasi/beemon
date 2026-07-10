@@ -528,8 +528,8 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">FILE I/O</span>
             <div className="flex gap-2 text-[10px]">
-              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytes) : '0'}/s</span>
-              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'}/s</span>
+              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytesPerSec) : '0'}/s</span>
+              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytesPerSec) : '0'}/s</span>
             </div>
           </div>
           <div className="flex flex-col items-end">

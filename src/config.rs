@@ -14,7 +14,7 @@ impl Default for Config {
             http_port: 8080,
             log_directive: "warn".to_string(),
             event_limit: 5000,
-            rates_poll_millis: 1000,
+            rates_poll_millis: 2000,
         }
     }
 }
@@ -54,7 +54,7 @@ mod tests {
     fn test_default_config() {
         let cfg = Config::default();
         assert_eq!(cfg.http_port, 8080);
-        assert_eq!(cfg.rates_poll_millis, 1000);
+        assert_eq!(cfg.rates_poll_millis, 2000);
         assert_eq!(cfg.event_limit, 5000);
         assert_eq!(cfg.log_directive, "warn");
     }

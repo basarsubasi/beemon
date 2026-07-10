@@ -1,7 +1,7 @@
 //! 5-second rates poller. Reads the BPF `process_io_stats` LRU_PERCPU_HASH
 //! and `process_net_flow_stats` HASH maps, then publishes:
 //!   - per-pid cumulative `IoStat` (retained for delta computation),
-//!   - per-pid per-second rates (for filling `Process.io_*_bytes` /
+//!   - per-pid per-second rates (for filling `Process.io_*_bytes_per_sec` /
 //!     `net_*_bytes` in the scanner's cache),
 //!   - host-wide host_*_per_sec rates (computed from successive deltas),
 //!   - per-pid cumulative flow lists (consumed by `GetNetworkFlows`).
@@ -20,7 +20,7 @@ use tracing::warn;
 use crate::bpf::maps::{io_stats_summed, net_flows_all, OwnedIoStats, OwnedNetFlows};
 use crate::bpf::types::{IoStat, NetFlowKey, NetFlowStat};
 
-/// Snapshot produced by the rates poller every 5 seconds. Cloned by the gRPC
+/// Snapshot produced by the rates poller every 2 seconds. Cloned by the HTTP
 /// service (`ListProcesses`, `GetNetworkFlows`) and the scanner task.
 #[derive(Clone, Debug, Default)]
 pub struct RateSnapshot {
@@ -46,7 +46,7 @@ pub struct BpfStateMaps {
     pub net_flows: Arc<std::sync::Mutex<OwnedNetFlows>>,
 }
 
-/// Spawn the 5s rates poller task.
+/// Spawn the 2s rates poller task.
 pub fn spawn(maps: Arc<BpfStateMaps>, snapshot: Arc<RwLock<RateSnapshot>>, period_millis: u64) {
     tokio::spawn(async move {
         let mut ticker = interval(Duration::from_millis(period_millis.max(500)));
