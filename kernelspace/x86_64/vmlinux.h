@@ -2,7 +2,7 @@
 #define __VMLINUX_H__
 
 #ifndef BPF_NO_PRESERVE_ACCESS_INDEX
-/* #pragma clang attribute push (__attribute__((preserve_access_index)), apply_to = record) */
+#pragma clang attribute push (__attribute__((preserve_access_index)), apply_to = record)
 #endif
 
 #ifndef __ksym
