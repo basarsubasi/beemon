@@ -22,7 +22,6 @@ export function ProcessDetails() {
   const navigate = useNavigate();
   
   const [process, setProcess] = useState<Process | null>(null);
-  const [notFound, setNotFound] = useState(false);
   const [children, setChildren] = useState<Process[]>([]);
   const [parentProcess, setParentProcess] = useState<Process | null>(null);
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
@@ -111,10 +110,8 @@ export function ProcessDetails() {
       try {
         const metaRes = await fetch(`/api/v1/processes/${pid}/metadata`);
         if (!metaRes.ok) {
-          setNotFound(true);
           return;
         }
-        setNotFound(false);
         const data = (await metaRes.json()) as GetProcessMetadataResponse;
         if (data.process) {
           setHostNamespaces(data.hostNamespaces || []);
@@ -188,19 +185,6 @@ export function ProcessDetails() {
   };
 
   if (!pid) return <div>No PID provided</div>;
-
-  if (notFound) return (
-    <div className="px-4 pt-8 pb-24 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-4 mb-2">
-        <Link to="/"><img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" /></Link>
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Process not available</h1>
-      </div>
-      <p className="text-zinc-500 dark:text-zinc-400">Beemon cannot inspect itself. This PID is excluded from detail views.</p>
-      <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-        <ArrowLeft size={16} /> Return to Dashboard
-      </Link>
-    </div>
-  );
 
   return (
     <div className="px-4 pt-8 pb-24 max-w-5xl mx-auto space-y-6">
