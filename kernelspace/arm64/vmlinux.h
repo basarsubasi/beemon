@@ -51257,3 +51257,5 @@ struct format_state___2 {
 #endif
 
 #endif /* __VMLINUX_H__ */
+
+#pragma clang attribute pop
