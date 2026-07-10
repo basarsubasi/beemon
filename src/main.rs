@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use tokio::sync::RwLock;
+use tokio::signal::unix::SignalKind;
 use tracing_subscriber::EnvFilter;
 
 use beemon::{
@@ -69,7 +70,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         proc_cache.clone(),
         cgroup_tree.clone(),
         namespace_tree.clone(),
-        1,
+        cfg.scanner_period_secs,
     );
     spawn_rates(state_maps.clone(), rates_snapshot.clone(), cfg.rates_poll_millis);
 
@@ -95,9 +96,27 @@ async fn async_main(cfg: Config) -> Result<()> {
         .context("binding HTTP listener")?;
     tracing::info!("HTTP listening on {addr}");
 
-    axum::serve(listener, app)
-        .await
-        .context("HTTP server error")?;
+    let server = axum::serve(listener, app);
+
+    tokio::select! {
+        result = server => {
+            result.context("HTTP server error")?;
+        }
+        _ = shutdown_signal() => {
+            tracing::info!("shutting down");
+        }
+    }
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+    let mut sigterm = tokio::signal::unix::signal(SignalKind::terminate())
+        .expect("installing SIGTERM handler");
+
+    tokio::select! {
+        _ = ctrl_c => {}
+        _ = sigterm.recv() => {}
+    }
 }

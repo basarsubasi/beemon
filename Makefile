@@ -18,8 +18,6 @@ run: build
 	sudo ./bin/beemon
 
 dev: build
-	@echo "Starting Beemon..."
-	@echo "NOTE: You may be prompted for your sudo password for the eBPF daemon."
+	@echo "Starting Beemon on port 5055..."
 	sudo -v
-	sudo ./bin/beemon &
-	$(MAKE) -C webui dev
+	sudo BEEMON_WEBUI_PORT=5055 ./bin/beemon
