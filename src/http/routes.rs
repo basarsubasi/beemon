@@ -60,7 +60,7 @@ pub async fn get_process_metadata(
     Path(pid): Path<u32>,
     State(state): State<AppState>,
 ) -> Result<Json<GetProcessMetadataResponse>, StatusCode> {
-    if pid == 0 {
+    if pid == 0 || pid == std::process::id() {
         return Err(StatusCode::BAD_REQUEST);
     }
     let snap = state.snapshot.read().await.clone();
@@ -87,7 +87,7 @@ pub async fn stream_events(
     State(state): State<AppState>,
 ) -> Result<Sse<impl futures_util::Stream<Item = Result<Event, std::convert::Infallible>>>, StatusCode>
 {
-    if pid == 0 {
+    if pid == 0 || pid == std::process::id() {
         return Err(StatusCode::BAD_REQUEST);
     }
     let sub = state
@@ -111,6 +111,9 @@ pub async fn get_network_flows(
     Path(pid): Path<u32>,
     State(state): State<AppState>,
 ) -> Result<Json<GetNetworkFlowsResponse>, StatusCode> {
+    if pid == 0 || pid == std::process::id() {
+        return Err(StatusCode::NOT_FOUND);
+    }
     let flows = read_flows_for_pid(&state.net_flows, pid)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(GetNetworkFlowsResponse {

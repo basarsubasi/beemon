@@ -20,8 +20,11 @@ pub async fn ws_events(
     ws: WebSocketUpgrade,
     Path(pid): Path<u32>,
     State(state): State<AppState>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_ws(socket, state, pid))
+) -> Result<impl IntoResponse, axum::http::StatusCode> {
+    if pid == 0 || pid == std::process::id() {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+    Ok(ws.on_upgrade(move |socket| handle_ws(socket, state, pid)))
 }
 
 async fn handle_ws(socket: WebSocket, state: AppState, pid: u32) {

@@ -559,8 +559,8 @@ export function Dashboard() {
             {sortedProcesses.map((proc) => (
               <TableRow 
                 key={proc.pid} 
-                className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
-                onClick={() => navigate(`/process/${proc.pid}`)}
+                className={`${proc.name === 'beemon' ? 'cursor-default' : 'cursor-pointer'} hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group`}
+                onClick={proc.name === 'beemon' ? undefined : () => navigate(`/process/${proc.pid}`)}
               >
                 <TableCell className="w-[90px] max-w-[90px] font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <span className="block truncate" title={String(proc.pid)}>{proc.pid}</span>
