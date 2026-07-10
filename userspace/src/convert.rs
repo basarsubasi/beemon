@@ -207,13 +207,11 @@ pub fn convert(e: &EventT) -> Event {
             optname: e.sockopt.optname,
         }),
 
-        // The BPF program doesn't emit LimitChanged; cgroup limit
-        // changes are surfaced to the UI via the periodic scanner (which
-        // reads the cgroup_tree_cache, refreshed every 10s) through the
-        // ListProcesses/GetProcessMetadata RPCs. We therefore never emit a
-        // LimitChangedEvent on the stream. Unknown event type ⇒ emit a
-        // no-op Syscall event with syscall_id 0 so the client can still see
-        // the timestamp/pid pair, accounting for forward-compat.
+        // Cgroup limit changes are surfaced to the UI via the periodic
+        // scanner through the ListProcesses/GetProcessMetadata RPCs, not
+        // the event stream. Unknown event type ⇒ emit a no-op Syscall event
+        // with syscall_id 0 so the client can still see the timestamp/pid
+        // pair, accounting for forward-compat.
         unknown => {
             tracing::warn!(event_type = unknown, "unknown BPF event type");
             Oneof::Syscall(SyscallEvent { syscall_id: 0 })

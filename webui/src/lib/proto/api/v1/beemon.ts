@@ -254,13 +254,6 @@ export interface ProcessEvent {
   args: string[];
 }
 
-export interface LimitChangedEvent {
-  memoryLimitBytes: number;
-  cpuQuotaUs: number;
-  cpuPeriodUs: number;
-  pidsLimit: number;
-}
-
 export interface Wait4Event {
   pid: number;
   options: number;
@@ -3195,88 +3188,6 @@ export const ProcessEvent: MessageFns<ProcessEvent> = {
     message.exitCode = object.exitCode ?? 0;
     message.filename = object.filename ?? "";
     message.args = object.args?.map((e) => e) || [];
-    return message;
-  },
-};
-
-function createBaseLimitChangedEvent(): LimitChangedEvent {
-  return { memoryLimitBytes: 0, cpuQuotaUs: 0, cpuPeriodUs: 0, pidsLimit: 0 };
-}
-
-export const LimitChangedEvent: MessageFns<LimitChangedEvent> = {
-  encode(message: LimitChangedEvent, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.memoryLimitBytes !== 0) {
-      writer.uint32(8).uint64(message.memoryLimitBytes);
-    }
-    if (message.cpuQuotaUs !== 0) {
-      writer.uint32(16).uint64(message.cpuQuotaUs);
-    }
-    if (message.cpuPeriodUs !== 0) {
-      writer.uint32(24).uint64(message.cpuPeriodUs);
-    }
-    if (message.pidsLimit !== 0) {
-      writer.uint32(32).uint64(message.pidsLimit);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): LimitChangedEvent {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLimitChangedEvent();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.memoryLimitBytes = longToNumber(reader.uint64());
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.cpuQuotaUs = longToNumber(reader.uint64());
-          continue;
-        }
-        case 3: {
-          if (tag !== 24) {
-            break;
-          }
-
-          message.cpuPeriodUs = longToNumber(reader.uint64());
-          continue;
-        }
-        case 4: {
-          if (tag !== 32) {
-            break;
-          }
-
-          message.pidsLimit = longToNumber(reader.uint64());
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-
-  create<I extends Exact<DeepPartial<LimitChangedEvent>, I>>(base?: I): LimitChangedEvent {
-    return LimitChangedEvent.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<LimitChangedEvent>, I>>(object: I): LimitChangedEvent {
-    const message = createBaseLimitChangedEvent();
-    message.memoryLimitBytes = object.memoryLimitBytes ?? 0;
-    message.cpuQuotaUs = object.cpuQuotaUs ?? 0;
-    message.cpuPeriodUs = object.cpuPeriodUs ?? 0;
-    message.pidsLimit = object.pidsLimit ?? 0;
     return message;
   },
 };

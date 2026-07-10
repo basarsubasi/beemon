@@ -8,7 +8,7 @@
 //! data indirectly via [`crate::snapshot::SnapshotCache`]).
 //!
 //! Invalidation: 10s TTL covers the natural refresh. Forced invalidation is
-//! triggered by a `LimitChangedEvent` synthesized in the rates poller (TODO:
+//! triggered by a cgroup limit change synthesized in the rates poller (TODO:
 //! wired up once we read cgroup events from BPF — for now, TTL is enough
 //! because the UI re-opens the details view frequently).
 

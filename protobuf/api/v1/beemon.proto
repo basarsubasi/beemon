@@ -283,13 +283,6 @@ message ProcessEvent {
   repeated string args = 8;
 }
 
-message LimitChangedEvent {
-  uint64 memory_limit_bytes = 1;
-  uint64 cpu_quota_us = 2;
-  uint64 cpu_period_us = 3;
-  uint64 pids_limit = 4;
-}
-
 message Wait4Event {
   uint32 pid = 1;
   int32 options = 2;
