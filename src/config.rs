@@ -13,7 +13,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             http_port: 5055,
-            log_directive: "warn".to_string(),
+            log_directive: "info".to_string(),
             event_limit: 5000,
             rates_poll_millis: 2000,
             scanner_period_secs: 1,
@@ -63,7 +63,7 @@ mod tests {
         assert_eq!(cfg.http_port, 5055);
         assert_eq!(cfg.rates_poll_millis, 2000);
         assert_eq!(cfg.event_limit, 5000);
-        assert_eq!(cfg.log_directive, "warn");
+        assert_eq!(cfg.log_directive, "info");
         assert_eq!(cfg.scanner_period_secs, 1);
     }
 
