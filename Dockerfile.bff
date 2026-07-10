@@ -1,4 +1,6 @@
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM rust:alpine AS builder
+
+RUN apk add --no-cache protoc protobuf-dev
 
 WORKDIR /app
 COPY protobuf/ ./protobuf/
@@ -6,7 +8,15 @@ COPY webui/bff/ ./webui/bff/
 
 WORKDIR /app/webui/bff
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /app/beemon-bff .
+
+RUN case "$TARGETARCH" in \
+      "amd64") RUST_TARGET="x86_64-unknown-linux-musl" ;; \
+      "arm64") RUST_TARGET="aarch64-unknown-linux-musl" ;; \
+      *) echo "Unsupported architecture: $TARGETARCH"; exit 1 ;; \
+    esac && \
+    rustup target add $RUST_TARGET && \
+    cargo build --release --target $RUST_TARGET && \
+    cp target/$RUST_TARGET/release/beemon-bff /app/beemon-bff
 
 FROM alpine:latest
 WORKDIR /app

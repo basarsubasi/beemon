@@ -1,16 +1,5 @@
 version: v2
 plugins:
-  - remote: buf.build/protocolbuffers/go
-    out: ../webui/bff/gen/go
-    opt: paths=source_relative
-  - remote: buf.build/grpc/go
-    out: ../webui/bff/gen/go
-    opt: paths=source_relative
-  - remote: buf.build/grpc-ecosystem/gateway
-    out: ../webui/bff/gen/go
-    opt: paths=source_relative
-  - remote: buf.build/grpc-ecosystem/openapiv2
-    out: gen/openapiv2
   - local: ../webui/ui/node_modules/.bin/protoc-gen-ts_proto
     out: ../webui/ui/src/lib/proto
     opt:

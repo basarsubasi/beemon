@@ -1,9 +1,12 @@
 .PHONY: build clean run
 
 build:
-	go build -o ../../bin/beemon-bff .
+	cargo build --release
+	mkdir -p ../../bin
+	cp target/release/beemon-bff ../../bin/beemon-bff
 
 clean:
+	cargo clean
 	rm -f ../../bin/beemon-bff
 
 run:
