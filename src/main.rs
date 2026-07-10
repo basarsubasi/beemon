@@ -40,9 +40,11 @@ fn main() -> Result<()> {
 }
 
 async fn async_main(cfg: Config) -> Result<()> {
-    tracing::info!("loading BPF programs");
+    eprintln!("starting beemon...");
+
+    eprintln!("  loading BPF programs...");
     let mut bpf = BpfHandle::load_and_attach().context("loading BPF programs")?;
-    tracing::info!("BPF attached: ok");
+    eprintln!("  BPF programs attached");
 
     let events_ringbuf = bpf.take_events_ringbuf().context("taking events ringbuf")?;
     let (target_pids, io_stats, net_flows) = bpf
@@ -64,6 +66,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         net_flows: net_flows_arc.clone(),
     });
 
+    eprintln!("  starting scanner & rate poller...");
     scanner::spawn(
         snapshot_cache.clone(),
         rates_snapshot.clone(),
@@ -78,6 +81,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         proc_cache: proc_cache.clone(),
         namespace_tree: namespace_tree.clone(),
     };
+    eprintln!("  spawning ringbuf consumer...");
     ringbuf::spawn(events_ringbuf, registry.clone(), invalidators);
 
     let state = AppState {
@@ -94,7 +98,7 @@ async fn async_main(cfg: Config) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .context("binding HTTP listener")?;
-    tracing::info!("HTTP listening on {addr}");
+    eprintln!("beemon is running on http://localhost:{}", cfg.http_port);
 
     let server = axum::serve(listener, app);
 

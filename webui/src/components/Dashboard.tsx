@@ -120,8 +120,8 @@ export function Dashboard() {
 
   const formatBytes = (bytesStr: string) => {
     const bytes = parseInt(bytesStr);
-    if (isNaN(bytes)) return "N/A";
-    if (bytes === 0) return "0 B";
+    if (isNaN(bytes) || bytes === 0) return "";
+    
     
     const gb = bytes / (1024 * 1024 * 1024);
     if (gb >= 1) return `${gb.toFixed(2)} GB`;
@@ -338,9 +338,9 @@ export function Dashboard() {
               <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Total Memory</p>
               <div className="flex items-baseline gap-2 mb-1.5">
                 <p className="text-xl font-mono text-zinc-900 dark:text-white leading-none">{formatBytes(totalMemory.toString())}</p>
-                {hostMem !== "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
+                {hostMem != "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
               </div>
-              {hostMem !== "0" && (() => {
+              {hostMem != "0" && (() => {
                 const memPct = (totalMemory / parseInt(hostMem)) * 100;
                 return (
                   <div className="flex items-center gap-2 text-[10px]">
@@ -577,7 +577,7 @@ export function Dashboard() {
                 <TableCell className="w-[150px] max-w-[150px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end">
                     <span className="block truncate text-right">{formatBytes(proc.memoryUsageBytes)}</span>
-                    {proc.memoryLimitBytes && proc.memoryLimitBytes !== "0" && (() => {
+                    {proc.memoryLimitBytes && proc.memoryLimitBytes != "0" && (() => {
                       const limitPct = (parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100;
                       return (
                         <Progress 
@@ -691,13 +691,13 @@ export function Dashboard() {
                       )}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.memoryLimit !== "0" ? formatBytes(cg.memoryLimit) : "Max"}
+                      {cg.memoryLimit != "0" ? formatBytes(cg.memoryLimit) : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.cpuQuota !== "0" ? cg.cpuQuota : "Max"}
+                      {cg.cpuQuota != "0" ? cg.cpuQuota : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.pidsLimit !== "0" ? cg.pidsLimit : "Max"}
+                      {cg.pidsLimit != "0" ? cg.pidsLimit : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                       {cg.count}

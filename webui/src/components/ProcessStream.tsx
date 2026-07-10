@@ -240,7 +240,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
             if (data.limitChanged) {
               setLimits({
                 memory: formatMemBytes(data.limitChanged.memoryLimitBytes),
-                cpu: data.limitChanged.cpuQuotaUs !== "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
+                cpu: data.limitChanged.cpuQuotaUs != "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
               });
             }
 
@@ -304,7 +304,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     if (process) {
       setLimits({
         memory: formatLimitBytes(process.memoryLimitBytes),
-        cpu: process.cpuQuotaUs && process.cpuQuotaUs !== "0" ? `${process.cpuQuotaUs}us` : "Max"
+        cpu: process.cpuQuotaUs && process.cpuQuotaUs != "0" ? `${process.cpuQuotaUs}us` : "Max"
       });
     }
   }, [process?.memoryLimitBytes, process?.cpuQuotaUs]);

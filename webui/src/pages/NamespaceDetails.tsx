@@ -460,19 +460,19 @@ export function NamespaceDetails() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
                   <div>
                     <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">Memory Limit</div>
-                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].memoryLimitBytes !== "0" ? formatBytes(processes[0].memoryLimitBytes) : "Max"}</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].memoryLimitBytes != "0" ? formatBytes(processes[0].memoryLimitBytes) : "Max"}</div>
                   </div>
                   <div>
                     <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">PIDs Limit</div>
-                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].pidsLimit !== "0" ? processes[0].pidsLimit : "Max"}</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].pidsLimit != "0" ? processes[0].pidsLimit : "Max"}</div>
                   </div>
                   <div>
                     <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">CPU Quota (us)</div>
-                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].cpuQuotaUs !== "0" ? processes[0].cpuQuotaUs : "Max"}</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].cpuQuotaUs != "0" ? processes[0].cpuQuotaUs : "Max"}</div>
                   </div>
                   <div>
                     <div className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mb-1">CPU Period (us)</div>
-                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].cpuPeriodUs !== "0" ? processes[0].cpuPeriodUs : "Max"}</div>
+                    <div className="text-lg font-mono text-zinc-900 dark:text-white">{processes[0].cpuPeriodUs != "0" ? processes[0].cpuPeriodUs : "Max"}</div>
                   </div>
                 </div>
               </div>
