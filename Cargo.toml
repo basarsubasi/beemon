@@ -13,9 +13,6 @@ path = "src/main.rs"
 [dependencies]
 aya = { version = "0.14", default-features = false }
 tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "net", "signal", "fs", "sync", "time", "io-util"] }
-tonic = { version = "0.14", default-features = false, features = ["codegen", "transport"] }
-tonic-prost = "0.14"
-prost = "0.14"
 axum = { version = "0.8", features = ["ws"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 tower-http = { version = "0.6", features = ["cors"] }
@@ -32,13 +29,10 @@ thiserror = "2"
 http = "1"
 libc = "0.2"
 bytes = "1"
-pbjson = "0.7"
+prost = "0.14"
 mime_guess = "2"
 
 [build-dependencies]
-tonic-prost-build = { version = "0.14", default-features = false, features = ["transport"] }
-prost-build = "0.14"
-pbjson-build = "0.7"
 anyhow = "1"
 
 [dev-dependencies]

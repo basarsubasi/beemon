@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use crate::pb::pb::Process;
+use crate::pb::Process;
 
 /// Per-process snapshot maintained by the 2-second background scanner.
 /// `ListProcesses` clones this out wholesale; `GetProcessMetadata` reads the

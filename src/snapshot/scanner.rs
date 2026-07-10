@@ -19,7 +19,7 @@ use tokio::sync::RwLock;
 use tokio::time::interval;
 use tracing::warn;
 
-use crate::pb::pb::Process;
+use crate::pb::Process;
 use crate::rates::RateSnapshot;
 use crate::snapshot::cache::SnapshotCache;
 use crate::snapshot::cgroup_tree_cache::CgroupTreeCache;

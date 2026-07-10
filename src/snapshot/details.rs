@@ -16,7 +16,7 @@ use std::os::unix::fs::FileTypeExt;
 use procfs::net::{tcp, tcp6, udp, udp6};
 use tracing::warn;
 
-use crate::pb::pb::{GetNamespaceDetailsResponse, NetworkConnection, OpenFile, Process};
+use crate::pb::{GetNamespaceDetailsResponse, NetworkConnection, OpenFile, Process};
 
 /// Return the given cached `Process` enriched with `open_files` and
 /// `active_connections` populated by walking `/proc/<pid>/fd/*` and

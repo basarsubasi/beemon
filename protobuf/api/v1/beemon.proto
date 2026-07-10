@@ -1,3 +1,6 @@
+
+// the protobuf definitions for the Beemon API, for futureproofing, not actively used
+
 syntax = "proto3";
 
 package beemon.v1;

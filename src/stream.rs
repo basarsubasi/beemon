@@ -15,7 +15,7 @@ use tracing::warn;
 
 use crate::bpf::maps::OwnedTargetPids;
 use crate::bpf::types::TRACE_FLAG_ALL;
-use crate::pb::pb::Event;
+use crate::pb::Event;
 
 /// The shared registry. Cloneable so it can be passed to many tasks.
 #[derive(Clone)]

@@ -14,7 +14,7 @@ use tokio_stream::wrappers::BroadcastStream;
 use tracing::warn;
 
 use crate::http::AppState;
-use crate::pb::pb::EventBatch;
+use crate::pb::EventBatch;
 
 pub async fn ws_events(
     ws: WebSocketUpgrade,

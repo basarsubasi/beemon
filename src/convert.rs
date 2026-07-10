@@ -4,8 +4,8 @@
 //! types in one struct (`EventT`), dispatching on `r#type`. Here we translate
 //! to the protobuf `oneof` surface.
 
-use crate::pb::pb::event::Event as Oneof;
-use crate::pb::pb::{
+use crate::pb::event::Event as Oneof;
+use crate::pb::{
     AcceptEvent, BindEvent, BrkEvent, BpfEvent, CapsetEvent, ChrootEvent, EpollWaitEvent, Event,
     FileCloseEvent, FileOpenEvent, FileReadEvent, FileWriteEvent,
     MmapEvent, MprotectEvent, MunmapEvent, NetworkAcceptEvent, NetworkConnectEvent,

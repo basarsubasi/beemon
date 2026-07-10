@@ -16,7 +16,7 @@ pub use proc_cache::{ProcCache, ProcCacheEntry};
 
 use std::sync::{Arc, Mutex};
 
-use crate::pb::pb::event::Event as Oneof;
+use crate::pb::event::Event as Oneof;
 
 /// A small bundle of the caches the BPF event stream is allowed to
 /// invalidate. Held by the ringbuf task and called for every converted
@@ -30,7 +30,7 @@ pub struct CacheInvalidators {
 
 impl CacheInvalidators {
     /// Inspect an event and invalidate any affected cache entries.
-    pub fn on_event(&self, ev: &crate::pb::pb::Event) {
+    pub fn on_event(&self, ev: &crate::pb::Event) {
         let Some(oneof) = &ev.event else { return };
         let (invalidate_proc, invalidate_tree) = match oneof {
             // sched_process_exit: process gone — drop its cached stable fields

@@ -11,7 +11,7 @@ use tokio_stream::StreamExt;
 use crate::bpf::maps::OwnedNetFlows;
 use crate::bpf::types::{NetFlowKey, NetFlowStat};
 use crate::http::AppState;
-use crate::pb::pb::{
+use crate::pb::{
     GetNamespaceDetailsResponse, GetNetworkFlowsResponse, GetProcessMetadataResponse,
     ListProcessesResponse, NetworkFlow, Process,
 };
@@ -99,7 +99,7 @@ pub async fn stream_events(
         .filter_map(|res| res.ok())
         .chunks_timeout(200, std::time::Duration::from_millis(50))
         .map(|events| {
-            let batch = crate::pb::pb::EventBatch { events };
+            let batch = crate::pb::EventBatch { events };
             let json = serde_json::to_string(&batch).unwrap_or_default();
             Ok::<_, std::convert::Infallible>(Event::default().data(json))
         });
