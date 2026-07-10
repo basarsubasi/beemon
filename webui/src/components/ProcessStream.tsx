@@ -12,7 +12,7 @@ const formatMemBytes = (bytesStr: string | undefined | number) => {
   if (bytesStr === undefined || bytesStr === null) return "N/A";
   const bytes = typeof bytesStr === 'string' ? parseInt(bytesStr) : bytesStr;
   if (isNaN(bytes)) return "Max";
-  if (bytes === 0) return "0 B";
+  if (bytes === 0) return "N/A";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
