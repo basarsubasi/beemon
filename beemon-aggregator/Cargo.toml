@@ -1,11 +1,11 @@
 [package]
-name = "beemon-bff"
+name = "beemon-aggregator"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [[bin]]
-name = "beemon-bff"
+name = "beemon-aggregator"
 path = "src/main.rs"
 
 [dependencies]

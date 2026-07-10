@@ -8,9 +8,9 @@ fn main() -> Result<()> {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
 
-    println!("cargo:rerun-if-changed=../../protobuf/api/v1/beemon.proto");
+    println!("cargo:rerun-if-changed=../protobuf/api/v1/beemon.proto");
 
-    let proto_src = manifest_dir.join("../../protobuf/api/v1/beemon.proto");
+    let proto_src = manifest_dir.join("../protobuf/api/v1/beemon.proto");
     let stripped = out_dir.join("beemon_stripped.proto");
 
     let raw = fs::read_to_string(&proto_src)
@@ -21,7 +21,7 @@ fn main() -> Result<()> {
         .with_context(|| format!("write preprocessed proto to {}", stripped.display()))?;
 
     let proto_path = stripped.as_path();
-    let proto_include = manifest_dir.join("../../protobuf/api/v1");
+    let proto_include = manifest_dir.join("../protobuf/api/v1");
 
     let mut config = prost_build::Config::new();
     let fds_path = out_dir.join("beemon.v1.fds");

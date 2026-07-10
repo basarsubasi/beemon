@@ -4,9 +4,9 @@ RUN apk add --no-cache protoc protobuf-dev
 
 WORKDIR /app
 COPY protobuf/ ./protobuf/
-COPY webui/bff/ ./webui/bff/
+COPY beemon-aggregator/ ./beemon-aggregator/
 
-WORKDIR /app/webui/bff
+WORKDIR /app/beemon-aggregator
 ARG TARGETARCH
 
 RUN case "$TARGETARCH" in \
@@ -16,9 +16,9 @@ RUN case "$TARGETARCH" in \
     esac && \
     rustup target add $RUST_TARGET && \
     cargo build --release --target $RUST_TARGET && \
-    cp target/$RUST_TARGET/release/beemon-bff /app/beemon-bff
+    cp target/$RUST_TARGET/release/beemon-aggregator /app/beemon-aggregator
 
 FROM alpine:latest
 WORKDIR /app
-COPY --from=builder /app/beemon-bff .
-CMD ["./beemon-bff"]
+COPY --from=builder /app/beemon-aggregator .
+CMD ["./beemon-aggregator"]

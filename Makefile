@@ -1,12 +1,6 @@
-.PHONY: all generate-proto generate-ebpf build build-ebpf build-bff build-ui clean run dev run-daemon run-bff run-ui
+.PHONY: all build build-ebpf build-bff build-ui clean run dev run-daemon run-bff run-ui
 
-all: generate-proto generate-ebpf build build-ui
-
-generate-proto:
-	$(MAKE) -C protobuf generate
-
-generate-ebpf:
-	$(MAKE) -C userspace generate
+all: build build-ui
 
 build: build-ebpf build-bff
 
@@ -14,19 +8,18 @@ build-ebpf:
 	$(MAKE) -C userspace build
 
 build-bff:
-	$(MAKE) -C webui/bff build
+	$(MAKE) -C beemon-aggregator build
 
 build-ui:
-	$(MAKE) -C webui/ui build
+	$(MAKE) -C webui build
 
 run:
-	$(MAKE) -C webui/bff run
+	$(MAKE) -C beemon-aggregator run
 
 clean:
-	$(MAKE) -C protobuf clean
 	$(MAKE) -C userspace clean
-	$(MAKE) -C webui/bff clean
-	$(MAKE) -C webui/ui clean
+	$(MAKE) -C beemon-aggregator clean
+	$(MAKE) -C webui clean
 
 dev: build
 	@echo "Starting Beemon stack..."
@@ -38,8 +31,7 @@ run-daemon:
 	sudo ./bin/beemon-daemon
 
 run-bff:
-	./bin/beemon-bff
+	./bin/beemon-aggregator
 
 run-ui:
-	$(MAKE) -C webui/ui dev
-
+	$(MAKE) -C webui dev
