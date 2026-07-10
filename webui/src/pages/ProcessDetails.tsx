@@ -192,15 +192,13 @@ export function ProcessDetails() {
   if (notFound) return (
     <div className="px-4 pt-8 pb-24 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-4 mb-2">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center justify-center p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800"
-        >
-          <ArrowLeft size={24} />
-        </button>
+        <Link to="/"><img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" /></Link>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Process not available</h1>
       </div>
       <p className="text-zinc-500 dark:text-zinc-400">Beemon cannot inspect itself. This PID is excluded from detail views.</p>
+      <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+        <ArrowLeft size={16} /> Return to Dashboard
+      </Link>
     </div>
   );
 

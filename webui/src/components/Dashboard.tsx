@@ -576,8 +576,8 @@ export function Dashboard() {
                 </TableCell>
                 <TableCell className="w-[150px] max-w-[150px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end">
-                    <span className="block truncate">{formatBytes(proc.memoryUsageBytes)}</span>
-                    {proc.memoryLimitBytes !== "0" && (() => {
+                    <span className="block truncate text-right">{formatBytes(proc.memoryUsageBytes)}</span>
+                    {proc.memoryLimitBytes && proc.memoryLimitBytes !== "0" && (() => {
                       const limitPct = (parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100;
                       return (
                         <Progress 

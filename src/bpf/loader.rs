@@ -263,3 +263,39 @@ fn bump_memlock() -> Result<()> {
         .map_err(|e| anyhow!("setrlimit(RLIMIT_MEMLOCK) failed: {e}"))
         .context("Bumping RLIMIT_MEMLOCK")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn find_program(name: &str) -> Option<&'static ProgramKind> {
+        PROGRAMS.iter().find(|(n, _)| *n == name).map(|(_, k)| k)
+    }
+
+    #[test]
+    fn vfs_readv_probe_registered() {
+        let p = find_program("trace_vfs_readv_ret").expect("vfs_readv probe missing");
+        assert!(matches!(p, ProgramKind::Kretprobe { fn_name: "vfs_readv" }));
+    }
+
+    #[test]
+    fn vfs_writev_probe_registered() {
+        let p = find_program("trace_vfs_writev_ret").expect("vfs_writev probe missing");
+        assert!(matches!(p, ProgramKind::Kretprobe { fn_name: "vfs_writev" }));
+    }
+
+    #[test]
+    fn copy_file_range_probe_registered() {
+        let p = find_program("trace_copy_file_range_ret").expect("copy_file_range probe missing");
+        assert!(matches!(p, ProgramKind::Kretprobe { fn_name: "copy_file_range" }));
+    }
+
+    #[test]
+    fn all_kretprobes_have_valid_fn_names() {
+        for (name, kind) in PROGRAMS {
+            if let ProgramKind::Kretprobe { fn_name } = kind {
+                assert!(!fn_name.is_empty(), "kretprobe {name} has empty fn_name");
+            }
+        }
+    }
+}

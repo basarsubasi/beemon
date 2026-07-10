@@ -442,4 +442,39 @@ mod tests {
         assert!(rates.io_read_bytes_per_sec > 0);
         assert!(rates.io_write_bytes_per_sec > 0);
     }
+
+    #[test]
+    fn test_copy_file_range_equal_read_write() {
+        let mut prev_io = HashMap::new();
+        prev_io.insert(100, IoStat {
+            file_read_bytes: 0,
+            file_write_bytes: 0,
+            net_rx_bytes: 0,
+            net_tx_bytes: 0,
+        });
+
+        let mut new_io = HashMap::new();
+        new_io.insert(100, IoStat {
+            file_read_bytes: 4096,
+            file_write_bytes: 4096,
+            net_rx_bytes: 0,
+            net_tx_bytes: 0,
+        });
+
+        let prev_at = Instant::now();
+        let now = prev_at + Duration::from_secs(1);
+
+        let (cumulative, per_pid_rates, rates) = compute_rates(&prev_io, &new_io, Some(prev_at), now);
+
+        let stat = cumulative.get(&100).unwrap();
+        assert_eq!(stat.file_read_bytes, 4096);
+        assert_eq!(stat.file_write_bytes, 4096);
+
+        let pid_rate = per_pid_rates.get(&100).unwrap();
+        assert_eq!(pid_rate.file_read_bytes, 4096);
+        assert_eq!(pid_rate.file_write_bytes, 4096);
+
+        assert_eq!(rates.io_read_bytes_per_sec, 4096);
+        assert_eq!(rates.io_write_bytes_per_sec, 4096);
+    }
 }
