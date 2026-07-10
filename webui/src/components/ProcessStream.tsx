@@ -715,14 +715,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
                         <Cell 
                           key={`cell-${index}`} 
                           fill={SYSCALL_COLORS[entry.name] || '#ffffff'} 
-                          onClick={() => {
-                            if (selectedEventTypes.includes(entry.name)) {
-                              setSelectedEventTypes(selectedEventTypes.filter(t => t !== entry.name));
-                            } else {
-                              setSelectedEventTypes([...selectedEventTypes, entry.name]);
-                            }
-                          }}
-                          className={`cursor-pointer transition-opacity ${selectedEventTypes.length > 0 && !selectedEventTypes.includes(entry.name) ? 'opacity-30' : 'hover:opacity-80'}`}
+                          className={selectedEventTypes.length > 0 && !selectedEventTypes.includes(entry.name) ? 'opacity-30' : ''}
                         />
                       ))}
                     </Pie>
