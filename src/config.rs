@@ -13,7 +13,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             http_port: 5055,
-            log_directive: "info".to_string(),
+            log_directive: "warn".to_string(),
             event_limit: 5000,
             rates_poll_millis: 2000,
             scanner_period_secs: 1,

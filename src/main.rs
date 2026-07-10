@@ -40,9 +40,9 @@ fn main() -> Result<()> {
 }
 
 async fn async_main(cfg: Config) -> Result<()> {
-    tracing::info!("starting beemon...");
+    tracing::warn!("starting beemon...");
 
-    tracing::info!("loading BPF programs...");
+    tracing::warn!("loading BPF programs...");
     let mut bpf = BpfHandle::load_and_attach().context("loading BPF programs")?;
     tracing::info!("BPF programs attached");
 
@@ -66,7 +66,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         net_flows: net_flows_arc.clone(),
     });
 
-    tracing::info!("starting scanner & rate poller...");
+    tracing::warn!("starting scanner & rate poller...");
     scanner::spawn(
         snapshot_cache.clone(),
         rates_snapshot.clone(),
@@ -81,7 +81,7 @@ async fn async_main(cfg: Config) -> Result<()> {
         proc_cache: proc_cache.clone(),
         namespace_tree: namespace_tree.clone(),
     };
-    tracing::info!("spawning ringbuf consumer...");
+    tracing::warn!("spawning ringbuf consumer...");
     ringbuf::spawn(events_ringbuf, registry.clone(), invalidators);
 
     let state = AppState {
@@ -98,7 +98,7 @@ async fn async_main(cfg: Config) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .context("binding HTTP listener")?;
-    tracing::info!("beemon is running on http://localhost:{}", cfg.http_port);
+    tracing::warn!("beemon is running on http://localhost:{}", cfg.http_port);
 
     let server = axum::serve(listener, app);
 
@@ -107,17 +107,17 @@ async fn async_main(cfg: Config) -> Result<()> {
             result.context("HTTP server error")?;
         }
         _ = shutdown_signal() => {
-            tracing::info!("shutting down...");
-            tracing::info!("stopping HTTP server...");
+            tracing::warn!("shutting down...");
+            tracing::warn!("stopping HTTP server...");
         }
     }
 
-    tracing::info!("detaching BPF programs...");
+    tracing::warn!("detaching BPF programs...");
     drop(bpf);
-    tracing::info!("cleaning up state maps...");
+    tracing::warn!("cleaning up state maps...");
     drop(state_maps);
 
-    tracing::info!("beemon stopped.");
+    tracing::warn!("beemon stopped.");
     Ok(())
 }
 
@@ -127,7 +127,7 @@ async fn shutdown_signal() {
         .expect("installing SIGTERM handler");
 
     tokio::select! {
-        _ = ctrl_c => { tracing::info!("received SIGINT"); }
-        _ = sigterm.recv() => { tracing::info!("received SIGTERM"); }
+        _ = ctrl_c => { tracing::warn!("received SIGINT"); }
+        _ = sigterm.recv() => { tracing::warn!("received SIGTERM"); }
     }
 }
