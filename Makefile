@@ -4,6 +4,7 @@ all: build build-ui
 
 build: build-ui
 	cargo build --release
+	mkdir -p bin
 	cp target/release/beemon bin/beemon
 
 build-ui:

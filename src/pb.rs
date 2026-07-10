@@ -6,6 +6,7 @@ use prost::Message;
 // ── Responses ─────────────────────────────────────────────────────
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct ListProcessesResponse {
     #[prost(message, repeated, tag = "1")]
     pub processes: Vec<Process>,
@@ -26,6 +27,7 @@ pub struct ListProcessesResponse {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct GetProcessMetadataResponse {
     #[prost(message, optional, tag = "1")]
     pub process: Option<Process>,
@@ -38,6 +40,7 @@ pub struct GetProcessMetadataResponse {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct GetNamespaceDetailsResponse {
     #[prost(string, tag = "1")]
     pub ns_type: String,
@@ -56,6 +59,7 @@ pub struct GetNamespaceDetailsResponse {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct GetNetworkFlowsResponse {
     #[prost(message, repeated, tag = "1")]
     pub flows: Vec<NetworkFlow>,
@@ -64,6 +68,7 @@ pub struct GetNetworkFlowsResponse {
 // ── Domain types ──────────────────────────────────────────────────
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct Process {
     #[prost(uint32, tag = "1")]
     pub pid: u32,
@@ -104,6 +109,7 @@ pub struct Process {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenFile {
     #[prost(uint32, tag = "1")]
     pub fd: u32,
@@ -114,6 +120,7 @@ pub struct OpenFile {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkConnection {
     #[prost(string, tag = "1")]
     pub local_address: String,
@@ -126,6 +133,7 @@ pub struct NetworkConnection {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkFlow {
     #[prost(string, tag = "1")]
     pub local_address: String,
@@ -150,12 +158,14 @@ pub struct NetworkFlow {
 // ── Event stream ──────────────────────────────────────────────────
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct EventBatch {
     #[prost(message, repeated, tag = "1")]
     pub events: Vec<Event>,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct Event {
     #[prost(uint64, tag = "1")]
     pub timestamp_ns: u64,
@@ -167,6 +177,7 @@ pub struct Event {
 
 pub mod event {
     #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, ::prost::Oneof)]
+    #[serde(rename_all = "camelCase")]
     pub enum Event {
         #[prost(message, tag = "3")]
         Syscall(super::SyscallEvent),
@@ -262,12 +273,14 @@ pub mod event {
 // ── Event payloads ────────────────────────────────────────────────
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SyscallEvent {
     #[prost(uint32, tag = "1")]
     pub syscall_id: u32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct FileOpenEvent {
     #[prost(string, tag = "1")]
     pub filename: String,
@@ -278,6 +291,7 @@ pub struct FileOpenEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkConnectEvent {
     #[prost(uint32, tag = "1")]
     pub saddr: u32,
@@ -292,6 +306,7 @@ pub struct NetworkConnectEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct NetworkAcceptEvent {
     #[prost(uint32, tag = "1")]
     pub saddr: u32,
@@ -306,6 +321,7 @@ pub struct NetworkAcceptEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessEvent {
     #[prost(bool, tag = "1")]
     pub is_exec: bool,
@@ -326,6 +342,7 @@ pub struct ProcessEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct FileReadEvent {
     #[prost(uint32, tag = "1")]
     pub fd: u32,
@@ -334,6 +351,7 @@ pub struct FileReadEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct FileWriteEvent {
     #[prost(uint32, tag = "1")]
     pub fd: u32,
@@ -344,18 +362,21 @@ pub struct FileWriteEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct FileCloseEvent {
     #[prost(uint32, tag = "1")]
     pub fd: u32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct ChrootEvent {
     #[prost(string, tag = "1")]
     pub path: String,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct PivotRootEvent {
     #[prost(string, tag = "1")]
     pub new_root: String,
@@ -364,6 +385,7 @@ pub struct PivotRootEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SetnsEvent {
     #[prost(uint32, tag = "1")]
     pub fd: u32,
@@ -372,12 +394,14 @@ pub struct SetnsEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct UnshareEvent {
     #[prost(uint32, tag = "1")]
     pub flags: u32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct Wait4Event {
     #[prost(uint32, tag = "1")]
     pub pid: u32,
@@ -386,6 +410,7 @@ pub struct Wait4Event {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct MmapEvent {
     #[prost(uint64, tag = "1")]
     pub addr: u64,
@@ -402,6 +427,7 @@ pub struct MmapEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct MunmapEvent {
     #[prost(uint64, tag = "1")]
     pub addr: u64,
@@ -410,6 +436,7 @@ pub struct MunmapEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct MprotectEvent {
     #[prost(uint64, tag = "1")]
     pub start: u64,
@@ -420,24 +447,28 @@ pub struct MprotectEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct BrkEvent {
     #[prost(uint64, tag = "1")]
     pub brk: u64,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct AcceptEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct BindEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SendtoEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
@@ -446,6 +477,7 @@ pub struct SendtoEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct RecvfromEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
@@ -454,6 +486,7 @@ pub struct RecvfromEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct UnlinkatEvent {
     #[prost(int32, tag = "1")]
     pub dfd: i32,
@@ -462,6 +495,7 @@ pub struct UnlinkatEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct RenameEvent {
     #[prost(string, tag = "1")]
     pub oldname: String,
@@ -470,6 +504,7 @@ pub struct RenameEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct EpollWaitEvent {
     #[prost(int32, tag = "1")]
     pub epfd: i32,
@@ -478,18 +513,21 @@ pub struct EpollWaitEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SelectEvent {
     #[prost(int32, tag = "1")]
     pub nfds: i32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct PollEvent {
     #[prost(int32, tag = "1")]
     pub nfds: i32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct PtraceEvent {
     #[prost(int64, tag = "1")]
     pub request: i64,
@@ -498,18 +536,21 @@ pub struct PtraceEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct BpfEvent {
     #[prost(int32, tag = "1")]
     pub cmd: i32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct CapsetEvent {
     #[prost(uint32, tag = "1")]
     pub target_pid: u32,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SignalEvent {
     #[prost(uint32, tag = "1")]
     pub target_pid: u32,
@@ -522,6 +563,7 @@ pub struct SignalEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct FileMetaEvent {
     #[prost(string, tag = "1")]
     pub pathname: String,
@@ -532,6 +574,7 @@ pub struct FileMetaEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct IoctlEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
@@ -540,6 +583,7 @@ pub struct IoctlEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct FcntlEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
@@ -548,6 +592,7 @@ pub struct FcntlEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct LseekEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
@@ -558,6 +603,7 @@ pub struct LseekEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SocketEvent {
     #[prost(int32, tag = "1")]
     pub family: i32,
@@ -568,6 +614,7 @@ pub struct SocketEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct SocketOptEvent {
     #[prost(int32, tag = "1")]
     pub fd: i32,
@@ -578,16 +625,21 @@ pub struct SocketOptEvent {
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct PipeEvent {}
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct Pipe2Event {}
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct GetpidEvent {}
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct GetuidEvent {}
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Message)]
+#[serde(rename_all = "camelCase")]
 pub struct UnameEvent {}
