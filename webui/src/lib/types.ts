@@ -12,8 +12,8 @@ export interface Process {
   namespaces?: string[];
   openFiles?: { fd: number; path: string; type: string }[];
   activeConnections?: NetworkConnection[];
-  ioReadBytes?: string;
-  ioWriteBytes?: string;
+  ioReadBytesPerSec?: string;
+  ioWriteBytesPerSec?: string;
   netRxBytes?: string;
   netTxBytes?: string;
   managedBy?: string;

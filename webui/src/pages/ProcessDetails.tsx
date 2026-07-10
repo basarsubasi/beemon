@@ -22,6 +22,7 @@ export function ProcessDetails() {
   const navigate = useNavigate();
   
   const [process, setProcess] = useState<Process | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [children, setChildren] = useState<Process[]>([]);
   const [parentProcess, setParentProcess] = useState<Process | null>(null);
   const [hostNamespaces, setHostNamespaces] = useState<string[]>([]);
@@ -109,6 +110,11 @@ export function ProcessDetails() {
     const fetchMetadata = async () => {
       try {
         const metaRes = await fetch(`/api/v1/processes/${pid}/metadata`);
+        if (!metaRes.ok) {
+          setNotFound(true);
+          return;
+        }
+        setNotFound(false);
         const data = (await metaRes.json()) as GetProcessMetadataResponse;
         if (data.process) {
           setHostNamespaces(data.hostNamespaces || []);
@@ -182,6 +188,19 @@ export function ProcessDetails() {
   };
 
   if (!pid) return <div>No PID provided</div>;
+
+  if (notFound) return (
+    <div className="px-4 pt-8 pb-24 max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center gap-4 mb-2">
+        <Link to="/"><img src="/logo.png" alt="Beemon Logo" className="h-8 w-auto object-contain" /></Link>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Process not available</h1>
+      </div>
+      <p className="text-zinc-500 dark:text-zinc-400">Beemon cannot inspect itself. This PID is excluded from detail views.</p>
+      <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+        <ArrowLeft size={16} /> Return to Dashboard
+      </Link>
+    </div>
+  );
 
   return (
     <div className="px-4 pt-8 pb-24 max-w-5xl mx-auto space-y-6">
@@ -269,7 +288,7 @@ export function ProcessDetails() {
             </h2>
             <div className="text-right">
               <span className="text-2xl font-bold text-zinc-900 dark:text-white">{children.length}</span>
-              <span className="text-zinc-500 dark:text-zinc-500 text-xs ml-1">/ {process?.pidsLimit !== "0" ? process?.pidsLimit : "Max"}</span>
+              <span className="text-zinc-500 dark:text-zinc-500 text-xs ml-1">/ {process?.pidsLimit != "0" ? process?.pidsLimit : "Max"}</span>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 max-h-[120px]">
@@ -314,8 +333,8 @@ export function ProcessDetails() {
               </div>
             </Button>
           ) : (
-            <Card className={`${sidePanelWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
-              <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
+            <Card className={`${sidePanelWide ? 'w-[90vw] max-w-5xl' : 'w-[450px]'} h-[500px] flex-shrink-0 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col overflow-hidden transition-all duration-300`}>
+              <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900">
                 <div className="flex gap-4 items-center">
                   <h2 
                     className={`font-semibold text-sm flex items-center gap-2 cursor-pointer ${sidePanelTab === 'files' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
@@ -397,7 +416,7 @@ export function ProcessDetails() {
                   <div className="flex flex-col h-full">
                     <div className="flex-1 overflow-auto">
                       <Table>
-                        <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950/90 backdrop-blur z-10">
+                    <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950 backdrop-blur z-10">
                       <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
                         <TableHead className="w-[50px] text-xs h-8 py-1 select-none">Proto</TableHead>
                         <TableHead className="text-xs h-8 py-1 select-none">Local</TableHead>
@@ -423,8 +442,8 @@ export function ProcessDetails() {
                                 <TableCell className={`font-mono text-[11px] text-zinc-600 dark:text-zinc-300 py-2 px-4 truncate ${sidePanelWide ? 'max-w-[300px]' : 'max-w-[100px]'}`} title={`${f.remoteAddress}:${f.remotePort}`}>
                                   {`${f.remoteAddress}:${f.remotePort}`}
                                 </TableCell>
-                                <TableCell className="py-2 px-4 font-mono text-[10px] text-green-500 text-right">{f.rxBytes && f.rxBytes !== "0" ? `${(parseInt(f.rxBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
-                                <TableCell className="py-2 px-4 font-mono text-[10px] text-purple-500 text-right">{f.txBytes && f.txBytes !== "0" ? `${(parseInt(f.txBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
+                                <TableCell className="py-2 px-4 font-mono text-[10px] text-green-500 text-right">{f.rxBytes && f.rxBytes != "0" ? `${(parseInt(f.rxBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
+                                <TableCell className="py-2 px-4 font-mono text-[10px] text-purple-500 text-right">{f.txBytes && f.txBytes != "0" ? `${(parseInt(f.txBytes)/1024).toFixed(1)}K` : "-"}</TableCell>
                               </TableRow>
                             ))
                           ) : (

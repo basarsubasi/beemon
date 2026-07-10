@@ -11,7 +11,7 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-#define MAX_ENTRIES 1024
+#define MAX_ENTRIES 4096
 
 // Event Types
 #define EVENT_TYPE_SYSCALL     1
@@ -607,6 +607,34 @@ int BPF_KRETPROBE(trace_vfs_write_ret, ssize_t ret) {
     return 0;
 }
 
+SEC("kretprobe/vfs_readv")
+int BPF_KRETPROBE(trace_vfs_readv_ret, ssize_t ret) {
+    if (ret <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_file_io(tgid, ret, 0);
+    return 0;
+}
+
+SEC("kretprobe/vfs_writev")
+int BPF_KRETPROBE(trace_vfs_writev_ret, ssize_t ret) {
+    if (ret <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    add_file_io(tgid, 0, ret);
+    return 0;
+}
+
+SEC("kretprobe/copy_file_range")
+int BPF_KRETPROBE(trace_copy_file_range_ret, ssize_t ret) {
+    if (ret <= 0) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    u32 tgid = id >> 32;
+    // ponytail: count as both read+write — same bytes move between files
+    add_file_io(tgid, ret, ret);
+    return 0;
+}
+
 SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(trace_tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
     u64 id = bpf_get_current_pid_tgid();
@@ -745,9 +773,9 @@ int trace_sched_process_exit(struct trace_event_raw_sched_process_template *ctx)
     u32 user_pid = id >> 32;
     u32 user_tid = (u32)id;
 
-    if (user_pid == user_tid) {
-        bpf_map_delete_elem(&process_io_stats, &user_pid);
-    }
+    // ponytail: don't delete from process_io_stats on exit — LRU eviction
+    // handles stale entries, and keeping counters lets the rates poller
+    // capture the final burst before the process disappears.
 
     if (!should_trace(user_pid)) return 0;
 

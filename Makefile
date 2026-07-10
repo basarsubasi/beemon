@@ -1,37 +1,23 @@
-.PHONY: all build build-ebpf build-bff build-ui clean run dev run-daemon run-bff run-ui
+.PHONY: all build build-ui clean run dev
 
 all: build build-ui
 
-build: build-ebpf build-bff
-
-build-ebpf:
-	$(MAKE) -C userspace build
-
-build-bff:
-	$(MAKE) -C beemon-aggregator build
+build: build-ui
+	cargo build --release
+	mkdir -p bin
+	cp target/release/beemon bin/beemon
 
 build-ui:
 	$(MAKE) -C webui build
 
-run:
-	$(MAKE) -C beemon-aggregator run
-
 clean:
-	$(MAKE) -C userspace clean
-	$(MAKE) -C beemon-aggregator clean
+	cargo clean
 	$(MAKE) -C webui clean
 
+run: build
+	sudo ./bin/beemon
+
 dev: build
-	@echo "Starting Beemon stack..."
-	@echo "NOTE: You may be prompted for your sudo password for the eBPF daemon."
+	@echo "Starting Beemon on port 5055..."
 	sudo -v
-	$(MAKE) -j3 run-daemon run-bff run-ui
-
-run-daemon:
-	sudo ./bin/beemon-daemon
-
-run-bff:
-	./bin/beemon-aggregator
-
-run-ui:
-	$(MAKE) -C webui dev
+	sudo BEEMON_WEBUI_PORT=5055 ./bin/beemon

@@ -138102,3 +138102,5 @@ struct rsync_pages;
 #endif
 
 #endif /* __VMLINUX_H__ */
+
+#pragma clang attribute pop

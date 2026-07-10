@@ -1,0 +1,48 @@
+[package]
+name = "beemon"
+version = "0.1.0"
+edition = "2021"
+description = "Beemon eBPF process monitor: single-binary daemon + HTTP API + embedded UI."
+license = "Apache-2.0"
+publish = false
+
+[[bin]]
+name = "beemon"
+path = "src/main.rs"
+
+[dependencies]
+aya = { version = "0.14", default-features = false }
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "net", "signal", "fs", "sync", "time", "io-util"] }
+axum = { version = "0.8", features = ["ws"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower-http = { version = "0.6", features = ["cors"] }
+rust-embed = "8"
+futures-util = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+procfs = "0.18"
+nix = { version = "0.31", default-features = false, features = ["fs", "process", "resource", "user", "net", "sched", "hostname"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+anyhow = "1"
+thiserror = "2"
+http = "1"
+libc = "0.2"
+bytes = "1"
+prost = "0.14"
+mime_guess = "2"
+
+[build-dependencies]
+anyhow = "1"
+
+[dev-dependencies]
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "sync", "time", "test-util"] }
+tempfile = "3"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+overflow-checks = true

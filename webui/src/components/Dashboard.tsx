@@ -99,8 +99,8 @@ export function Dashboard() {
           });
         } else {
           setHostIo({
-            read: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioReadBytes || "0") || 0), 0).toString(),
-            write: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioWriteBytes || "0") || 0), 0).toString(),
+            read: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioReadBytesPerSec || "0") || 0), 0).toString(),
+            write: (data.processes || []).reduce((a, p) => a + (parseInt(p.ioWriteBytesPerSec || "0") || 0), 0).toString(),
             netRx: (data.processes || []).reduce((a, p) => a + (parseInt(p.netRxBytes || "0") || 0), 0).toString(),
             netTx: (data.processes || []).reduce((a, p) => a + (parseInt(p.netTxBytes || "0") || 0), 0).toString(),
           });
@@ -120,8 +120,8 @@ export function Dashboard() {
 
   const formatBytes = (bytesStr: string) => {
     const bytes = parseInt(bytesStr);
-    if (isNaN(bytes)) return "N/A";
-    if (bytes === 0) return "0 B";
+    if (isNaN(bytes) || bytes === 0) return "";
+    
     
     const gb = bytes / (1024 * 1024 * 1024);
     if (gb >= 1) return `${gb.toFixed(2)} GB`;
@@ -173,11 +173,11 @@ export function Dashboard() {
         aVal = a.cpuQuotaUs === "0" ? Infinity : parseInt(a.cpuQuotaUs);
         bVal = b.cpuQuotaUs === "0" ? Infinity : parseInt(b.cpuQuotaUs);
       } else if (sortKey === 'file_read') {
-        aVal = parseInt(a.ioReadBytes || '0');
-        bVal = parseInt(b.ioReadBytes || '0');
+        aVal = parseInt(a.ioReadBytesPerSec || '0');
+        bVal = parseInt(b.ioReadBytesPerSec || '0');
       } else if (sortKey === 'file_write') {
-        aVal = parseInt(a.ioWriteBytes || '0');
-        bVal = parseInt(b.ioWriteBytes || '0');
+        aVal = parseInt(a.ioWriteBytesPerSec || '0');
+        bVal = parseInt(b.ioWriteBytesPerSec || '0');
       } else if (sortKey === 'net_rx') {
         aVal = parseInt(a.netRxBytes || '0');
         bVal = parseInt(b.netRxBytes || '0');
@@ -338,9 +338,9 @@ export function Dashboard() {
               <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Total Memory</p>
               <div className="flex items-baseline gap-2 mb-1.5">
                 <p className="text-xl font-mono text-zinc-900 dark:text-white leading-none">{formatBytes(totalMemory.toString())}</p>
-                {hostMem !== "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
+                {hostMem != "0" && <p className="text-xs text-zinc-500 font-mono">/ {formatBytes(hostMem)}</p>}
               </div>
-              {hostMem !== "0" && (() => {
+              {hostMem != "0" && (() => {
                 const memPct = (totalMemory / parseInt(hostMem)) * 100;
                 return (
                   <div className="flex items-center gap-2 text-[10px]">
@@ -559,8 +559,8 @@ export function Dashboard() {
             {sortedProcesses.map((proc) => (
               <TableRow 
                 key={proc.pid} 
-                className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group"
-                onClick={() => navigate(`/process/${proc.pid}`)}
+                className={`${proc.name === 'beemon' ? 'cursor-default' : 'cursor-pointer'} hover:bg-zinc-50 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800/50 transition-colors group`}
+                onClick={proc.name === 'beemon' ? undefined : () => navigate(`/process/${proc.pid}`)}
               >
                 <TableCell className="w-[90px] max-w-[90px] font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <span className="block truncate" title={String(proc.pid)}>{proc.pid}</span>
@@ -578,7 +578,7 @@ export function Dashboard() {
                   <div className="flex flex-col gap-1 items-end">
                     <span className="block truncate">{formatBytes(proc.memoryUsageBytes)}</span>
                     {proc.memoryLimitBytes !== "0" && (() => {
-                      const limitPct = (parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100;
+                          const limitPct = (parseInt(proc.memoryUsageBytes) / parseInt(proc.memoryLimitBytes)) * 100;
                       return (
                         <Progress 
                           value={limitPct} 
@@ -590,8 +590,8 @@ export function Dashboard() {
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                   <div className="flex flex-col gap-1 items-end text-[10px]">
-                    <span className="text-blue-500">R: {formatIoBytes(proc.ioReadBytes)}</span>
-                    <span className="text-orange-500">W: {formatIoBytes(proc.ioWriteBytes)}</span>
+                    <span className="text-blue-500">R: {formatIoBytes(proc.ioReadBytesPerSec)}</span>
+                    <span className="text-orange-500">W: {formatIoBytes(proc.ioWriteBytesPerSec)}</span>
                   </div>
                 </TableCell>
                 <TableCell className="w-[120px] max-w-[120px] text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
@@ -691,13 +691,13 @@ export function Dashboard() {
                       )}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.memoryLimit !== "0" ? formatBytes(cg.memoryLimit) : "Max"}
+                      {cg.memoryLimit != "0" ? formatBytes(cg.memoryLimit) : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.cpuQuota !== "0" ? cg.cpuQuota : "Max"}
+                      {cg.cpuQuota != "0" ? cg.cpuQuota : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
-                      {cg.pidsLimit !== "0" ? cg.pidsLimit : "Max"}
+                      {cg.pidsLimit != "0" ? cg.pidsLimit : "Max"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-600 dark:text-zinc-300 py-4 px-6">
                       {cg.count}

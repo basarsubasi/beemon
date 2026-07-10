@@ -12,7 +12,7 @@ const formatMemBytes = (bytesStr: string | undefined | number) => {
   if (bytesStr === undefined || bytesStr === null) return "N/A";
   const bytes = typeof bytesStr === 'string' ? parseInt(bytesStr) : bytesStr;
   if (isNaN(bytes)) return "Max";
-  if (bytes === 0) return "0 B";
+  if (bytes === 0) return "N/A";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
@@ -45,6 +45,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterInput, setFilterInput] = useState("");
+  const [regexMode, setRegexMode] = useState(false);
 
   const [renderState, setRenderState] = useState({
     displayedEvents: [] as BeemonEvent[],
@@ -119,11 +120,17 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
       : validEvents;
 
     if (searchQuery.trim()) {
-      try {
-        const regex = new RegExp(searchQuery, "i");
-        filteredEvents = filteredEvents.filter(e => regex.test(JSON.stringify(e) + ' ' + ((e as any)._searchText || '')));
-      } catch (err) {
-        // invalid regex, ignore
+      const text = searchQuery.toLowerCase();
+      const haystack = (e: any) => (JSON.stringify(e) + ' ' + (e._searchText || '')).toLowerCase();
+      if (regexMode) {
+        try {
+          const regex = new RegExp(searchQuery, "i");
+          filteredEvents = filteredEvents.filter(e => regex.test(haystack(e)));
+        } catch (err) {
+          // invalid regex, ignore
+        }
+      } else {
+        filteredEvents = filteredEvents.filter(e => haystack(e).includes(text));
       }
     }
 
@@ -240,7 +247,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
             if (data.limitChanged) {
               setLimits({
                 memory: formatMemBytes(data.limitChanged.memoryLimitBytes),
-                cpu: data.limitChanged.cpuQuotaUs !== "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
+                cpu: data.limitChanged.cpuQuotaUs != "0" ? `${data.limitChanged.cpuQuotaUs}us` : "Max"
               });
             }
 
@@ -304,7 +311,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
     if (process) {
       setLimits({
         memory: formatLimitBytes(process.memoryLimitBytes),
-        cpu: process.cpuQuotaUs && process.cpuQuotaUs !== "0" ? `${process.cpuQuotaUs}us` : "Max"
+        cpu: process.cpuQuotaUs && process.cpuQuotaUs != "0" ? `${process.cpuQuotaUs}us` : "Max"
       });
     }
   }, [process?.memoryLimitBytes, process?.cpuQuotaUs]);
@@ -528,8 +535,8 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
           <div className="flex flex-col items-end">
             <span className="flex-shrink-0 font-semibold">FILE I/O</span>
             <div className="flex gap-2 text-[10px]">
-              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytes) : '0'}/s</span>
-              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytes) : '0'}/s</span>
+              <span className="text-blue-500">R: {process ? formatIoBytes(process.ioReadBytesPerSec) : '0'}/s</span>
+              <span className="text-orange-500">W: {process ? formatIoBytes(process.ioWriteBytesPerSec) : '0'}/s</span>
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -577,20 +584,27 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Filter events (regex supported, e.g. 'connect.*192\.168')"
+                  placeholder={regexMode ? "Filter events (regex, e.g. 'connect.*192')" : "Filter events (plain text)"}
                   value={filterInput}
                   onChange={(e) => setFilterInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') setSearchQuery(filterInput); }}
-                  className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-md py-1.5 pl-8 pr-8 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-shadow text-zinc-900 dark:text-zinc-100"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-md py-1.5 pl-8 pr-16 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-shadow text-zinc-900 dark:text-zinc-100"
                 />
-                {(searchQuery || filterInput) && (
-                  <button 
-                    onClick={() => { setSearchQuery(""); setFilterInput(""); }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    onClick={() => setRegexMode(!regexMode)}
+                    className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${regexMode ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+                    title={regexMode ? "Regex mode ON" : "Regex mode OFF"}
+                  >.*</button>
+                  {(searchQuery || filterInput) && (
+                    <button 
+                      onClick={() => { setSearchQuery(""); setFilterInput(""); }}
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-md p-1.5 bg-zinc-50/50 dark:bg-zinc-900/20">
                 <div className="flex justify-between items-center mb-2 px-1">
@@ -701,14 +715,7 @@ export function ProcessStream({ pid, process, infoBarRef, onEvent }: { pid: numb
                         <Cell 
                           key={`cell-${index}`} 
                           fill={SYSCALL_COLORS[entry.name] || '#ffffff'} 
-                          onClick={() => {
-                            if (selectedEventTypes.includes(entry.name)) {
-                              setSelectedEventTypes(selectedEventTypes.filter(t => t !== entry.name));
-                            } else {
-                              setSelectedEventTypes([...selectedEventTypes, entry.name]);
-                            }
-                          }}
-                          className={`cursor-pointer transition-opacity ${selectedEventTypes.length > 0 && !selectedEventTypes.includes(entry.name) ? 'opacity-30' : 'hover:opacity-80'}`}
+                          className={selectedEventTypes.length > 0 && !selectedEventTypes.includes(entry.name) ? 'opacity-30' : ''}
                         />
                       ))}
                     </Pie>
