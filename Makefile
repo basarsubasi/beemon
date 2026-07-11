@@ -1,11 +1,16 @@
 .PHONY: all build build-ui clean run dev
 
+STATIC_TARGET := x86_64-unknown-linux-gnu
+DYNAMIC_TARGET := x86_64-unknown-linux-musl
+
 all: build build-ui
 
 build: build-ui
-	cargo build --release
+	cargo build --release --target=$(STATIC_TARGET)
+	cargo build --release --target=$(DYNAMIC_TARGET)
 	mkdir -p bin
-	cp target/release/beemon bin/beemon
+	cp target/$(STATIC_TARGET)/release/beemon bin/beemon-gnu
+	cp target/$(DYNAMIC_TARGET)/release/beemon bin/beemon-musl
 
 build-ui:
 	$(MAKE) -C webui build
